@@ -61,24 +61,76 @@ def odds_matrix(odds_long: pd.DataFrame, race_ids) -> np.ndarray:
 
 
 def backtest_ev(P_tri: np.ndarray, O: np.ndarray, hit_idx: np.ndarray, pay: np.ndarray,
-                ev_grid=(1.0, 1.1, 1.2, 1.3, 1.5, 2.0), p_min: float = 0.01, max_bets: int = 5):
-    """各EV閾値で、1点100円ずつ買った場合の成績。払戻は実際の払戻金を使う。"""
+                ev_grid=(1.0, 1.1, 1.2, 1.3, 1.5, 2.0), p_min: float = 0.01, max_bets: int = 5,
+                filt=None, extra=None, n_boot: int = 1000, seed: int = 0):
+    """各EV閾値で、1点100円ずつ買った場合の成績。払戻は実際の払戻金を使う。
+
+    回収率の90%信頼区間をブートストラップ(レースを重複ありで引き直す)で出す。
+    区間の下限が100%を超えていれば「たまたま」ではない可能性が高い。
+    """
+    rng = np.random.default_rng(seed)
     rows = []
+    n = len(P_tri)
     for th in ev_grid:
-        bets = hits = 0
-        ret = 0.0
-        days_ret = []
-        for i in range(len(P_tri)):
+        cost = np.zeros(n)
+        ret = np.zeros(n)
+        hits = 0
+        for i in range(n):
             if not np.isfinite(O[i]).any():
                 continue
-            sel = select_bets(P_tri[i], O[i], th, p_min, max_bets)
-            for s in sel:
-                bets += 1
+            p = P_tri[i] if filt is None else filt.adjust(P_tri[i], O[i], extra[i] if extra is not None else None)
+            for s in select_bets(p, O[i], th, p_min, max_bets):
+                cost[i] += 100
                 if COMBOS.index(s["combo"]) == hit_idx[i]:
                     hits += 1
-                    ret += pay[i]
-            days_ret.append(len(sel))
-        rows.append({"ev_min": th, "bets": bets, "hit_rate": round(hits / bets, 4) if bets else None,
-                     "roi": round(ret / (100 * bets), 4) if bets else None,
-                     "profit_yen": int(ret - 100 * bets)})
+                    ret[i] += pay[i]
+        bets = int(cost.sum() // 100)
+        row = {"ev_min": th, "bets": bets, "hit_rate": round(hits / bets, 4) if bets else None,
+               "roi": round(ret.sum() / cost.sum(), 4) if bets else None,
+               "profit_yen": int(ret.sum() - cost.sum())}
+        if bets >= 30:
+            idx = rng.integers(0, n, (n_boot, n))
+            c, r = cost[idx].sum(1), ret[idx].sum(1)
+            roi = r[c > 0] / c[c > 0]
+            row["roi_lo90"], row["roi_hi90"] = (round(float(np.quantile(roi, q)), 4) for q in (0.05, 0.95))
+        rows.append(row)
     return rows
+
+
+class BetFilter:
+    """「買う/買わない」の判断。高い期待値に見える組ほどモデルが過信していることが多いので、
+    実際の的中データから確率を補正し直す(ロジスティック回帰)。
+
+    入力: log(合成確率), log(オッズ), モデルと市場の食い違い, レースの荒れ度(1着確率のエントロピー)
+    """
+
+    def _x(self, p, odds, pk, ent):
+        lp = np.log(np.clip(p, 1e-6, 1))
+        lo = np.log(np.clip(np.nan_to_num(odds, nan=1e4), 1, 1e5))
+        dis = lp - np.log(np.clip(pk, 1e-6, 1))
+        return np.column_stack([lp, lo, dis, np.full(len(p), ent)])
+
+    def fit(self, PB, O, PK, ENT, y):
+        from sklearn.linear_model import LogisticRegression
+        X, t = [], []
+        for i in range(len(PB)):
+            if not np.isfinite(O[i]).any():
+                continue
+            cand = np.argsort(-(PB[i] * np.nan_to_num(O[i])))[:20]  # 期待値上位の候補で学習
+            X.append(self._x(PB[i][cand], O[i][cand], PK[i][cand], ENT[i]))
+            t.append((cand == y[i]).astype(int))
+        self.m = LogisticRegression(C=1.0, max_iter=1000).fit(np.vstack(X), np.concatenate(t))
+        return self
+
+    def adjust(self, p, odds, extra):
+        pk, ent = extra
+        q = p.copy()
+        cand = np.argsort(-(p * np.nan_to_num(odds)))[:20]
+        q[cand] = self.m.predict_proba(self._x(p[cand], odds[cand], pk[cand], ent))[:, 1]
+        return q
+
+
+def entropy(w):
+    w = np.clip(np.asarray(w, float), 1e-9, 1)
+    w = w / w.sum()
+    return float(-(w * np.log(w)).sum())

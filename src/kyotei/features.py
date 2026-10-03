@@ -66,6 +66,29 @@ def _smoothed(num, den, prior, strength):
     return (num.fillna(0) + prior * strength) / (den.fillna(0) + strength)
 
 
+def wind_bin(w):
+    return pd.cut(pd.to_numeric(w, errors="coerce"), [-1, 1, 3, 5, 99], labels=False)
+
+
+def wind_table(df: pd.DataFrame) -> pd.DataFrame:
+    """直前予想用: 場×風向き×風の強さ×枠 の直近2年の集計(前日まで)。"""
+    d = df[df["finish"].notna() & df["wind_dir"].notna()].copy()
+    d = d[pd.to_datetime(d["date"]) >= pd.to_datetime(d["date"]).max() - pd.Timedelta(days=730)]
+    d["_wbin"] = wind_bin(d["wind"])
+    return (d.assign(w=(d["finish"] == 1).astype(float))
+            .groupby(["jcd", "wind_dir", "_wbin", "lane"])["w"].agg(["sum", "count"]).reset_index())
+
+
+def apply_wind(df: pd.DataFrame, table: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df["_wbin"] = wind_bin(df["wind"])
+    m = df[["jcd", "wind_dir", "_wbin", "lane"]].merge(table, how="left",
+                                                       on=["jcd", "wind_dir", "_wbin", "lane"])
+    df["vw_win"] = _smoothed(m["sum"], m["count"], df["vl_win"].values, 30).values
+    df.loc[df["wind_dir"].isna(), "vw_win"] = np.nan
+    return df.drop(columns=["_wbin"])
+
+
 def add_history(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
     has_res = df["finish"].notna() if "finish" in df else pd.Series(False, index=df.index)
@@ -140,6 +163,16 @@ def add_history(df: pd.DataFrame) -> pd.DataFrame:
     r = _rolling_prior(df, ["jcd", "lane"], {"win": "_win", "has": "_has"}, "730D", "vl")
     df = df.merge(r, on=["jcd", "lane", "date"], how="left")
     df["vl_win"] = _smoothed(df["vl_win"], df["vl_has"], lane_prior, 50)
+
+    # 場×風向き×風の強さ×枠(2年)。水面の向きは場ごとに違うので、
+    # 「この場でこの風だと何号艇が勝ちやすいか」をデータから学ぶ(向かい風・追い風の代わり)
+    if "wind_dir" in df and "wind" in df:
+        df["_wbin"] = wind_bin(df["wind"])
+        st = _asof_stats(df.assign(_wd=df["wind_dir"].where(has_res)),
+                         ["jcd", "_wd", "_wbin", "lane"], {"w": "_win", "n": "_has"}, "730D",
+                         df.assign(_wd=df["wind_dir"]))
+        df["vw_win"] = _smoothed(st["w"], st["n"], df["vl_win"], 30).values
+        df.loc[df["wind_dir"].isna(), "vw_win"] = np.nan
 
     # モーター(場×番号、直近120日。モーターは年1回程度で入れ替わる)
     mvals = {"top2": "_top2", "has": "_has"}
@@ -244,6 +277,8 @@ def add_growth(df: pd.DataFrame) -> pd.DataFrame:
 def add_relative(df: pd.DataFrame) -> pd.DataFrame:
     g = df.groupby("race_id")
     src = REL_SRC + ["rating", "rc_win", "rl_win"]
+    if "vw_win" in df and df["vw_win"].notna().any():
+        src = src + ["vw_win"]
     if "rating_growth_180" in df:
         src = src + ["rating_growth_180"]
     if "exhibit_time" in df and df["exhibit_time"].notna().any():
@@ -287,7 +322,7 @@ def add_relative(df: pd.DataFrame) -> pd.DataFrame:
 GRADE_WORDS = [("優勝", 6), ("準優", 5), ("ドリーム", 4), ("特選", 3), ("特賞", 3), ("選抜", 3),
                ("予選", 2), ("一般", 1)]
 LATE_ONLY = ("exhibit", "course", "wind", "wave", "ex_st", "tilt", "in_", "out_", "st_adv",
-             "st_pred", "weight_diff")
+             "st_pred", "weight_diff", "vw_")
 
 
 def race_grade(s) -> int:

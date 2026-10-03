@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 from fetch_history import download_text  # noqa: E402
 from kyotei import features  # noqa: E402
-from kyotei.betting import COMBOS, blend, market_probs, model_tri_probs, select_bets  # noqa: E402
+from kyotei.betting import COMBOS, blend, entropy, market_probs, model_tri_probs, select_bets  # noqa: E402
 from kyotei.data import load_history  # noqa: E402
 from kyotei.parse_lzh import parse_program, parse_result  # noqa: E402
 from kyotei.publish import read_json, write_check, write_json  # noqa: E402
@@ -57,7 +57,8 @@ def predict_win(bundle, stage, df):
     return st["stack"].predict(X, probs), st["stack"]
 
 
-def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=None, blend_ab=None):
+def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=None, blend_ab=None,
+                 bet_filter=None):
     rdf = rdf.sort_values("lane")
     w = np.full(6, 1e-6)
     w[rdf["lane"].values - 1] = p_win
@@ -69,7 +70,8 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
         market = pk
         if blend_ab:
             p_final = blend(pm, pk, *blend_ab)
-        bets = select_bets(p_final, odds, EV_MIN, P_MIN, MAX_BETS)
+        p_bet = bet_filter.adjust(p_final, odds, (pk, entropy(w))) if bet_filter else p_final
+        bets = select_bets(p_bet, odds, EV_MIN, P_MIN, MAX_BETS)
     top = np.argsort(-p_final)[:10]
     r0 = rdf.iloc[0]
     boats = []
@@ -152,8 +154,11 @@ def morning(day: dt.date):
     ent, races, _ = load_history(since)
     ent = ent[ent["date"] < day.isoformat()]
     df = features.build(pd.concat([ent, today], ignore_index=True), races)
+    wt = features.wind_table(df[df["date"] < day.isoformat()]) if "wind_dir" in df else None
     df = df[df["date"] == day.isoformat()].reset_index(drop=True)
     CACHE.mkdir(parents=True, exist_ok=True)
+    if wt is not None:
+        wt.to_pickle(CACHE / f"wind_{day.isoformat()}.pkl")
     df.to_pickle(CACHE / f"features_{day.isoformat()}.pkl")
     bundle = load_bundle()
     p, stack = predict_win(bundle, "early", df)
@@ -221,6 +226,8 @@ def live(day: dt.date, ahead_min: int = 35):
         print("朝の予想がまだありません")
         return
     df = pd.read_pickle(fp)
+    wp = CACHE / f"wind_{day.isoformat()}.pkl"
+    wind_tab = pd.read_pickle(wp) if wp.exists() else None
     data = read_json(jp)
     bundle = load_bundle()
     t = now()
@@ -250,12 +257,15 @@ def live(day: dt.date, ahead_min: int = 35):
             rdf.loc[m, "weight_now"] = b.get("weight_now")
         rdf["wind"], rdf["wave"] = info.get("wind"), info.get("wave")
         rdf["wind_dir"] = info.get("wind_dir_code")
+        if wind_tab is not None:
+            rdf = features.apply_wind(rdf, wind_tab)
         rdf = features.add_late(rdf)
         oh = fetch("odds3t", race["jcd"], race["rno"], hd)
         od = parse_odds3t(oh) if oh else {}
         odds = np.array([od.get(c, np.nan) for c in COMBOS]) if od else None
         p, stack = predict_win(bundle, "late", rdf)
-        data["races"][i] = race_payload(rdf, p, stack, "late", odds, bundle.get("blend"))
+        data["races"][i] = race_payload(rdf, p, stack, "late", odds, bundle.get("blend"),
+                                        bundle.get("bet_filter"))
         n += 1
     data["updated_at"] = t.strftime("%H:%M")
     write_json(jp, data)

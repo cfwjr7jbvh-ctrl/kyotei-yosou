@@ -25,8 +25,8 @@ import pandas as pd
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 from kyotei import features  # noqa: E402
 from kyotei.data import load_history  # noqa: E402
-from kyotei.betting import (COMBOS, backtest_ev, blend, fit_blend, market_probs,  # noqa: E402
-                            model_tri_probs, odds_matrix)
+from kyotei.betting import (COMBOS, BetFilter, backtest_ev, blend, entropy,  # noqa: E402
+                            fit_blend, market_probs, model_tri_probs, odds_matrix)
 from kyotei.ensemble import Stacker, evaluate  # noqa: E402
 from kyotei.models import available_models, race_softmax  # noqa: E402
 from kyotei.publish import write_json  # noqa: E402
@@ -96,21 +96,27 @@ def ev_analysis(te, p_ens, stack, races, odds, report, log):
     PK = np.array([market_probs(o) for o in O])
     y = np.array([COMBOS.index(c) for c in rc["tri_combo"]])
     pay = rc["tri_pay"].values.astype(float)
-    half = len(rids) // 2  # 前半でブレンド係数を推定、後半で検証
-    a, b = fit_blend(PM[:half], PK[:half], y[:half])
+    # オッズのある期間を3等分: ①合成係数の推定 ②買う/買わない判断の学習 ③検証
+    n = len(rids)
+    i1, i2 = n // 3, 2 * n // 3
+    a, b = fit_blend(PM[:i1], PK[:i1], y[:i1])
     PB = blend(PM, PK, a, b)
+    ENT = np.array([entropy(w) for w in W])
+    filt = BetFilter().fit(PB[i1:i2], O[i1:i2], PK[i1:i2], ENT[i1:i2], y[i1:i2])
     r = np.arange(len(y))
-    sl = slice(half, None)
-    out = {"races": int(len(rids) - half), "period": [str(rids[half][:8]), str(rids[-1][:8])],
+    sl = slice(i2, None)
+    extra = list(zip(PK[sl], ENT[sl]))
+    out = {"races": int(n - i2), "period": [str(rids[i2][:8]), str(rids[-1][:8])],
            "blend_a_model": round(a, 3), "blend_b_market": round(b, 3),
            "tri_logloss": {"model": float(-np.log(PM[r, y] + 1e-12)[sl].mean()),
                            "market": float(-np.log(PK[r, y] + 1e-12)[sl].mean()),
                            "blend": float(-np.log(PB[r, y] + 1e-12)[sl].mean())},
            "ev_model": backtest_ev(PM[sl], O[sl], y[sl], pay[sl]),
-           "ev_blend": backtest_ev(PB[sl], O[sl], y[sl], pay[sl])}
+           "ev_blend": backtest_ev(PB[sl], O[sl], y[sl], pay[sl]),
+           "ev_filtered": backtest_ev(PB[sl], O[sl], y[sl], pay[sl], filt=filt, extra=extra)}
     log(json.dumps(out, ensure_ascii=False, indent=1))
     report["ev"] = out
-    return a, b
+    return (a, b), filt
 
 
 def main():
@@ -144,11 +150,13 @@ def main():
                          "val": [str(va.date.min()), str(va.date.max())],
                          "test": [str(te.date.min()), str(te.date.max())]},
               "stages": {}}
-    bundle = {"stages": {}, "blend": None}
+    bundle = {"stages": {}, "blend": None, "bet_filter": None}
     for stage in ("early", "late"):
         feats, models, stack, p_ens = run_stage(stage, df, races, tr, va, te, report, log)
         if stage == "late" and odds is not None:
-            bundle["blend"] = ev_analysis(te, p_ens, stack, races, odds, report, log)
+            res = ev_analysis(te, p_ens, stack, races, odds, report, log)
+            if res:
+                bundle["blend"], bundle["bet_filter"] = res
         # 本番用: 学習+検証期間で学習し直す(アンサンブル重み・補正は検証で決めた値)
         full = pd.concat([tr, va])
         for k in models:

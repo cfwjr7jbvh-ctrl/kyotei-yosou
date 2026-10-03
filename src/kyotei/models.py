@@ -59,13 +59,18 @@ class GBDTWin:
     def __init__(self, feats, seed=0):
         self.feats, self.seed = feats, seed
 
+    n_seeds = 3  # 乱数を変えて3回学習し平均(結果のブレを抑える)
+
     def fit(self, df):
         y = (df["finish"] <= self.target).astype(int)
-        self.m = _gbdt_classifier(self.seed).fit(df[self.feats], y, sample_weight=recency_weight(df))
+        w = recency_weight(df)
+        self.ms = [_gbdt_classifier(self.seed + k).fit(df[self.feats], y, sample_weight=w)
+                   for k in range(self.n_seeds)]
+        self.m = self.ms[0]
         return self
 
     def raw(self, df):
-        return self.m.predict_proba(df[self.feats])[:, 1]
+        return np.mean([m.predict_proba(df[self.feats])[:, 1] for m in self.ms], axis=0)
 
     def predict_proba(self, df):
         p = self.raw(df)
