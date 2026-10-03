@@ -48,15 +48,16 @@ const b64d=s=>Uint8Array.from(atob(s.trim()),c=>c.charCodeAt(0));
 const b64e=u=>btoa(String.fromCharCode(...new Uint8Array(u)));
 document.getElementById("f").onsubmit=async e=>{
   e.preventDefault();const pw=document.getElementById("pw").value,m=document.getElementById("m");
-  m.textContent="確認中…";
+  m.textContent="確認中…";m.style.color="var(--muted)";
   const r=await fetch("/__login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({password:pw})});
-  if(!r.ok){m.textContent="パスワードが違います";return;}
+  if(!r.ok){m.style.color="var(--bad)";m.textContent="パスワードが違います";return;}
   try{ // 予想データの暗号を解く鍵も、同じパスワードから作って端末に保存
     const salt=b64d(await (await fetch("/data/salt.txt")).text());
     const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveKey"]);
     const key=await crypto.subtle.deriveKey({name:"PBKDF2",salt,iterations:250000,hash:"SHA-256"},base,{name:"AES-GCM",length:256},true,["decrypt"]);
     localStorage.setItem("kyotei_key",b64e(await crypto.subtle.exportKey("raw",key)));
   }catch(err){}
+  m.textContent="ログインしました。ページを読み込んでいます…";
   location.replace(location.pathname==="/__login"?"/":location.href);
 };
 </script></body></html>`, { status: 401, headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
