@@ -401,7 +401,7 @@ def add_matchups(df: pd.DataFrame, pos: pd.Series) -> pd.DataFrame:
 GRADE_WORDS = [("優勝", 6), ("準優", 5), ("ドリーム", 4), ("特選", 3), ("特賞", 3), ("選抜", 3),
                ("予選", 2), ("一般", 1)]
 LATE_ONLY = ("exhibit", "course", "wind", "wave", "ex_st", "tilt", "in_", "out_", "st_adv",
-             "st_pred", "weight_diff", "vw_", "mu_")
+             "st_pred", "weight_diff", "vw_", "mu_", "air_temp", "water_temp", "temp_")
 
 
 def race_grade(s) -> int:
@@ -448,14 +448,33 @@ def build(entries: pd.DataFrame, races: pd.DataFrame | None = None) -> pd.DataFr
     df = add_rating(df)
     rating_model = df.attrs.get("rating_model")
     df = add_growth(df)
+    df = pre_race_view(df)
     df = add_late(df)
     df.attrs["rating_model"] = rating_model
     return df.sort_values(["date", "race_id", "lane"]).reset_index(drop=True)
 
 
-def add_late(df: pd.DataFrame) -> pd.DataFrame:
-    """直前情報(展示タイム・進入コース・風・波)から作る特徴量。"""
+def pre_race_view(df: pd.DataFrame) -> pd.DataFrame:
+    """学習でも、直前予想の時点で分かる値を使う(本番の直前予想と同じ条件にそろえる)。
+
+    - 進入コース: 競走成績の「本番の進入」ではなく、直前情報の「展示の進入」(約12%のレースで違う)
+    - 風速・波高: 直前情報の値
+    過去成績の集計(add_history)は、すでに本番の進入・気象で計算済み。値が無いレースは元の値のまま。
+    """
     df = df.copy()
+    if "ex_course" in df and "course" in df:
+        df["course"] = df["ex_course"].where(df["ex_course"].notna(), df["course"])
+    for c, pre in (("wind", "p_wind"), ("wave", "p_wave")):
+        if pre in df and c in df:
+            df[c] = df[pre].where(df[pre].notna(), df[c])
+    return df
+
+
+def add_late(df: pd.DataFrame) -> pd.DataFrame:
+    """直前情報(展示タイム・進入コース・風・波・気温・水温)から作る特徴量。"""
+    df = df.copy()
+    if "air_temp" in df and "water_temp" in df:  # 気温が高いほどエンジンの出力が落ちる、水温との差は水面の状態
+        df["temp_air_water"] = df["air_temp"] - df["water_temp"]
     if "ex_st" in df and "st_bias" in df:
         # 展示STからの本番ST予想。展示を信じられる選手ほど展示を重く、そうでない選手は普段のSTを重く
         v0 = 0.045 ** 2
@@ -487,7 +506,8 @@ def feature_columns(df: pd.DataFrame, stage: str = "late") -> list[str]:
     exclude = {"race_id", "date", "racer_id", "racer_class", "finish", "st", "motor_no",
                "boat_no", "racer_name", "branch", "rating_strength", "deadline", "result_code",
                "st_flag", "race_type", "weight_now", "kimarite", "series_str",
-               "race_time"}  # race_time はレース結果(未来の情報)なので特徴量にしない
+               "race_time",  # race_time はレース結果(未来の情報)なので特徴量にしない
+               "ex_course", "p_wind", "p_wave"}  # course・wind・wave に入れ替え済み(重複)
     cols = [c for c in df.columns if c not in exclude and pd.api.types.is_numeric_dtype(df[c])
             and df[c].notna().mean() > 0.5 and not c.startswith(("rcc_", "_"))]
     if stage == "early":

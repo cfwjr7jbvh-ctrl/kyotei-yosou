@@ -265,6 +265,7 @@ def live(day: dt.date, ahead_min: int = 35):
             rdf.loc[m, "tilt"] = b.get("tilt")
             rdf.loc[m, "weight_now"] = b.get("weight_now")
         rdf["wind"], rdf["wave"] = info.get("wind"), info.get("wave")
+        rdf["air_temp"], rdf["water_temp"] = info.get("air_temp"), info.get("water_temp")
         rdf["wind_dir"] = info.get("wind_dir_code")
         if wind_tab is not None:
             rdf = features.apply_wind(rdf, wind_tab)

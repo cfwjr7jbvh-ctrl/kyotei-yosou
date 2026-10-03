@@ -6,7 +6,8 @@ import pathlib
 import pandas as pd
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
-PREVIEW_COLS = ["ex_st", "weight_now", "tilt", "wind_dir"]
+PREVIEW_COLS = ["ex_st", "weight_now", "tilt", "wind_dir",
+                "ex_course", "p_wind", "p_wave", "air_temp", "water_temp"]  # 直前情報(締切前に分かる値)
 
 
 def _read(pattern: str, since: str | None):
