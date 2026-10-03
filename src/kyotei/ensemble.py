@@ -1,6 +1,6 @@
 """アンサンブル(スタッキング)と評価。
 
-各モデルの log(1着確率) を説明変数にした Plackett-Luce で重みを学習し、
+各モデルの log(1着確率) を説明変数にした多項ロジットで、1着の当たり方に合うよう重みを学習し、
 最終的な1着確率を作る。そこから Benter 補正つきで3連単確率を出す。
 """
 from __future__ import annotations
@@ -18,7 +18,10 @@ class Stacker:
         d = df[["race_id", "lane", "finish"]].copy()
         for k, p in probs.items():
             d[f"lp_{k}"] = np.log(np.clip(p, 1e-6, 1))
-        self.pl = PLLogit([f"lp_{k}" for k in self.names], l2=1e-4).fit(d)
+        # 重みは「1着の当たり方」だけで決める。1〜3着まとめて決めると、荒れやすい2・3着に
+        # 引っ張られて1着確率まで平らになる(実データで1号艇を約11ポイント過小評価していた)。
+        # 2・3着の平らさは、このあと fit_discount の補正(lam2, lam3)で別に合わせる。
+        self.pl = PLLogit([f"lp_{k}" for k in self.names], l2=1e-4, top=1).fit(d)
         P, orders = race_matrix(d.assign(p=self.predict(d, probs)))
         self.lam2, self.lam3 = fit_discount(P, orders)
         return self
