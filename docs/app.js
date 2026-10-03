@@ -27,7 +27,8 @@ class Locked extends Error { }
 async function getJSON(path) {
   const r = await fetch(path + "?t=" + Date.now());
   if (!r.ok) throw new Error(path);
-  const obj = await r.json();
+  let obj;
+  try { obj = await r.json(); } catch (e) { throw new Error("not json: " + path); }
   if (!obj || obj.enc !== 1) return obj;
   if (!KEY) throw new Locked();
   try {
@@ -182,7 +183,7 @@ async function init() {
     let ok = true;
     try { await getJSON("data/check.json"); } catch (err) { ok = !(err instanceof Locked); }
     if (ok && state.day) ok = await loadDay(state.day);
-    if (ok) { $("#login").hidden = true; $("#app").hidden = false; }
+    if (ok) { $("#login").hidden = true; $("#app").hidden = false; $("#login-msg").textContent = ""; }
     btn.disabled = false;
     if (ok) {
       if ($("#remember").checked) localStorage.setItem(LS, b64e(await crypto.subtle.exportKey("raw", KEY)));
