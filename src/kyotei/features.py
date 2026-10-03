@@ -100,6 +100,7 @@ def add_history(df: pd.DataFrame) -> pd.DataFrame:
     df["_st"] = df["st"].where(has_res & df["st"].notna(), 0) if "st" in df else 0.0
     df["_has"] = has_res.astype(float)
     df["_has_st"] = (has_res & df["st"].notna()).astype(float) if "st" in df else 0.0
+    df["_st2"] = df["_st"] ** 2
     # フライング・出遅れ(F/L)。F持ちはスタートを控えるので重要
     fl = pd.Series(False, index=df.index)
     for c in ("st_flag", "result_code"):
@@ -122,7 +123,7 @@ def add_history(df: pd.DataFrame) -> pd.DataFrame:
     # 選手の直近180日
     r = _rolling_prior(df, ["racer_id"], {"win": "_win", "top3": "_top3", "fin": "_fin",
                                           "st": "_st", "has": "_has", "hst": "_has_st",
-                                          "fl": "_fl"}, "180D", "rc")
+                                          "fl": "_fl", "st2": "_st2"}, "180D", "rc")
     df = df.merge(r, on=["racer_id", "date"], how="left")
     df["rc_n"] = df["rc_has"].fillna(0)
     df["rc_win"] = _smoothed(df["rc_win"], df["rc_has"], 1 / 6, 5)
@@ -130,6 +131,48 @@ def add_history(df: pd.DataFrame) -> pd.DataFrame:
     df["rc_avgfin"] = _smoothed(df["rc_fin"], df["rc_has"], 3.5, 5)
     df["rc_avgst"] = _smoothed(df["rc_st"], df["rc_hst"], 0.16, 5)
     df["rc_fcount"] = df["rc_fl"].fillna(0)
+    # スタートの安定度(STのばらつき。小さいほど安定)
+    msq = _smoothed(df["rc_st2"], df["rc_hst"], 0.16 ** 2 + 0.05 ** 2, 5)
+    df["rc_stsd"] = np.sqrt(np.maximum(msq - df["rc_avgst"] ** 2, 1e-4))
+
+    # 決まり手の得意度(1年): 1コースからの逃げ率、2コース以遠からの差し・まくり・まくり差し率
+    # 前づけ(枠より内のコースを取る)の頻度もここで数える
+    crs_h = (df["course"] if "course" in df else df["lane"]).where(has_res)
+    df["_c1"] = (crs_h == 1).astype(float)
+    df["_cx"] = (crs_h >= 2).astype(float)
+    df["_front"] = (crs_h < df["lane"]).astype(float)
+    tvals = {"c1": "_c1", "cx": "_cx", "front": "_front", "has": "_has"}
+    if "kimarite" in df:
+        km = pd.to_numeric(df["kimarite"], errors="coerce").where(has_res & (f == 1))
+        for code, name in ((1, "nige"), (2, "sashi"), (3, "makuri"), (4, "makurizashi")):
+            df[f"_k{name}"] = (km == code).astype(float)
+            tvals[name] = f"_k{name}"
+    r = _rolling_prior(df, ["racer_id"], tvals, "365D", "kt")
+    df = df.merge(r, on=["racer_id", "date"], how="left")
+    df["front_rate"] = _smoothed(df["kt_front"], df["kt_has"], 0.02, 10)
+    if "kt_nige" in df:
+        df["nige_rate"] = _smoothed(df["kt_nige"], df["kt_c1"], 0.5, 6)
+        df["sashi_rate"] = _smoothed(df["kt_sashi"], df["kt_cx"], 0.03, 15)
+        df["makuri_rate"] = _smoothed(df["kt_makuri"], df["kt_cx"], 0.03, 15)
+        df["makurizashi_rate"] = _smoothed(df["kt_makurizashi"], df["kt_cx"], 0.03, 15)
+    df = df.drop(columns=[c for c in df.columns if c.startswith("kt_")])
+
+    # 選手×場(2年): 得意な水面
+    r = _rolling_prior(df, ["racer_id", "jcd"], {"win": "_win", "top3": "_top3", "has": "_has"}, "730D", "rv")
+    df = df.merge(r, on=["racer_id", "jcd", "date"], how="left")
+    df["rv_win"] = _smoothed(df["rv_win"], df["rv_has"], df["rc_win"], 6)
+    df["rv_top3"] = _smoothed(df["rv_top3"], df["rv_has"], df["rc_top3"], 6)
+
+    # 荒れた水面(波5cm以上 or 風5m以上)での強さ(2年)
+    if "wave" in df and "wind" in df:
+        rough = ((pd.to_numeric(df["wave"], errors="coerce") >= 5) |
+                 (pd.to_numeric(df["wind"], errors="coerce") >= 5)) & has_res
+        df["_rough"] = rough.astype(float)
+        df["_rough_top3"] = (rough & (f <= 3)).astype(float)
+        r = _rolling_prior(df, ["racer_id"], {"cnt": "_rough", "t3": "_rough_top3"}, "730D", "rw")
+        df = df.merge(r[["racer_id", "date", "rw_cnt", "rw_t3"]], on=["racer_id", "date"], how="left")
+        df["rough_top3"] = _smoothed(df["rw_t3"], df["rw_cnt"], df["rc_top3"], 8)
+        df = df.drop(columns=["rw_cnt", "rw_t3"])
 
     if "_sd" in df:  # 選手ごとの「展示ST→本番ST」のクセと、展示の信頼度(1年)
         r = _rolling_prior(df, ["racer_id"], {"d": "_sd", "d2": "_sd2", "cnt": "_sdn"}, "365D", "xs")
@@ -185,8 +228,8 @@ def add_history(df: pd.DataFrame) -> pd.DataFrame:
         df["mt_exrank"] = _smoothed(df["mt_exr"], df["mt_hex"], 3.5, 10)
 
     drop = [c for c in df.columns if c.startswith("_") or c in
-            ("rc_fin", "rc_st", "rc_has", "rc_hst", "rc_fl", "rl_has", "vl_has", "mt_has",
-             "mt_exr", "mt_hex", "rc_n_x")]
+            ("rc_fin", "rc_st", "rc_has", "rc_hst", "rc_fl", "rc_st2", "rl_has", "vl_has", "mt_has",
+             "mt_exr", "mt_hex", "rc_n_x", "rv_has", "rv_n")]
     return df.drop(columns=drop)
 
 
@@ -312,6 +355,7 @@ def add_relative(df: pd.DataFrame) -> pd.DataFrame:
     if "in_st_pred" in df:
         df["st_pred_adv_in"] = df["in_st_pred"] - df["st_pred"]
         df["st_pred_adv_out"] = df["out_st_pred"] - df["st_pred"]
+    df = add_matchups(df, pos)
     # 1号艇の強さ(イン逃げできるか)は全艇の着順に効く
     lane1 = df[df["lane"] == 1].set_index("race_id")
     for c in ("nat_win_rate", "rating", "rl_win", "class_num"):
@@ -319,10 +363,45 @@ def add_relative(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def add_matchups(df: pd.DataFrame, pos: pd.Series) -> pd.DataFrame:
+    """特性同士の相性。ml_ は枠順(朝から分かる)、mu_ は進入コース順(展示後)で計算する。
+
+    - in1_nige       : インの艇の逃げ率(高いほど外の艇は勝ちにくい)
+    - makuri_x_st    : 自分のまくり率 × 内の艇よりスタートが速い度合い
+    - sashi_x_in1    : 自分の差し率 × インの艇が逃げ損ねる率
+    - mz_x_in1       : 自分のまくり差し率 × インの艇が逃げ損ねる率
+    - out_makuri     : 外の艇のまくり率(外から攻められる危険)
+    - makuri_pressure: 3・4コースの艇の「まくり率×スタート優位」の最大値(イン逃げを脅かす力)
+    """
+    if "makuri_rate" not in df:
+        return df
+    race = df["race_id"].astype(str)
+    for prefix, p in (("ml_", df["lane"]), ("mu_", pos)):
+        p = p.astype(int)
+        st = df["st_pred"] if (prefix == "mu_" and "st_pred" in df) else df["rc_avgst"]
+        tab = pd.DataFrame({"race": race.values, "p": p.values, "nige": df["nige_rate"].values,
+                            "makuri": df["makuri_rate"].values, "st": st.values})
+        idx = tab.set_index(["race", "p"])
+        look = lambda col, q: pd.MultiIndex.from_arrays([race.values, q.values]).map(  # noqa: E731
+            idx[col].groupby(level=[0, 1]).first())
+        in1_nige = pd.Series(look("nige", pd.Series(1, index=df.index)), index=df.index).astype(float)
+        in_st = pd.Series(look("st", p - 1), index=df.index).astype(float)
+        out_mk = pd.Series(look("makuri", p + 1), index=df.index).astype(float)
+        adv = (in_st - st).clip(-0.1, 0.1)
+        df[prefix + "in1_nige"] = in1_nige.values
+        df[prefix + "makuri_x_st"] = (df["makuri_rate"] * adv).values
+        df[prefix + "sashi_x_in1"] = (df["sashi_rate"] * (1 - in1_nige)).values
+        df[prefix + "mz_x_in1"] = (df["makurizashi_rate"] * (1 - in1_nige)).values
+        df[prefix + "out_makuri"] = out_mk.values
+        threat = (df["makuri_rate"] * adv.clip(lower=0)).where(p.isin([3, 4]))
+        df[prefix + "makuri_pressure"] = threat.groupby(race).transform("max").fillna(0).values
+    return df
+
+
 GRADE_WORDS = [("優勝", 6), ("準優", 5), ("ドリーム", 4), ("特選", 3), ("特賞", 3), ("選抜", 3),
                ("予選", 2), ("一般", 1)]
 LATE_ONLY = ("exhibit", "course", "wind", "wave", "ex_st", "tilt", "in_", "out_", "st_adv",
-             "st_pred", "weight_diff", "vw_")
+             "st_pred", "weight_diff", "vw_", "mu_")
 
 
 def race_grade(s) -> int:
@@ -339,7 +418,7 @@ def build(entries: pd.DataFrame, races: pd.DataFrame | None = None) -> pd.DataFr
     if "race_type" in df:
         df["race_grade"] = df["race_type"].map(race_grade)
     if races is not None:
-        keep = [c for c in ("wind", "wave") if c in races and c not in df]
+        keep = [c for c in ("wind", "wave", "kimarite") if c in races and c not in df]
         if keep:
             df = df.merge(races[["race_id"] + keep], on="race_id", how="left")
     df = add_history(df)
@@ -384,7 +463,7 @@ def add_late(df: pd.DataFrame) -> pd.DataFrame:
 def feature_columns(df: pd.DataFrame, stage: str = "late") -> list[str]:
     exclude = {"race_id", "date", "racer_id", "racer_class", "finish", "st", "motor_no",
                "boat_no", "racer_name", "branch", "rating_strength", "deadline", "result_code",
-               "st_flag", "race_type", "weight_now"}
+               "st_flag", "race_type", "weight_now", "kimarite"}
     cols = [c for c in df.columns if c not in exclude and pd.api.types.is_numeric_dtype(df[c])
             and df[c].notna().mean() > 0.5 and not c.startswith(("rcc_", "_"))]
     if stage == "early":

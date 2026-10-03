@@ -33,5 +33,11 @@ def load_history(since: str | None = None):
         pv = pv[~pv["race_id"].isin(bad)]
         ent = ent.merge(pv[["race_id", "lane"] + PREVIEW_COLS], on=["race_id", "lane"], how="left")
         print(f"previews merged: {pv['race_id'].nunique()} races (dropped {len(bad)} mismatched)")
+    km = _read("kimarite/kimarite_*.csv.gz", since)  # 決まり手(過去分は Open API)
+    if km is not None and races is not None:
+        km = km.dropna(subset=["kimarite"]).drop_duplicates("race_id").set_index("race_id")["kimarite"]
+        if "kimarite" not in races:
+            races["kimarite"] = pd.NA
+        races["kimarite"] = races["kimarite"].fillna(races["race_id"].map(km))
     odds = _read("odds/odds3t_*.csv.gz", since)
     return ent, races, odds

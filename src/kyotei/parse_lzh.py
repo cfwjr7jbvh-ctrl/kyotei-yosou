@@ -11,6 +11,8 @@ import unicodedata
 import numpy as np
 
 Z2H = str.maketrans("０１２３４５６７８９", "0123456789")
+# 決まり手(Boatrace Open API の technique_number と同じ番号)
+KIMARITE = {"逃げ": 1, "差し": 2, "まくり": 3, "まくり差し": 4, "抜き": 5, "恵まれ": 6}
 
 _B_ROW = re.compile(
     r"^([1-6]) (\d{4})(.{4})(\d{2})(.{2})(\d{2})([AB][12]) *"
@@ -84,6 +86,10 @@ def parse_result(text: str, date: str) -> tuple[list[dict], list[dict]]:
                 races.append(cur)
                 continue
             if cur is None:
+                continue
+            km = re.search(r"レースタイム\s+(\S+)", line)
+            if km:
+                cur["kimarite"] = KIMARITE.get(km.group(1), np.nan)
                 continue
             m = _K_ROW.match(line)
             if m:
