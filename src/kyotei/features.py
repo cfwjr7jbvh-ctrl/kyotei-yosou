@@ -447,6 +447,8 @@ def build(entries: pd.DataFrame, races: pd.DataFrame | None = None) -> pd.DataFr
     df = add_history(df)
     df = add_rating(df)
     rating_model = df.attrs.get("rating_model")
+    from .features_motor import add_motor  # モーター入れ替え・乗り手の腕を除いたモーター力・今節の足
+    df = add_motor(df)
     df = add_growth(df)
     df = pre_race_view(df)
     df = add_late(df)
