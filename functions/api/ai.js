@@ -34,7 +34,7 @@ export async function onRequestPost({ request, env }) {
   const messages = [{ role: "system", content: SYSTEM + (context ? "\n\n# レースのデータ\n" + context : "") }, ...history];
   const model = env.AI_MODEL || "@cf/openai/gpt-oss-120b";
   try {
-    const res = await env.AI.run(model, { messages, max_tokens: 900 });
+    const res = await env.AI.run(model, { messages, max_tokens: 2000 });
     const text = textOf(res).trim();
     return Response.json({ text: text || "(回答が空でした。もう一度聞いてみてください)", model });
   } catch (e) {
