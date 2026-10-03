@@ -26,6 +26,19 @@
   </label>
 </header>
 
+<section id="login" class="login" hidden>
+  <form id="login-form" autocomplete="on">
+    <h2>会員専用ページ</h2>
+    <p>パスワードを入力してください</p>
+    <input type="text" name="username" value="kyotei" autocomplete="username" hidden>
+    <input id="pw" type="password" autocomplete="current-password" placeholder="パスワード" required>
+    <label class="rem"><input type="checkbox" id="remember" checked> この端末で記憶する</label>
+    <button type="submit">ひらく</button>
+    <p id="login-msg" class="msg" role="status"></p>
+  </form>
+</section>
+
+<div id="app">
 <nav class="tabs" role="tablist">
   <button role="tab" data-tab="ev" aria-selected="true">期待値の買い目</button>
   <button role="tab" data-tab="all" aria-selected="false">全レース</button>
@@ -41,9 +54,11 @@
   <section id="tab-track" class="panel" hidden></section>
 </main>
 
+</div>
+
 <footer class="foot">
   <p>予想は過去データからの確率計算で、的中や利益を保証するものではありません。舟券の購入は20歳以上、余裕資金の範囲で。</p>
-  <p>データ出典: BOAT RACE 公式サイト</p>
+  <p>データ出典: BOAT RACE 公式サイト ・ <button id="logout" class="link">この端末のパスワードを消す</button></p>
 </footer>
 
 <template id="race-tpl">

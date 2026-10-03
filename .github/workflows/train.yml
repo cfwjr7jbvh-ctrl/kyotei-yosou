@@ -18,6 +18,8 @@ concurrency:
 jobs:
   train:
     runs-on: ubuntu-latest
+    env:
+      SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4

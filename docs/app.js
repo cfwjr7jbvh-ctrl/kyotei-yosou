@@ -4,10 +4,43 @@ const pct = (p, d = 1) => (p * 100).toFixed(d) + "%";
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const state = { day: null, data: null, venue: "all" };
 
+// ---- パスワード(予想データは暗号化して置いてある) ----
+let KEY = null;
+const LS = "kyotei_key";
+const b64d = (s) => Uint8Array.from(atob(s.trim()), (c) => c.charCodeAt(0));
+const b64e = (u) => btoa(String.fromCharCode(...new Uint8Array(u)));
+
+async function deriveKey(pw) {
+  const salt = b64d(await (await fetch("data/salt.txt?t=" + Date.now())).text());
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({ name: "PBKDF2", salt, iterations: 250000, hash: "SHA-256" },
+    base, { name: "AES-GCM", length: 256 }, true, ["decrypt"]);
+}
+async function loadSavedKey() {
+  try {
+    const raw = localStorage.getItem(LS);
+    if (raw) KEY = await crypto.subtle.importKey("raw", b64d(raw), "AES-GCM", true, ["decrypt"]);
+  } catch (e) { KEY = null; }
+}
+class Locked extends Error { }
+
 async function getJSON(path) {
   const r = await fetch(path + "?t=" + Date.now());
   if (!r.ok) throw new Error(path);
-  return r.json();
+  const obj = await r.json();
+  if (!obj || obj.enc !== 1) return obj;
+  if (!KEY) throw new Locked();
+  try {
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64d(obj.iv) }, KEY, b64d(obj.ct));
+    return JSON.parse(new TextDecoder().decode(pt));
+  } catch (e) { throw new Locked(); }
+}
+
+function showLogin(msg) {
+  $("#login").hidden = false;
+  $("#app").hidden = true;
+  $("#login-msg").textContent = msg || "";
+  $("#pw").focus();
 }
 
 function boatRow(b, maxP) {
@@ -78,8 +111,8 @@ function stat(k, v, cls = "") { return `<div class="stat"><div class="k">${k}</d
 async function renderTrack() {
   const box = $("#tab-track");
   let track = { days: [] }, rep = null;
-  try { track = await getJSON("data/track.json"); } catch (e) { }
-  try { rep = await getJSON("data/report.json"); } catch (e) { }
+  try { track = await getJSON("data/track.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
+  try { rep = await getJSON("data/report.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
   const t = track.days.reduce((a, d) => {
     for (const k of ["races", "top1_hit", "bets", "bet_hits", "invest", "return"]) a[k] = (a[k] || 0) + d[k];
     return a;
@@ -127,14 +160,36 @@ async function loadDay(day) {
   try {
     state.data = await getJSON(`data/days/${day}.json`);
   } catch (e) {
+    if (e instanceof Locked) { showLogin(KEY ? "パスワードが変更されました。再入力してください" : ""); return false; }
     state.data = { races: [] };
   }
+  $("#login").hidden = true;
+  $("#app").hidden = false;
   $("#updated").textContent = `${day} ・ ${state.data.races.length}レース` + (state.data.updated_at ? ` ・ ${state.data.updated_at}更新` : "");
   renderEV();
   renderAll();
+  return true;
 }
 
 async function init() {
+  await loadSavedKey();
+  $("#login-form").onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = $("#login-form button");
+    btn.disabled = true;
+    $("#login-msg").textContent = "確認中…";
+    KEY = await deriveKey($("#pw").value);
+    let ok = true;
+    try { await getJSON("data/check.json"); } catch (err) { ok = !(err instanceof Locked); }
+    if (ok && state.day) ok = await loadDay(state.day);
+    if (ok) { $("#login").hidden = true; $("#app").hidden = false; }
+    btn.disabled = false;
+    if (ok) {
+      if ($("#remember").checked) localStorage.setItem(LS, b64e(await crypto.subtle.exportKey("raw", KEY)));
+      $("#pw").value = "";
+    } else { KEY = null; $("#login-msg").textContent = "パスワードが違います"; }
+  };
+  $("#logout").onclick = () => { localStorage.removeItem(LS); KEY = null; showLogin(""); };
   let idx = { days: [] };
   try { idx = await getJSON("data/index.json"); } catch (e) { }
   const sel = $("#day");
@@ -149,6 +204,8 @@ async function init() {
     const v = e.target.closest("button");
     if (v) { state.venue = v.dataset.v; renderAll(); }
   };
+  state.day = idx.latest;
+  try { await getJSON("data/check.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
   if (idx.latest) await loadDay(idx.latest);
   else { $("#updated").textContent = "予想データの準備中です"; $("#tab-ev").innerHTML = `<div class="empty">最初の予想は、過去データの学習が終わり次第ここに表示されます。</div>`; }
   setInterval(() => { if (state.day === idx.latest) loadDay(state.day); }, 5 * 60 * 1000);

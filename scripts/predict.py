@@ -24,6 +24,7 @@ from fetch_history import download_text  # noqa: E402
 from kyotei import features  # noqa: E402
 from kyotei.betting import COMBOS, blend, market_probs, model_tri_probs, select_bets  # noqa: E402
 from kyotei.parse_lzh import parse_program, parse_result  # noqa: E402
+from kyotei.publish import read_json, write_check, write_json  # noqa: E402
 from kyotei.scrape import fetch, parse_beforeinfo, parse_odds3t  # noqa: E402
 
 JST = dt.timezone(dt.timedelta(hours=9))
@@ -92,16 +93,10 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
     return out
 
 
-def write_json(path: pathlib.Path, obj):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":"),
-                               default=lambda o: o.item() if hasattr(o, "item") else str(o)),
-                    encoding="utf-8")
-
-
 def update_index():
     days = sorted(p.stem for p in DAYS.glob("*.json"))
-    write_json(ROOT / "docs/data/index.json", {"days": days[-60:], "latest": days[-1] if days else None})
+    write_json(ROOT / "docs/data/index.json", {"days": days[-60:], "latest": days[-1] if days else None},
+               encrypt=False)
 
 
 def score_day(day: dt.date):
@@ -109,7 +104,7 @@ def score_day(day: dt.date):
     p = DAYS / f"{day.isoformat()}.json"
     if not p.exists():
         return
-    data = json.loads(p.read_text(encoding="utf-8"))
+    data = read_json(p)
     k = download_text("K", day)
     if not k:
         return
@@ -136,13 +131,14 @@ def score_day(day: dt.date):
     data["summary"] = tot
     write_json(p, data)
     tp = ROOT / "docs/data/track.json"
-    track = json.loads(tp.read_text(encoding="utf-8")) if tp.exists() else {"days": []}
+    track = read_json(tp) if tp.exists() else {"days": []}
     track["days"] = [d for d in track["days"] if d["date"] != tot["date"]] + [tot]
     track["days"].sort(key=lambda d: d["date"])
     write_json(tp, track)
 
 
 def morning(day: dt.date):
+    write_check()
     score_day(day - dt.timedelta(days=1))
     b = download_text("B", day)
     if not b:
@@ -180,7 +176,7 @@ def live(day: dt.date, ahead_min: int = 35):
         print("朝の予想がまだありません")
         return
     df = pd.read_pickle(fp)
-    data = json.loads(jp.read_text(encoding="utf-8"))
+    data = read_json(jp)
     bundle = load_bundle()
     t = now()
     hd = day.strftime("%Y%m%d")

@@ -105,3 +105,14 @@ main{max-width:720px;margin:0 auto;padding:12px 16px 24px}
 .tbl tr.best td{font-weight:700;color:var(--accent)}
 .scroll{overflow-x:auto}
 .foot{max-width:720px;margin:0 auto;padding:8px 16px 32px;font-size:11px;color:var(--muted)}
+
+.login{min-height:70vh;display:grid;place-items:center;padding:24px 16px}
+.login form{width:100%;max-width:360px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 20px;display:grid;gap:10px}
+.login h2{margin:0;font-size:18px}
+.login p{margin:0;color:var(--muted);font-size:13px}
+.login input[type=password]{font:inherit;font-size:16px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.login .rem{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.login button{font:inherit;font-weight:700;font-size:15px;border:0;border-radius:10px;padding:12px;background:var(--accent);color:var(--accent-ink)}
+.login button:disabled{opacity:.6}
+.login .msg{min-height:1.2em;color:var(--bad)}
+.link{background:none;border:0;padding:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer}

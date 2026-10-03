@@ -28,6 +28,7 @@ from kyotei.betting import (COMBOS, backtest_ev, blend, fit_blend, market_probs,
                             model_tri_probs, odds_matrix)
 from kyotei.ensemble import Stacker, evaluate  # noqa: E402
 from kyotei.models import available_models, race_softmax  # noqa: E402
+from kyotei.publish import write_json  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
@@ -171,7 +172,7 @@ def main():
         pickle.dump(bundle, f)
     rep = ROOT / "docs/data/report.json"
     rep.parent.mkdir(parents=True, exist_ok=True)
-    rep.write_text(json.dumps(report, ensure_ascii=False, indent=1, default=float), encoding="utf-8")
+    write_json(rep, report)
     log("done")
 
 
