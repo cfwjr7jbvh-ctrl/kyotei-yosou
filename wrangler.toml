@@ -1,0 +1,10 @@
+# Cloudflare Pages の設定(アプリの公開・パスワード保護・AI)
+name = "kyotei-yosou"
+pages_build_output_dir = "docs"
+compatibility_date = "2026-06-01"
+
+[ai]
+binding = "AI"
+
+[vars]
+AI_MODEL = "@cf/openai/gpt-oss-120b"
