@@ -34,10 +34,23 @@ def fetch_day(d: dt.date) -> pd.DataFrame | None:
         time.sleep(3 * (attempt + 1))
     else:
         return None
+    try:
+        data = r.json()
+    except ValueError:
+        print(d, "invalid json", flush=True)
+        return None
+    races = data.get("previews", []) if isinstance(data, dict) else []
     rows = []
-    for race in r.json().get("previews", []):
+    for race in races:
+        if not isinstance(race, dict):
+            continue
         rid = f"{d:%Y%m%d}{int(race['race_stadium_number']):02d}{int(race['race_number']):02d}"
-        for b in race.get("boats", []):
+        boats = race.get("boats") or []
+        if isinstance(boats, dict):
+            boats = list(boats.values())
+        for b in boats:
+            if not isinstance(b, dict):
+                continue
             rows.append({
                 "race_id": rid, "lane": b.get("racer_boat_number"),
                 "ex_course": b.get("racer_course_number"), "ex_st": b.get("racer_start_timing"),
@@ -60,25 +73,37 @@ def main():
     done = set(done_p.read_text().split()) if done_p.exists() else set()
     d, end = dt.date.fromisoformat(a.start), dt.date.fromisoformat(a.end)
     buf: dict[str, list] = {}
+
+    def flush():
+        for ym, items in buf.items():
+            p = OUT / f"previews_{ym}.csv.gz"
+            df = pd.concat(items, ignore_index=True)
+            if p.exists():
+                old = pd.read_csv(p, dtype={"race_id": str})
+                df = pd.concat([old[~old["race_id"].isin(df["race_id"])], df], ignore_index=True)
+            df.sort_values(["race_id", "lane"]).to_csv(p, index=False, compression="gzip")
+        buf.clear()
+        done_p.write_text("\n".join(sorted(done)))
+
     while d <= end:
         if d.isoformat() not in done:
-            df = fetch_day(d)
-            if df is not None:
+            try:
+                df = fetch_day(d)
+            except Exception as e:  # noqa: BLE001  壊れたデータの日は飛ばす
+                print(d, "error", repr(e)[:200], flush=True)
+                df = None
+            if df is not None and len(df):
                 buf.setdefault(d.strftime("%Y%m"), []).append(df)
                 done.add(d.isoformat())
                 print(d, len(df), flush=True)
             else:
                 print(d, "no data", flush=True)
             time.sleep(0.3)
-        d += dt.timedelta(days=1)
-    for ym, items in buf.items():
-        p = OUT / f"previews_{ym}.csv.gz"
-        df = pd.concat(items)
-        if p.exists():
-            old = pd.read_csv(p, dtype={"race_id": str})
-            df = pd.concat([old[~old["race_id"].isin(df["race_id"])], df])
-        df.sort_values(["race_id", "lane"]).to_csv(p, index=False, compression="gzip")
-    done_p.write_text("\n".join(sorted(done)))
+        nxt = d + dt.timedelta(days=1)
+        if nxt.month != d.month:
+            flush()
+        d = nxt
+    flush()
 
 
 if __name__ == "__main__":
