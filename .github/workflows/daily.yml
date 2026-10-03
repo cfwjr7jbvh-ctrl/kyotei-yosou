@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: site
@@ -47,3 +48,19 @@ jobs:
           python scripts/fetch_odds.py --days 3 --time-limit 0.5
           git add data/odds && git commit -qm "data: オッズ" || echo "no changes"
           git pull --rebase -q && git push -q
+      - name: 過去データに抜けがあれば取得を再開
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LEFT=$(python -c "
+          import datetime as dt
+          done=set(open('data/history/done.txt').read().split())
+          d=dt.date(2023,10,1); e=dt.date.today()-dt.timedelta(days=6); n=0
+          while d<=e:
+              n+= d.isoformat() not in done; d+=dt.timedelta(days=1)
+          print(n)")
+          echo "未取得の日数: $LEFT"
+          RUNNING=$(gh run list --workflow history.yml --status in_progress --json databaseId --jq length)
+          if [ "$LEFT" -gt 3 ] && [ "$RUNNING" = "0" ]; then
+            gh workflow run history.yml --ref main -f start=2023-10-01 -f end=""
+          fi
