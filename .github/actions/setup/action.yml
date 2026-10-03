@@ -1,0 +1,26 @@
+name: setup
+description: Python と依存パッケージ、学習済みモデルの準備
+inputs:
+  model:
+    description: "model ブランチから学習済みモデルを取り出す"
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+        cache: pip
+    - shell: bash
+      run: |
+        sudo apt-get install -y -q p7zip-full >/dev/null
+        pip install -q -r requirements.txt
+    - if: inputs.model == 'true'
+      shell: bash
+      run: |
+        mkdir -p models
+        if git fetch -q --depth 1 origin model 2>/dev/null; then
+          git show FETCH_HEAD:bundle.pkl > models/bundle.pkl && echo "model loaded"
+        else
+          echo "model branch not found"
+        fi

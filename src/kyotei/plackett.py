@@ -24,18 +24,18 @@ def pl_trifecta_matrix(p_win, lam2: float = 1.0, lam3: float = 1.0) -> np.ndarra
     """6x6x6の3連単確率(同一艇を含む組は0)。"""
     p = _norm(p_win)
     s2, s3 = p ** lam2, p ** lam3
+    i, j, k = PERMS3[:, 0], PERMS3[:, 1], PERMS3[:, 2]
     out = np.zeros((6, 6, 6))
-    for i, j, k in PERMS3:
-        out[i, j, k] = p[i] * s2[j] / (s2.sum() - s2[i]) * s3[k] / (s3.sum() - s3[i] - s3[j])
+    out[i, j, k] = p[i] * s2[j] / (s2.sum() - s2[i]) * s3[k] / (s3.sum() - s3[i] - s3[j])
     return out / out.sum()
 
 
 def pl_exacta_matrix(p_win, lam2: float = 1.0) -> np.ndarray:
     p = _norm(p_win)
     s2 = p ** lam2
+    i, j = PERMS2[:, 0], PERMS2[:, 1]
     out = np.zeros((6, 6))
-    for i, j in PERMS2:
-        out[i, j] = p[i] * s2[j] / (s2.sum() - s2[i])
+    out[i, j] = p[i] * s2[j] / (s2.sum() - s2[i])
     return out / out.sum()
 
 

@@ -1,0 +1,38 @@
+name: モデル学習(毎週)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 18 * * 6"   # 毎週日曜 3:17 JST
+
+permissions:
+  contents: write
+
+concurrency:
+  group: train
+  cancel-in-progress: false
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - name: 学習と検証
+        run: python scripts/train_eval.py
+      - name: モデルを model ブランチへ保存
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          mkdir -p /tmp/m && cp models/bundle.pkl /tmp/m/ && cd /tmp/m
+          git init -q -b model && git add bundle.pkl
+          git commit -q -m "model ${GITHUB_RUN_ID}"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" model
+      - name: 検証レポートをコミット
+        run: |
+          git add docs/data/report.json
+          git commit -m "report: モデル検証結果を更新" || echo "no changes"
+          git pull --rebase -q && git push -q

@@ -142,12 +142,14 @@ def add_relative(df: pd.DataFrame) -> pd.DataFrame:
     src = REL_SRC + ["rating", "rc_win", "rl_win"]
     if "exhibit_time" in df and df["exhibit_time"].notna().any():
         src = src + ["exhibit_time"]
+    if "rc_avgst" in df:
+        src = src + ["rc_avgst"]
     for c in src:
         if c not in df:
             continue
         df[f"{c}_diff"] = df[c] - g[c].transform("mean")
-        df[f"{c}_rank"] = g[c].rank(ascending=(c == "exhibit_time"), method="average")
-    if "exhibit_time" in df:
+        df[f"{c}_rank"] = g[c].rank(ascending=(c in ("exhibit_time", "rc_avgst")), method="average")
+    if "exhibit_time" in df and df["exhibit_time"].notna().any():
         df["exhibit_gap_best"] = df["exhibit_time"] - g["exhibit_time"].transform("min")
     # 1号艇の強さ(イン逃げできるか)は全艇の着順に効く
     lane1 = df[df["lane"] == 1].set_index("race_id")
@@ -156,19 +158,49 @@ def add_relative(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+GRADE_WORDS = [("優勝", 6), ("準優", 5), ("ドリーム", 4), ("特選", 3), ("特賞", 3), ("選抜", 3),
+               ("予選", 2), ("一般", 1)]
+LATE_ONLY = ("exhibit", "course", "wind", "wave", "ex_st", "tilt")
+
+
+def race_grade(s) -> int:
+    s = str(s)
+    for w, v in GRADE_WORDS:
+        if w in s:
+            return v
+    return 1
+
+
 def build(entries: pd.DataFrame, races: pd.DataFrame | None = None) -> pd.DataFrame:
     df = entries.copy()
     df["class_num"] = df["racer_class"].map(CLASS_NUM).fillna(1)
+    if "race_type" in df:
+        df["race_grade"] = df["race_type"].map(race_grade)
+    if races is not None:
+        keep = [c for c in ("wind", "wave") if c in races and c not in df]
+        if keep:
+            df = df.merge(races[["race_id"] + keep], on="race_id", how="left")
     df = add_history(df)
     df = add_rating(df)
-    df = add_relative(df)
-    if races is not None:
-        keep = [c for c in ("wind", "wave") if c in races]
-        df = df.merge(races[["race_id"] + keep], on="race_id", how="left")
+    df = add_late(df)
     return df.sort_values(["date", "race_id", "lane"]).reset_index(drop=True)
 
 
-def feature_columns(df: pd.DataFrame) -> list[str]:
-    exclude = {"race_id", "date", "racer_id", "racer_class", "finish", "st", "course",
-               "motor_no", "boat_no", "racer_name", "branch", "rating_strength"}
-    return [c for c in df.columns if c not in exclude and pd.api.types.is_numeric_dtype(df[c])]
+def add_late(df: pd.DataFrame) -> pd.DataFrame:
+    """直前情報(展示タイム・進入コース・風・波)から作る特徴量。"""
+    df = df.copy()
+    if "course" in df:
+        df["course_shift"] = df["course"] - df["lane"]
+        df["course_in"] = (df["course"] == 1).astype(float).where(df["course"].notna())
+    return add_relative(df)
+
+
+def feature_columns(df: pd.DataFrame, stage: str = "late") -> list[str]:
+    exclude = {"race_id", "date", "racer_id", "racer_class", "finish", "st", "motor_no",
+               "boat_no", "racer_name", "branch", "rating_strength", "deadline", "result_code",
+               "st_flag", "race_type", "weight_now"}
+    cols = [c for c in df.columns if c not in exclude and pd.api.types.is_numeric_dtype(df[c])
+            and df[c].notna().mean() > 0.5]
+    if stage == "early":
+        cols = [c for c in cols if not any(c.startswith(p) for p in LATE_ONLY)]
+    return cols

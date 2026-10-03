@@ -1,0 +1,36 @@
+name: 過去オッズ取得(検証用)
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "直近何日分"
+        default: "120"
+  schedule:
+    - cron: "7 17 * * *"   # 毎日 2:07 JST、少しずつ埋める
+
+permissions:
+  contents: write
+
+concurrency:
+  group: odds
+  cancel-in-progress: false
+
+jobs:
+  odds:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - name: オッズ取得
+        run: python scripts/fetch_odds.py --days "${{ github.event.inputs.days || '120' }}" --time-limit 3
+      - name: コミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/odds
+          git commit -qm "data: 過去オッズ" || echo "no changes"
+          git pull --rebase -q && git push -q

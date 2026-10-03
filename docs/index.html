@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>競艇AI予想</title>
+<meta name="description" content="複数の予想モデルとオッズから期待値のある買い目を出す競艇予想">
+<meta name="theme-color" content="#0b1e33">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand">
+    <span class="wake" aria-hidden="true"></span>
+    <div>
+      <h1>競艇AI予想</h1>
+      <p class="sub" id="updated">読み込み中…</p>
+    </div>
+  </div>
+  <label class="date">
+    <span class="sr">日付</span>
+    <select id="day"></select>
+  </label>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button role="tab" data-tab="ev" aria-selected="true">期待値の買い目</button>
+  <button role="tab" data-tab="all" aria-selected="false">全レース</button>
+  <button role="tab" data-tab="track" aria-selected="false">成績・検証</button>
+</nav>
+
+<main>
+  <section id="tab-ev" class="panel"></section>
+  <section id="tab-all" class="panel" hidden>
+    <div class="venues" id="venues"></div>
+    <div id="all-list"></div>
+  </section>
+  <section id="tab-track" class="panel" hidden></section>
+</main>
+
+<footer class="foot">
+  <p>予想は過去データからの確率計算で、的中や利益を保証するものではありません。舟券の購入は20歳以上、余裕資金の範囲で。</p>
+  <p>データ出典: BOAT RACE 公式サイト</p>
+</footer>
+
+<template id="race-tpl">
+  <article class="race">
+    <header class="race-h">
+      <div class="race-t"><b class="v"></b><b class="r"></b><span class="type"></span></div>
+      <div class="race-m"><span class="badge"></span><time></time></div>
+    </header>
+    <ol class="boats"></ol>
+    <div class="picks"></div>
+  </article>
+</template>
+
+<script src="app.js"></script>
+</body>
+</html>
