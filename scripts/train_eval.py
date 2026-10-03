@@ -165,6 +165,9 @@ def main():
     ap.add_argument("--synthetic", action="store_true")
     ap.add_argument("--days", type=int, default=300)
     ap.add_argument("--out", default=str(ROOT / "models"))
+    ap.add_argument("--report-out", default=None,
+                    help="実験用: 平文レポートをこのパスにだけ書き、サイト用データや履歴は更新しない")
+    ap.add_argument("--until", default=None, help="実験用: この日付(YYYY-MM-DD)までのデータで評価(比較を同条件にする)")
     args = ap.parse_args()
     t0 = time.time()
 
@@ -177,6 +180,9 @@ def main():
         odds = None
     else:
         ent, races, odds = load_history()
+    if args.until:
+        ent = ent[ent["date"] <= args.until]
+        races = races[races["date"] <= args.until]
     df = features.build(ent, races)
     ok_races = df.groupby("race_id")["finish"].apply(lambda s: (s <= 3).sum() == 3)
     df = df[df["race_id"].isin(ok_races[ok_races].index)].reset_index(drop=True)
@@ -211,6 +217,12 @@ def main():
     bundle["built_at"] = report["generated_at"]
     with open(out / "bundle.pkl", "wb") as f:
         pickle.dump(bundle, f)
+    if args.report_out:
+        pathlib.Path(args.report_out).parent.mkdir(parents=True, exist_ok=True)
+        pathlib.Path(args.report_out).write_text(json.dumps(report, ensure_ascii=False, indent=1, default=float),
+                                                 encoding="utf-8")
+        log("done (experiment)")
+        return
     rep = ROOT / "docs/data/report.json"
     rep.parent.mkdir(parents=True, exist_ok=True)
     write_json(rep, report)

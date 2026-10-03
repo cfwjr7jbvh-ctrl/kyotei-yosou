@@ -1,0 +1,74 @@
+name: 改良案の検証(自動採用)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "改良案のブランチ名 (exp/...)"
+        required: true
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: experiment
+  cancel-in-progress: false
+
+jobs:
+  experiment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    env:
+      SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - name: 比べる条件をそろえる(昨日までのデータで固定)
+        id: d
+        run: echo "until=$(TZ=Asia/Tokyo date -d '1 day ago' +%F)" >> "$GITHUB_OUTPUT"
+      - name: 今のモデル(main)を評価
+        run: python scripts/train_eval.py --until "${{ steps.d.outputs.until }}" --out /tmp/base --report-out /tmp/base.json
+      - name: 改良案を評価
+        id: cand
+        run: |
+          git fetch -q origin "${{ github.event.inputs.branch }}"
+          CAND=$(git rev-parse FETCH_HEAD)
+          echo "sha=$CAND" >> "$GITHUB_OUTPUT"
+          git worktree add /tmp/cand "$CAND"
+          rm -rf /tmp/cand/data && ln -s "$PWD/data" /tmp/cand/data
+          python /tmp/cand/scripts/train_eval.py --until "${{ steps.d.outputs.until }}" --out /tmp/cand_model --report-out /tmp/cand.json
+      - name: 比較して判定
+        id: cmp
+        run: |
+          NAME=$(echo "${{ github.event.inputs.branch }}" | tr '/' '_')
+          mkdir -p reports/experiments
+          cp /tmp/base.json "reports/experiments/${NAME}_base.json"
+          cp /tmp/cand.json "reports/experiments/${NAME}_candidate.json"
+          if python scripts/compare.py /tmp/base.json /tmp/cand.json "reports/experiments/${NAME}_result.json"; then
+            echo "adopt=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "adopt=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: 結果を記録し、良ければ本番に反映
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git stash -q -u -- reports/experiments
+          git pull -q --no-rebase origin main
+          git stash pop -q
+          git add reports/experiments
+          git commit -qm "実験結果: ${{ github.event.inputs.branch }} (adopt=${{ steps.cmp.outputs.adopt }})"
+          if [ "${{ steps.cmp.outputs.adopt }}" = "true" ]; then
+            git merge --no-edit -m "改良案を採用: ${{ github.event.inputs.branch }}" "${{ steps.cand.outputs.sha }}"
+          fi
+          git push -q origin HEAD:main
+      - name: 採用したら本番モデルを学習し直す
+        if: steps.cmp.outputs.adopt == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run train.yml --ref main
