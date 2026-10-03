@@ -12,6 +12,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: data-write
@@ -41,3 +42,21 @@ jobs:
           git commit -m "data: 過去データ取得" || echo "no changes"
           git pull --rebase
           git push
+      - name: 時間切れで終わっていたら続きを自動で再実行
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          END="${{ github.event.inputs.end }}"
+          [ -z "$END" ] && END=$(TZ=Asia/Tokyo date -d '1 day ago' +%F)
+          LEFT=$(python -c "
+          import datetime as dt
+          done=set(open('data/history/done.txt').read().split())
+          d=dt.date.fromisoformat('${{ github.event.inputs.start }}'); e=dt.date.fromisoformat('$END'); n=0
+          while d<=e:
+              n+= d.isoformat() not in done; d+=dt.timedelta(days=1)
+          print(n)")
+          echo "未取得の日数: $LEFT"
+          if [ "$LEFT" -gt 3 ]; then
+            gh workflow run history.yml --ref main -f start="${{ github.event.inputs.start }}" -f end="$END"
+            echo "続きを再実行しました"
+          fi
