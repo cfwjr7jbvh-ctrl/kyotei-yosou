@@ -1,6 +1,9 @@
 name: モデル学習(毎週)
 
 on:
+  workflow_run:
+    workflows: ["過去データ取得", "過去オッズ取得(検証用)"]
+    types: [completed]
   workflow_dispatch:
   schedule:
     - cron: "17 18 * * 6"   # 毎週日曜 3:17 JST

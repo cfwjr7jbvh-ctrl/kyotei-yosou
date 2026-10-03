@@ -1,6 +1,9 @@
 name: 朝の予想(毎日)
 
 on:
+  workflow_run:
+    workflows: ["モデル学習(毎週)"]
+    types: [completed]
   workflow_dispatch:
   schedule:
     - cron: "41 21 * * *"   # 毎日 6:41 JST

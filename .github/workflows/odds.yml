@@ -1,6 +1,9 @@
 name: 過去オッズ取得(検証用)
 
 on:
+  workflow_run:
+    workflows: ["過去データ取得"]
+    types: [completed]
   workflow_dispatch:
     inputs:
       days:
