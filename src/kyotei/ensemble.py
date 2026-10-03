@@ -1,14 +1,16 @@
 """アンサンブル(スタッキング)と評価。
 
 各モデルの log(1着確率) を説明変数にした多項ロジットで、1着の当たり方に合うよう重みを学習し、
-最終的な1着確率を作る。そこから Benter 補正つきで3連単確率を出す。
+最終的な1着確率を作る。2着・3着は、それぞれ別の重みで「残った艇の中から誰が来るか」を学習する
+(1着は単勝モデル、2・3着は3着内モデルが効くなど、着順で頼りになるモデルが違うため)。
 """
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+from scipy.optimize import minimize
 
-from .models import PLLogit, race_softmax
+from .models import PLLogit, _race_tensor, race_softmax
 from .plackett import PERMS3, fit_discount, pl_trifecta_matrix, trifecta_logprob_batch
 
 
@@ -23,7 +25,21 @@ class Stacker:
         # 2・3着の平らさは、このあと fit_discount の補正(lam2, lam3)で別に合わせる。
         self.pl = PLLogit([f"lp_{k}" for k in self.names], l2=1e-4, top=1).fit(d)
         P, orders = race_matrix(d.assign(p=self.predict(d, probs)))
-        self.lam2, self.lam3 = fit_discount(P, orders)
+        self.lam2, self.lam3 = fit_discount(P, orders)  # 古い形式(p**lam)用。今は下の w2, w3 を使う
+        # 2着: 1着艇を除いた中から、3着: 1・2着艇を除いた中から選ばれる確率の重み
+        zc = [f"_z{i}" for i in range(len(self.names))]
+        z = pd.DataFrame(self.pl._prep(d).values, columns=zc, index=d.index)
+        z[["race_id", "lane", "finish"]] = d[["race_id", "lane", "finish"]]
+        X, mask, fin, *_ = _race_tensor(z, zc)
+        ok = (np.nan_to_num(fin, nan=99) <= 3).sum(1) == 3
+        X, mask, fin = X[ok], mask[ok], fin[ok]
+        o = np.argsort(np.nan_to_num(fin, nan=99), axis=1)[:, :3]
+        r = np.arange(len(X))
+        avail = mask.copy()
+        avail[r, o[:, 0]] = False
+        self.w2 = _fit_conditional(X, avail, o[:, 1])
+        avail[r, o[:, 1]] = False
+        self.w3 = _fit_conditional(X, avail, o[:, 2])
         return self
 
     def predict(self, df, probs):
@@ -32,8 +48,46 @@ class Stacker:
             d[f"lp_{k}"] = np.log(np.clip(probs[k], 1e-6, 1))
         return self.pl.predict_proba(d)
 
+    def strengths(self, df, probs):
+        """2着・3着の強さ(レース内で合計1)。w2 が無い古いモデルでは Benter 補正(p**lam)と同じ。"""
+        p = self.predict(df, probs)
+        if getattr(self, "w2", None) is None:
+            rid = df["race_id"].values
+            return (race_softmax(self.lam2 * np.log(np.clip(p, 1e-9, 1)), rid),
+                    race_softmax(self.lam3 * np.log(np.clip(p, 1e-9, 1)), rid))
+        d = df[["race_id", "lane"]].copy()
+        for k in self.names:
+            d[f"lp_{k}"] = np.log(np.clip(probs[k], 1e-6, 1))
+        Z = self.pl._prep(d).values
+        rid = d["race_id"].values
+        return race_softmax(Z @ self.w2, rid), race_softmax(Z @ self.w3, rid)
+
     def weights(self):
-        return dict(zip(self.names, np.round(self.pl.w / self.pl.sd.values, 3)))
+        out = dict(zip(self.names, np.round(self.pl.w / self.pl.sd.values, 3)))
+        if getattr(self, "w2", None) is not None:
+            sd = self.pl.sd.values
+            out.update({f"2nd_{k}": v for k, v in zip(self.names, np.round(self.w2 / sd, 3))})
+            out.update({f"3rd_{k}": v for k, v in zip(self.names, np.round(self.w3 / sd, 3))})
+        return out
+
+
+def _fit_conditional(X: np.ndarray, avail: np.ndarray, chosen: np.ndarray, l2: float = 1e-4) -> np.ndarray:
+    """条件付きロジット: 残っている艇(avail)の中から chosen が選ばれる確率を最大にする重み。"""
+    n, _, k = X.shape
+    r = np.arange(n)
+
+    def f(w):
+        u = X @ w
+        uu = np.where(avail, u, -np.inf)
+        m = uu.max(1, keepdims=True)
+        e = np.where(avail, np.exp(uu - m), 0.0)
+        Z = e.sum(1)
+        ll = (u[r, chosen] - m[:, 0] - np.log(Z)).sum()
+        p = e / Z[:, None]
+        g = X[r, chosen].sum(0) - np.einsum("ij,ijk->k", p, X)
+        return -ll / n + l2 * w @ w, -g / n + 2 * l2 * w
+
+    return minimize(f, np.zeros(k), jac=True, method="L-BFGS-B").x
 
 
 def race_matrix(d: pd.DataFrame, col: str = "p"):
@@ -49,8 +103,11 @@ def race_matrix(d: pd.DataFrame, col: str = "p"):
     return P.values[ok], orders[ok]
 
 
-def evaluate(d: pd.DataFrame, races: pd.DataFrame, col: str, lam2=1.0, lam3=1.0) -> dict:
-    """的中率・対数損失・回収率(払戻金から計算できる戦略)をまとめて出す。"""
+def evaluate(d: pd.DataFrame, races: pd.DataFrame, col: str, lam2=1.0, lam3=1.0, s_cols=None) -> dict:
+    """的中率・対数損失・回収率(払戻金から計算できる戦略)をまとめて出す。
+
+    s_cols=(列名, 列名) を渡すと、その列を2着・3着の強さとして3連単確率を作る(Stacker.strengths)。
+    """
     d = d.sort_values(["race_id", "lane"])
     P = d.pivot(index="race_id", columns="lane", values=col).reindex(columns=range(1, 7)).fillna(1e-6)
     F = d.pivot(index="race_id", columns="lane", values="finish").reindex(columns=range(1, 7)).loc[P.index]
@@ -58,13 +115,20 @@ def evaluate(d: pd.DataFrame, races: pd.DataFrame, col: str, lam2=1.0, lam3=1.0)
     P, F = P[ok], F[ok]
     rid = P.index.values
     Pv = P.values / P.values.sum(1, keepdims=True)
+    S2 = S3 = None
+    if s_cols:
+        S2, S3 = (d.pivot(index="race_id", columns="lane", values=c).reindex(index=P.index, columns=range(1, 7))
+                  .fillna(1e-9).values for c in s_cols)
     orders = np.argsort(F.fillna(99).values, axis=1)[:, :3]
     n = len(Pv)
     r = np.arange(n)
     res = {"races": int(n)}
     res["win_logloss"] = float(-np.log(Pv[r, orders[:, 0]]).mean())
     res["win_hit"] = float((Pv.argmax(1) == orders[:, 0]).mean())
-    res["tri_logloss"] = float(-trifecta_logprob_batch(Pv, orders, lam2, lam3).mean())
+    res["tri_logloss"] = float(-trifecta_logprob_batch(Pv, orders, lam2, lam3, S2, S3).mean())
+
+    def tri(i):
+        return pl_trifecta_matrix(Pv[i], lam2, lam3, None if S2 is None else S2[i], None if S3 is None else S3[i])
 
     rc = races.set_index("race_id").reindex(rid)
     tri_pay = rc["tri_pay"].values.astype(float)
@@ -73,7 +137,7 @@ def evaluate(d: pd.DataFrame, races: pd.DataFrame, col: str, lam2=1.0, lam3=1.0)
     pay1 = pay5 = 0.0
     tri_probs_top = np.zeros(n)
     for i in range(n):
-        T = pl_trifecta_matrix(Pv[i], lam2, lam3)
+        T = tri(i)
         flat = T[PERMS3[:, 0], PERMS3[:, 1], PERMS3[:, 2]]
         top = np.argsort(-flat)[:5]
         a, b, c = orders[i]
@@ -96,7 +160,7 @@ def evaluate(d: pd.DataFrame, races: pd.DataFrame, col: str, lam2=1.0, lam3=1.0)
     if conf.sum():
         hits = np.zeros(n, bool)
         for i in np.where(conf)[0]:
-            T = pl_trifecta_matrix(Pv[i], lam2, lam3)
+            T = tri(i)
             hits[i] = np.unravel_index(T.argmax(), T.shape) == tuple(orders[i])
         res["roi_tri_top1_confident"] = float((tri_pay * hits)[conf].sum() / (100 * conf.sum()))
         res["tri_hit_top1_confident"] = float(hits[conf].mean())

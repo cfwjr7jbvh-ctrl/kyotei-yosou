@@ -64,8 +64,10 @@ def run_stage(stage, df, races, tr, va, te, report, log):
         ev["p"] = p
         res[k] = evaluate(ev, races, "p")
     p_ens = stack.predict(te, pt)
+    s23 = stack.strengths(te, pt)  # 2着・3着の強さ(着順ごとの重み)
     ev["p"] = p_ens
-    res["ensemble"] = evaluate(ev, races, "p", stack.lam2, stack.lam3)
+    ev["s2"], ev["s3"] = s23
+    res["ensemble"] = evaluate(ev, races, "p", stack.lam2, stack.lam3, s_cols=("s2", "s3"))
     report["stages"][stage] = {
         "n_features": len(feats), "metrics": res,
         "ensemble_weights": {k: float(v) for k, v in stack.weights().items()},
@@ -77,7 +79,7 @@ def run_stage(stage, df, races, tr, va, te, report, log):
     show = ["win_logloss", "win_hit", "tri_logloss", "tri_hit_top1", "tri_hit_top5",
             "roi_win_top1", "roi_tri_top1", "roi_tri_top5"]
     log(pd.DataFrame(res).T[show].to_string())
-    return feats, models, stack, p_ens
+    return feats, models, stack, p_ens, s23
 
 
 def segment_analysis(te, p_ens):
@@ -121,7 +123,7 @@ def write_review_report(report):
         f.write(json.dumps(summary, ensure_ascii=False, default=float) + "\n")
 
 
-def ev_analysis(te, p_ens, stack, races, odds, report, log):
+def ev_analysis(te, p_ens, stack, races, odds, report, log, s23=None):
     rids = np.sort(te["race_id"].unique())
     O = odds_matrix(odds, rids)
     has = np.isfinite(O).sum(1) >= 100
@@ -133,7 +135,11 @@ def ev_analysis(te, p_ens, stack, races, odds, report, log):
     rids, O = rids[ok], O[ok]
     rc = rc.loc[rids]
     W = win_matrix(te, p_ens, rids)
-    PM = np.array([model_tri_probs(w, stack.lam2, stack.lam3) for w in W])
+    if s23 is not None:
+        S2, S3 = win_matrix(te, s23[0], rids), win_matrix(te, s23[1], rids)
+        PM = np.array([model_tri_probs(w, stack.lam2, stack.lam3, a, b) for w, a, b in zip(W, S2, S3)])
+    else:
+        PM = np.array([model_tri_probs(w, stack.lam2, stack.lam3) for w in W])
     PK = np.array([market_probs(o) for o in O])
     y = np.array([COMBOS.index(c) for c in rc["tri_combo"]])
     pay = rc["tri_pay"].values.astype(float)
@@ -199,10 +205,10 @@ def main():
               "stages": {}}
     bundle = {"stages": {}, "blend": None, "bet_filter": None}
     for stage in ("early", "late"):
-        feats, models, stack, p_ens = run_stage(stage, df, races, tr, va, te, report, log)
+        feats, models, stack, p_ens, s23 = run_stage(stage, df, races, tr, va, te, report, log)
         report["stages"][stage]["segments"] = segment_analysis(te, p_ens)
         if stage == "late" and odds is not None:
-            res = ev_analysis(te, p_ens, stack, races, odds, report, log)
+            res = ev_analysis(te, p_ens, stack, races, odds, report, log, s23)
             if res:
                 bundle["blend"], bundle["bet_filter"] = res
         # 本番用: 学習+検証期間で学習し直す(アンサンブル重み・補正は検証で決めた値)

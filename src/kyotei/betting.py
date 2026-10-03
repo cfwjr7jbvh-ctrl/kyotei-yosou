@@ -16,8 +16,8 @@ from .plackett import PERMS3, pl_trifecta_matrix
 COMBOS = [f"{a+1}-{b+1}-{c+1}" for a, b, c in PERMS3]
 
 
-def model_tri_probs(p_win: np.ndarray, lam2: float, lam3: float) -> np.ndarray:
-    T = pl_trifecta_matrix(p_win, lam2, lam3)
+def model_tri_probs(p_win: np.ndarray, lam2: float, lam3: float, s2=None, s3=None) -> np.ndarray:
+    T = pl_trifecta_matrix(p_win, lam2, lam3, s2, s3)
     return T[PERMS3[:, 0], PERMS3[:, 1], PERMS3[:, 2]]
 
 
