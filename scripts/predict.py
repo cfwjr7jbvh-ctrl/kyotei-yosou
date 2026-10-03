@@ -54,16 +54,21 @@ def predict_win(bundle, stage, df):
         if c not in X:
             X[c] = np.nan
     probs = {k: m.predict_proba(X) for k, m in st["models"].items()}
-    return st["stack"].predict(X, probs), st["stack"]
+    stack = st["stack"]
+    return stack.predict(X, probs), stack, stack.strengths(X, probs)
 
 
 def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=None, blend_ab=None,
-                 bet_filter=None):
+                 bet_filter=None, s23=None):
     rdf = rdf.sort_values("lane")
     w = np.full(6, 1e-6)
     w[rdf["lane"].values - 1] = p_win
     w = w / w.sum()
-    pm = model_tri_probs(w, stack.lam2, stack.lam3)
+    s2 = s3 = None
+    if s23 is not None:  # 2着・3着の強さ(着順ごとの重み)
+        s2, s3 = np.full(6, 1e-9), np.full(6, 1e-9)
+        s2[rdf["lane"].values - 1], s3[rdf["lane"].values - 1] = s23
+    pm = model_tri_probs(w, stack.lam2, stack.lam3, s2, s3)
     p_final, bets, market = pm, [], None
     if odds is not None and np.isfinite(odds).sum() >= 100:
         pk = market_probs(odds)
@@ -164,11 +169,12 @@ def morning(day: dt.date):
         wt.to_pickle(CACHE / f"wind_{day.isoformat()}.pkl")
     df.to_pickle(CACHE / f"features_{day.isoformat()}.pkl")
     bundle = load_bundle()
-    p, stack = predict_win(bundle, "early", df)
-    df["p"] = p
+    p, stack, (s2, s3) = predict_win(bundle, "early", df)
+    df["p"], df["s2"], df["s3"] = p, s2, s3
     out = {"date": day.isoformat(), "model_built_at": bundle.get("built_at"), "races": []}
     for rid, rdf in df.groupby("race_id", sort=True):
-        out["races"].append(race_payload(rdf, rdf["p"].values, stack, "early"))
+        out["races"].append(race_payload(rdf, rdf["p"].values, stack, "early",
+                                         s23=(rdf["s2"].values, rdf["s3"].values)))
     out["races"].sort(key=lambda r: (r["deadline"] or "", r["jcd"]))
     write_json(DAYS / f"{day.isoformat()}.json", out)
     update_index()
@@ -266,9 +272,9 @@ def live(day: dt.date, ahead_min: int = 35):
         oh = fetch("odds3t", race["jcd"], race["rno"], hd)
         od = parse_odds3t(oh) if oh else {}
         odds = np.array([od.get(c, np.nan) for c in COMBOS]) if od else None
-        p, stack = predict_win(bundle, "late", rdf)
+        p, stack, s23 = predict_win(bundle, "late", rdf)
         data["races"][i] = race_payload(rdf, p, stack, "late", odds, bundle.get("blend"),
-                                        bundle.get("bet_filter"))
+                                        bundle.get("bet_filter"), s23=s23)
         n += 1
     data["updated_at"] = t.strftime("%H:%M")
     write_json(jp, data)

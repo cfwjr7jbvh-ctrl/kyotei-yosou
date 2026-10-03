@@ -20,10 +20,14 @@ def _norm(p: np.ndarray) -> np.ndarray:
     return p / p.sum()
 
 
-def pl_trifecta_matrix(p_win, lam2: float = 1.0, lam3: float = 1.0) -> np.ndarray:
-    """6x6x6の3連単確率(同一艇を含む組は0)。"""
+def pl_trifecta_matrix(p_win, lam2: float = 1.0, lam3: float = 1.0, s2=None, s3=None) -> np.ndarray:
+    """6x6x6の3連単確率(同一艇を含む組は0)。
+
+    s2, s3 を渡すと、2着・3着の強さとして p**lam の代わりに使う(着順ごとに重みを変えたアンサンブル用)。
+    """
     p = _norm(p_win)
-    s2, s3 = p ** lam2, p ** lam3
+    s2 = p ** lam2 if s2 is None else _norm(s2)
+    s3 = p ** lam3 if s3 is None else _norm(s3)
     i, j, k = PERMS3[:, 0], PERMS3[:, 1], PERMS3[:, 2]
     out = np.zeros((6, 6, 6))
     out[i, j, k] = p[i] * s2[j] / (s2.sum() - s2[i]) * s3[k] / (s3.sum() - s3[i] - s3[j])
@@ -39,14 +43,16 @@ def pl_exacta_matrix(p_win, lam2: float = 1.0) -> np.ndarray:
     return out / out.sum()
 
 
-def trifecta_logprob_batch(P: np.ndarray, orders: np.ndarray, lam2: float, lam3: float) -> np.ndarray:
-    """P: (n,6) 1着確率, orders: (n,3) 実際の1-2-3着(0始まり艇番)。"""
+def trifecta_logprob_batch(P: np.ndarray, orders: np.ndarray, lam2: float, lam3: float,
+                           S2: np.ndarray | None = None, S3: np.ndarray | None = None) -> np.ndarray:
+    """P: (n,6) 1着確率, orders: (n,3) 実際の1-2-3着(0始まり艇番)。S2, S3: 2着・3着の強さ(省略時 P**lam)。"""
     n = len(P)
     P = np.clip(P, 1e-9, None)
     P = P / P.sum(1, keepdims=True)
     a, b, c = orders[:, 0], orders[:, 1], orders[:, 2]
     r = np.arange(n)
-    s2, s3 = P ** lam2, P ** lam3
+    s2 = P ** lam2 if S2 is None else np.clip(S2, 1e-12, None)
+    s3 = P ** lam3 if S3 is None else np.clip(S3, 1e-12, None)
     lp = np.log(P[r, a])
     lp += np.log(s2[r, b]) - np.log(s2.sum(1) - s2[r, a])
     lp += np.log(s3[r, c]) - np.log(s3.sum(1) - s3[r, a] - s3[r, b])
