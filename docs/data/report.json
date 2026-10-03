@@ -1,0 +1,104 @@
+{
+ "generated_at": "2026-10-03T21:32+09:00",
+ "synthetic": true,
+ "period": {
+  "train": [
+   "2024-01-01",
+   "2024-04-29"
+  ],
+  "test": [
+   "2024-06-09",
+   "2024-07-18"
+  ]
+ },
+ "models": {
+  "baseline_lane": {
+   "races": 3840,
+   "win_logloss": 1.4884,
+   "win_hit": 0.4813,
+   "tri_logloss": 4.2011,
+   "tri_hit_top1": 0.0534,
+   "tri_hit_top5": 0.2206,
+   "roi_tri_top1": 0.9422,
+   "roi_tri_top5": 1.1026,
+   "roi_win_top1": 0.8434,
+   "roi_tri_top1_confident": 0.7426,
+   "tri_hit_top1_confident": 0.0547
+  },
+  "gbdt_win": {
+   "races": 3840,
+   "win_logloss": 1.4046,
+   "win_hit": 0.488,
+   "tri_logloss": 3.9481,
+   "tri_hit_top1": 0.0755,
+   "tri_hit_top5": 0.2844,
+   "roi_tri_top1": 0.8721,
+   "roi_tri_top5": 0.8815,
+   "roi_win_top1": 0.8159,
+   "roi_tri_top1_confident": 0.8763,
+   "tri_hit_top1_confident": 0.125
+  },
+  "gbdt_place": {
+   "races": 3840,
+   "win_logloss": 1.4889,
+   "win_hit": 0.4857,
+   "tri_logloss": 4.0984,
+   "tri_hit_top1": 0.0781,
+   "tri_hit_top5": 0.2828,
+   "roi_tri_top1": 0.8911,
+   "roi_tri_top5": 0.9197,
+   "roi_win_top1": 0.8053,
+   "roi_tri_top1_confident": 0.8715,
+   "tri_hit_top1_confident": 0.125
+  },
+  "pl_logit": {
+   "races": 3840,
+   "win_logloss": 1.3954,
+   "win_hit": 0.487,
+   "tri_logloss": 3.9253,
+   "tri_hit_top1": 0.0747,
+   "tri_hit_top5": 0.288,
+   "roi_tri_top1": 0.8296,
+   "roi_tri_top5": 0.9172,
+   "roi_win_top1": 0.8045,
+   "roi_tri_top1_confident": 0.8363,
+   "tri_hit_top1_confident": 0.1289
+  },
+  "rating": {
+   "races": 3840,
+   "win_logloss": 1.4142,
+   "win_hit": 0.4865,
+   "tri_logloss": 3.9794,
+   "tri_hit_top1": 0.0737,
+   "tri_hit_top5": 0.2724,
+   "roi_tri_top1": 1.0738,
+   "roi_tri_top5": 0.9832,
+   "roi_win_top1": 0.8358,
+   "roi_tri_top1_confident": 0.8441,
+   "tri_hit_top1_confident": 0.1107
+  },
+  "ensemble": {
+   "races": 3840,
+   "win_logloss": 1.3946,
+   "win_hit": 0.487,
+   "tri_logloss": 3.9216,
+   "tri_hit_top1": 0.0768,
+   "tri_hit_top5": 0.2849,
+   "roi_tri_top1": 0.8622,
+   "roi_tri_top5": 0.9086,
+   "roi_win_top1": 0.8057,
+   "roi_tri_top1_confident": 0.871,
+   "tri_hit_top1_confident": 0.1328
+  }
+ },
+ "ensemble": {
+  "weights": {
+   "gbdt_win": 0.092,
+   "gbdt_place": 0.166,
+   "pl_logit": 0.63,
+   "rating": 0.064
+  },
+  "lam2": 1.0035051324858777,
+  "lam3": 1.0246417343649004
+ }
+}

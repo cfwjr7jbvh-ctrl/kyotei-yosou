@@ -1,0 +1,114 @@
+"""公式サイトのレースページ(直前情報・3連単オッズ)の取得と解析。
+
+アクセスは1リクエストごとに間隔を空け、サイトに負荷をかけないようにする。
+"""
+from __future__ import annotations
+
+import itertools
+import re
+import time
+
+import numpy as np
+import requests
+from bs4 import BeautifulSoup
+
+BASE = "https://www.boatrace.jp/owpc/pc/race"
+UA = {"User-Agent": "Mozilla/5.0 (personal kyotei prediction research; low-frequency)"}
+_session = requests.Session()
+_last = [0.0]
+
+
+def fetch(page: str, jcd: int, rno: int, hd: str, wait: float = 1.0) -> str | None:
+    dt = time.time() - _last[0]
+    if dt < wait:
+        time.sleep(wait - dt)
+    _last[0] = time.time()
+    url = f"{BASE}/{page}?rno={rno}&jcd={jcd:02d}&hd={hd}"
+    for attempt in range(3):
+        try:
+            r = _session.get(url, headers=UA, timeout=30)
+            if r.status_code == 200:
+                return r.text
+        except requests.RequestException:
+            pass
+        time.sleep(3 * (attempt + 1))
+    return None
+
+
+def _num(s: str):
+    m = re.search(r"-?\d*\.?\d+", s or "")
+    return float(m.group(0)) if m else np.nan
+
+
+# 3連単オッズ表は「1着艇ごとの列」×「2着・3着の組み合わせ20行」で並んでいる
+_TRI_ORDER = [(f, s, t) for f in range(1, 7)
+              for s, t in itertools.permutations([x for x in range(1, 7) if x != f], 2)]
+
+
+def parse_odds3t(html: str) -> dict[str, float]:
+    """表の各行は 6列(1着艇1〜6)×[2着(4行に1回だけ), 3着, オッズ]。"""
+    s = BeautifulSoup(html, "html.parser")
+    if len(s.select("td.oddsPoint")) != 120:
+        return {}
+    tb = s.select_one("td.oddsPoint").find_parent("tbody")
+    second = [None] * 6
+    out = {}
+    for tr in tb.select("tr"):
+        tds = tr.select("td")
+        per = len(tds) // 6
+        if per not in (2, 3):
+            continue
+        for col in range(6):
+            cell = tds[col * per:(col + 1) * per]
+            if per == 3:
+                second[col] = int(_num(cell[0].get_text()))
+            third = int(_num(cell[-2].get_text()))
+            out[f"{col + 1}-{second[col]}-{third}"] = _num(cell[-1].get_text(strip=True))
+    return out if len(out) == 120 else {}
+
+
+def parse_beforeinfo(html: str) -> dict:
+    """展示タイム・チルト・体重・スタート展示(進入とST)・気象。"""
+    s = BeautifulSoup(html, "html.parser")
+    boats = {}
+    tables = s.select("table.is-w748")
+    if tables:
+        for tb in tables[0].select("tbody"):
+            tds = tb.select("tr")[0].select("td")
+            if len(tds) < 6:
+                continue
+            lane = int(_num(tds[0].get_text()))
+            boats[lane] = {"weight_now": _num(tds[3].get_text()),
+                           "exhibit_time": _num(tds[4].get_text()),
+                           "tilt": _num(tds[5].get_text()),
+                           "parts_changed": int(bool(tds[7].get_text(strip=True))) if len(tds) > 7 else 0}
+    for course, div in enumerate(s.select("div.table1_boatImage1"), start=1):
+        num = div.select_one(".table1_boatImage1Number")
+        tm = div.select_one(".table1_boatImage1Time")
+        if not num:
+            continue
+        lane = int(_num(num.get_text()))
+        txt = tm.get_text(strip=True) if tm else ""
+        b = boats.setdefault(lane, {})
+        b["ex_course"] = course
+        b["ex_st"] = _num(txt.replace("F", "")) * (-1 if txt.startswith("F") else 1)
+    w = {}
+    for unit in s.select(".weather1_bodyUnit"):
+        title = unit.select_one(".weather1_bodyUnitLabelTitle")
+        data = unit.select_one(".weather1_bodyUnitLabelData")
+        if title and data:
+            w[title.get_text(strip=True)] = _num(data.get_text())
+        img = unit.select_one(".weather1_bodyUnitImage")
+        if img and "is-windDirection" in (unit.get("class") or []):
+            m = re.search(r"is-wind(\d+)", " ".join(img.get("class", [])))
+            if m:
+                w["wind_dir_code"] = int(m.group(1))
+    return {"boats": boats, "wind": w.get("風速"), "wave": w.get("波高"),
+            "air_temp": w.get("気温"), "water_temp": w.get("水温"),
+            "wind_dir_code": w.get("wind_dir_code")}
+
+
+def race_days(hd: str) -> list[int]:
+    """その日に開催している場コード一覧(公式トップから)。"""
+    r = _session.get(f"{BASE}/index?hd={hd}", headers=UA, timeout=30)
+    return sorted({int(x) for x in re.findall(r"jcd=(\d\d)", r.text)}) if r.ok else []
