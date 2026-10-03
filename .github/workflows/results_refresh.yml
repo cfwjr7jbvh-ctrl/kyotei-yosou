@@ -1,0 +1,36 @@
+name: 過去の成績更新(レースタイム・払戻)
+
+# 2026-10-04 より前に取得した月に、レースタイムと全券種の払戻・人気を足す(手動実行、取得済みの月は飛ばす)
+on:
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: "最大実行時間(時間)"
+        default: "4.5"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-write
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - run: python scripts/refresh_results.py --time-limit "${{ github.event.inputs.hours }}"
+      - name: コミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/history
+          git commit -qm "data: 過去の成績にレースタイム・払戻を追加" || echo "no changes"
+          git pull --rebase -q && git push -q
