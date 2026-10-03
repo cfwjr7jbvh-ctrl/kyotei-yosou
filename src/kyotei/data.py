@@ -22,7 +22,10 @@ def load_history(since: str | None = None):
     """since: 'YYYYMM' 以降だけ読む。直前情報は公式成績と突き合わせて、合わないレースは捨てる。"""
     ent = _read("history/entries_*.csv.gz", since)
     races = _read("history/races_*.csv.gz", since)
-    pv = _read("previews/previews_*.csv.gz", since)
+    pv = _read("previews/previews_*.csv.gz", since)       # Open API(過去分)
+    own = _read("previews/own_*.csv.gz", since)           # 自分たちで取得(2026-10-03 以降)
+    if own is not None:
+        pv = own if pv is None else pd.concat([pv[~pv["race_id"].isin(own["race_id"])], own])
     if pv is not None and ent is not None:
         m = ent[["race_id", "lane", "exhibit_time", "course"]].merge(pv, on=["race_id", "lane"])
         bad = m[((m["exhibit_time"] - m["ex_time_p"]).abs() > 0.015)

@@ -141,6 +141,7 @@ def score_day(day: dt.date):
 def morning(day: dt.date):
     write_check()
     score_day(day - dt.timedelta(days=1))
+    backfill_own(day - dt.timedelta(days=1))
     b = download_text("B", day)
     if not b:
         print("番組表がまだありません:", day)
@@ -166,6 +167,53 @@ def morning(day: dt.date):
     print("morning:", len(out["races"]), "races")
 
 
+OWN = ROOT / "data/previews"
+
+
+def save_own_previews(rows: list[dict]):
+    """自分たちで取得した直前情報を保存(Open API と同じ列)。同じレースは新しい方で上書き。"""
+    if not rows:
+        return
+    df = pd.DataFrame(rows)
+    for ym, g in df.groupby(df["race_id"].str[:6]):
+        p = OWN / f"own_{ym}.csv.gz"
+        if p.exists():
+            old = pd.read_csv(p, dtype={"race_id": str})
+            g = pd.concat([old[~old["race_id"].isin(g["race_id"])], g])
+        p.parent.mkdir(parents=True, exist_ok=True)
+        g.sort_values(["race_id", "lane"]).to_csv(p, index=False, compression="gzip")
+
+
+def preview_rows(race_id: str, info: dict) -> list[dict]:
+    return [{"race_id": race_id, "lane": int(lane), "ex_course": b.get("ex_course"),
+             "ex_st": b.get("ex_st"), "ex_time_p": b.get("exhibit_time"),
+             "weight_now": b.get("weight_now"), "tilt": b.get("tilt"),
+             "wind_dir": info.get("wind_dir_code"), "p_wind": info.get("wind"),
+             "p_wave": info.get("wave"), "air_temp": info.get("air_temp"),
+             "water_temp": info.get("water_temp"), "source": "own"}
+            for lane, b in info.get("boats", {}).items()]
+
+
+def backfill_own(day: dt.date):
+    """直前予想で取り逃したレースの直前情報を、翌朝に公式サイトから補う。"""
+    p = DAYS / f"{day.isoformat()}.json"
+    if not p.exists():
+        return
+    data = read_json(p)
+    own = OWN / f"own_{day:%Y%m}.csv.gz"
+    have = set(pd.read_csv(own, dtype={"race_id": str})["race_id"]) if own.exists() else set()
+    rows = []
+    for race in data["races"]:
+        if race["race_id"] in have:
+            continue
+        html = fetch("beforeinfo", race["jcd"], race["rno"], day.strftime("%Y%m%d"))
+        info = parse_beforeinfo(html) if html else {}
+        if info.get("boats"):
+            rows += preview_rows(race["race_id"], info)
+    save_own_previews(rows)
+    print("backfilled previews:", len({r["race_id"] for r in rows}), "races")
+
+
 def live(day: dt.date, ahead_min: int = 35):
     fp = CACHE / f"features_{day.isoformat()}.pkl"
     jp = DAYS / f"{day.isoformat()}.json"
@@ -178,6 +226,7 @@ def live(day: dt.date, ahead_min: int = 35):
     t = now()
     hd = day.strftime("%Y%m%d")
     n = 0
+    own_rows = []
     for i, race in enumerate(data["races"]):
         if not race.get("deadline"):
             continue
@@ -191,6 +240,7 @@ def live(day: dt.date, ahead_min: int = 35):
         boats = info.get("boats", {})
         if not boats or all(not np.isfinite(b.get("exhibit_time", np.nan)) for b in boats.values()):
             continue  # 展示前
+        own_rows += preview_rows(race["race_id"], info)
         for lane, b in boats.items():
             m = rdf["lane"] == lane
             rdf.loc[m, "exhibit_time"] = b.get("exhibit_time")
@@ -209,6 +259,7 @@ def live(day: dt.date, ahead_min: int = 35):
         n += 1
     data["updated_at"] = t.strftime("%H:%M")
     write_json(jp, data)
+    save_own_previews(own_rows)
     print("live updated:", n, "races")
 
 

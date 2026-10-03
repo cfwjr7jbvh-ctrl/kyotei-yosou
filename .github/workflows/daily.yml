@@ -29,7 +29,6 @@ jobs:
       - name: 最近の成績を追加取得
         run: |
           python scripts/fetch_history.py --start "$(TZ=Asia/Tokyo date -d '5 days ago' +%F)"
-          python scripts/fetch_previews.py --start "$(TZ=Asia/Tokyo date -d '5 days ago' +%F)" || true
       - name: 朝の予想と前日の答え合わせ
         run: python scripts/predict.py morning
       - uses: actions/cache/save@v4
