@@ -412,6 +412,28 @@ def race_grade(s) -> int:
     return 1
 
 
+def add_series(df: pd.DataFrame) -> pd.DataFrame:
+    """今節の得点率と、準優勝戦ボーダーとの距離(勝負駆けの度合い)。番組表の時点の情報だけで計算。"""
+    if "series_rate" not in df:
+        return df
+    racers = df.drop_duplicates(["date", "jcd", "racer_id"])[["date", "jcd", "racer_id", "series_rate"]]
+    racers = racers.dropna(subset=["series_rate"])
+    racers["series_rank"] = racers.groupby(["date", "jcd"])["series_rate"].rank(ascending=False, method="min")
+    n = racers.groupby(["date", "jcd"])["racer_id"].transform("size")
+    border = racers.groupby(["date", "jcd"])["series_rate"].transform(
+        lambda x: x.sort_values(ascending=False).iloc[17] if len(x) >= 18 else np.nan)
+    racers["series_rank_pct"] = racers["series_rank"] / n
+    racers["border_gap"] = racers["series_rate"] - border
+    df = df.merge(racers[["date", "jcd", "racer_id", "series_rank", "series_rank_pct", "border_gap"]],
+                  on=["date", "jcd", "racer_id"], how="left")
+    grade = df["race_grade"] if "race_grade" in df else pd.Series(2, index=df.index)
+    gap = df["border_gap"].abs()
+    # 予選(2)で、3日目以降、ボーダーまで1点以内 → 勝負駆け
+    df["kachikake"] = ((grade == 2) & (df["day_no"] >= 3) & (gap <= 1.0)).astype(float)
+    df["kachikake_strength"] = df["kachikake"] * (1.0 - gap.clip(upper=1.0))
+    return df
+
+
 def build(entries: pd.DataFrame, races: pd.DataFrame | None = None) -> pd.DataFrame:
     df = entries.copy()
     df["class_num"] = df["racer_class"].map(CLASS_NUM).fillna(1)
@@ -421,6 +443,7 @@ def build(entries: pd.DataFrame, races: pd.DataFrame | None = None) -> pd.DataFr
         keep = [c for c in ("wind", "wave", "kimarite") if c in races and c not in df]
         if keep:
             df = df.merge(races[["race_id"] + keep], on="race_id", how="left")
+    df = add_series(df)
     df = add_history(df)
     df = add_rating(df)
     rating_model = df.attrs.get("rating_model")
@@ -463,7 +486,7 @@ def add_late(df: pd.DataFrame) -> pd.DataFrame:
 def feature_columns(df: pd.DataFrame, stage: str = "late") -> list[str]:
     exclude = {"race_id", "date", "racer_id", "racer_class", "finish", "st", "motor_no",
                "boat_no", "racer_name", "branch", "rating_strength", "deadline", "result_code",
-               "st_flag", "race_type", "weight_now", "kimarite"}
+               "st_flag", "race_type", "weight_now", "kimarite", "series_str"}
     cols = [c for c in df.columns if c not in exclude and pd.api.types.is_numeric_dtype(df[c])
             and df[c].notna().mean() > 0.5 and not c.startswith(("rcc_", "_"))]
     if stage == "early":

@@ -1,0 +1,32 @@
+name: 過去の番組表更新(得点率)
+
+on:
+  workflow_run:
+    workflows: ["過去データ取得"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: data-write
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - run: python scripts/refresh_program.py
+      - name: コミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/history
+          git commit -qm "data: 番組表から得点率などを追加" || echo "no changes"
+          git pull --rebase -q && git push -q

@@ -35,6 +35,9 @@ def _f(x):
         return np.nan
 
 
+POINTS = {"1": 10, "2": 8, "3": 6, "4": 4, "5": 2, "6": 1}  # 予選の得点(一般的な配点)
+
+
 def parse_program(text: str, date: str) -> list[dict]:
     """番組表 → 1行1艇の出走表。"""
     text = text.replace("\r", "")
@@ -42,6 +45,8 @@ def parse_program(text: str, date: str) -> list[dict]:
     for jcd, body in _split_venues(text, "B").items():
         rno = None
         meta = {}
+        md = re.search(r"第\s*([０-９\d]+)\s*日", body)
+        day_no = int(md.group(1).translate(Z2H)) if md else np.nan
         for line in body.split("\n"):
             m = _B_RACE.match(line)
             if m:
@@ -56,7 +61,10 @@ def parse_program(text: str, date: str) -> list[dict]:
                 continue
             g = m.groups()
             series = g[15][1:13] if len(g[15]) > 1 else ""
-            fins = [int(c) for c in series.translate(Z2H) if c in "123456"]
+            sz = series.translate(Z2H)
+            fins = [int(c) for c in sz if c in "123456"]
+            marks = [c for c in sz if c.strip()]  # 出走したレース(F・L・欠場なども含む)
+            pts = sum(POINTS.get(c, 0) for c in marks)
             rows.append(dict(
                 race_id=f"{date.replace('-', '')}{jcd:02d}{rno:02d}", date=date, jcd=jcd, rno=rno,
                 lane=int(g[0]), racer_id=int(g[1]), racer_name=g[2].replace("　", ""),
@@ -65,7 +73,9 @@ def parse_program(text: str, date: str) -> list[dict]:
                 loc_win_rate=_f(g[9]), loc_2rate=_f(g[10]), motor_no=int(g[11]),
                 motor_2rate=_f(g[12]), boat_no=int(g[13]), boat_2rate=_f(g[14]),
                 series_n=len(fins), series_avg=float(np.mean(fins)) if fins else np.nan,
-                series_flag=int(bool(re.search(r"[FLKS]", series))), **meta))
+                series_flag=int(bool(re.search(r"[FLKS]", series))),
+                series_str=sz.rstrip(), series_races=len(marks),
+                series_rate=round(pts / len(marks), 3) if marks else np.nan, day_no=day_no, **meta))
     return rows
 
 

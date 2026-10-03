@@ -2,7 +2,7 @@ name: モデル学習(毎週)
 
 on:
   workflow_run:
-    workflows: ["過去データ取得", "過去オッズ取得(検証用)"]
+    workflows: ["過去の番組表更新(得点率)", "過去オッズ取得(検証用)"]
     types: [completed]
   workflow_dispatch:
   schedule:
