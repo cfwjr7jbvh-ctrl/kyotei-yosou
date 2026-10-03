@@ -1,0 +1,30 @@
+name: 過去の直前情報取得(Open API)
+
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: "取得開始日 (YYYY-MM-DD)"
+        default: "2023-10-01"
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q pandas requests
+      - run: python scripts/fetch_previews.py --start "${{ github.event.inputs.start }}"
+      - name: コミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/previews
+          git commit -qm "data: 過去の直前情報" || echo "no changes"
+          git pull --rebase -q && git push -q

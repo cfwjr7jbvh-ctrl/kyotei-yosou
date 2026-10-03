@@ -23,6 +23,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from fetch_history import download_text  # noqa: E402
 from kyotei import features  # noqa: E402
 from kyotei.betting import COMBOS, blend, market_probs, model_tri_probs, select_bets  # noqa: E402
+from kyotei.data import load_history  # noqa: E402
 from kyotei.parse_lzh import parse_program, parse_result  # noqa: E402
 from kyotei.publish import read_json, write_check, write_json  # noqa: E402
 from kyotei.scrape import fetch, parse_beforeinfo, parse_odds3t  # noqa: E402
@@ -146,12 +147,8 @@ def morning(day: dt.date):
         update_index()
         return
     today = pd.DataFrame(parse_program(b, day.isoformat()))
-    H = ROOT / "data/history"
     since = (day - dt.timedelta(days=760)).strftime("%Y%m")
-    ent = pd.concat([pd.read_csv(p, dtype={"race_id": str}) for p in sorted(H.glob("entries_*.csv.gz"))
-                     if p.stem.split("_")[1] >= since])
-    races = pd.concat([pd.read_csv(p, dtype={"race_id": str}) for p in sorted(H.glob("races_*.csv.gz"))
-                       if p.stem.split("_")[1] >= since])
+    ent, races, _ = load_history(since)
     ent = ent[ent["date"] < day.isoformat()]
     df = features.build(pd.concat([ent, today], ignore_index=True), races)
     df = df[df["date"] == day.isoformat()].reset_index(drop=True)
@@ -199,7 +196,10 @@ def live(day: dt.date, ahead_min: int = 35):
             rdf.loc[m, "exhibit_time"] = b.get("exhibit_time")
             rdf.loc[m, "course"] = b.get("ex_course")
             rdf.loc[m, "ex_st"] = b.get("ex_st")
+            rdf.loc[m, "tilt"] = b.get("tilt")
+            rdf.loc[m, "weight_now"] = b.get("weight_now")
         rdf["wind"], rdf["wave"] = info.get("wind"), info.get("wave")
+        rdf["wind_dir"] = info.get("wind_dir_code")
         rdf = features.add_late(rdf)
         oh = fetch("odds3t", race["jcd"], race["rno"], hd)
         od = parse_odds3t(oh) if oh else {}

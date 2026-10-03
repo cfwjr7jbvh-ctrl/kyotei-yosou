@@ -27,7 +27,9 @@ jobs:
       - id: d
         run: echo "today=$(TZ=Asia/Tokyo date +%F)" >> "$GITHUB_OUTPUT"
       - name: 最近の成績を追加取得
-        run: python scripts/fetch_history.py --start "$(TZ=Asia/Tokyo date -d '5 days ago' +%F)"
+        run: |
+          python scripts/fetch_history.py --start "$(TZ=Asia/Tokyo date -d '5 days ago' +%F)"
+          python scripts/fetch_previews.py --start "$(TZ=Asia/Tokyo date -d '5 days ago' +%F)" || true
       - name: 朝の予想と前日の答え合わせ
         run: python scripts/predict.py morning
       - uses: actions/cache/save@v4
@@ -38,7 +40,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/data data/history
+          git add docs/data data/history data/previews
           git commit -qm "予想: ${{ steps.d.outputs.today }} 朝" || echo "no changes"
           git pull --rebase -q && git push -q
       - name: 前日分のオッズを保存(検証用)

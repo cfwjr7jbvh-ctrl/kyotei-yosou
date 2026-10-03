@@ -83,6 +83,14 @@ def add_history(df: pd.DataFrame) -> pd.DataFrame:
         if c in df:
             fl |= df[c].astype(str).str.startswith(("F", "L"))
     df["_fl"] = fl.astype(float)
+    # 展示ST→本番STのズレ(選手ごとのクセ)。F は本番STをマイナス扱い
+    if "ex_st" in df and "st" in df:
+        st_signed = df["st"] * np.where(df.get("st_flag", pd.Series("", index=df.index)).astype(str) == "F", -1, 1)
+        dd = (st_signed - df["ex_st"]).where(has_res)
+        ok = dd.notna() & (dd.abs() < 0.3)
+        df["_sd"] = dd.where(ok, 0)
+        df["_sd2"] = (dd ** 2).where(ok, 0)
+        df["_sdn"] = ok.astype(float)
     if "exhibit_time" in df:
         df["_exrank"] = df.groupby("race_id")["exhibit_time"].rank().where(has_res, np.nan)
         df["_has_ex"] = df["_exrank"].notna().astype(float)
@@ -99,6 +107,15 @@ def add_history(df: pd.DataFrame) -> pd.DataFrame:
     df["rc_avgfin"] = _smoothed(df["rc_fin"], df["rc_has"], 3.5, 5)
     df["rc_avgst"] = _smoothed(df["rc_st"], df["rc_hst"], 0.16, 5)
     df["rc_fcount"] = df["rc_fl"].fillna(0)
+
+    if "_sd" in df:  # 選手ごとの「展示ST→本番ST」のクセと、展示の信頼度(1年)
+        r = _rolling_prior(df, ["racer_id"], {"d": "_sd", "d2": "_sd2", "cnt": "_sdn"}, "365D", "xs")
+        df = df.merge(r, on=["racer_id", "date"], how="left")
+        df["st_bias"] = _smoothed(df["xs_d"], df["xs_cnt"], 0.0, 8)
+        msd = _smoothed(df["xs_d2"], df["xs_cnt"], 0.06 ** 2, 8)
+        df["st_sd"] = np.sqrt(np.maximum(msd - df["st_bias"] ** 2, 1e-4))
+        df["st_ex_n"] = df["xs_cnt"].fillna(0)
+        df = df.drop(columns=["xs_d", "xs_d2", "xs_cnt", "xs_n"], errors="ignore")
 
     # 選手×実際の進入コース(1年)。直前予想で、展示の進入コースを当てはめて使う
     if "course" in df and df["course"].notna().any():
@@ -233,17 +250,20 @@ def add_relative(df: pd.DataFrame) -> pd.DataFrame:
         src = src + ["exhibit_time"]
     if "rc_avgst" in df:
         src = src + ["rc_avgst"]
+    if "st_pred" in df and df["st_pred"].notna().any():
+        src = src + ["st_pred"]
     for c in src:
         if c not in df:
             continue
         df[f"{c}_diff"] = df[c] - g[c].transform("mean")
-        df[f"{c}_rank"] = g[c].rank(ascending=(c in ("exhibit_time", "rc_avgst")), method="average")
+        df[f"{c}_rank"] = g[c].rank(ascending=(c in ("exhibit_time", "rc_avgst", "st_pred")),
+                                    method="average")
     if "exhibit_time" in df and df["exhibit_time"].notna().any():
         df["exhibit_gap_best"] = df["exhibit_time"] - g["exhibit_time"].transform("min")
     # 隣の艇(内・外)との関係。進入コースが分かればコース順、なければ枠順
     pos = df["course"].where(df["course"].notna(), df["lane"]) if "course" in df else df["lane"]
     key = df["race_id"].astype(str) + "_" + pos.astype(int).astype(str)
-    for c in ("rc_avgst", "rating", "rc_win"):
+    for c in ("rc_avgst", "rating", "rc_win", "st_pred"):
         if c not in df:
             continue
         mp = pd.Series(df[c].values, index=key).groupby(level=0).first()
@@ -254,6 +274,9 @@ def add_relative(df: pd.DataFrame) -> pd.DataFrame:
     if "rc_avgst" in df:  # 内の艇より自分のスタートが速いほど、まくりが決まりやすい
         df["st_adv_in"] = df["in_rc_avgst"] - df["rc_avgst"]
         df["st_adv_out"] = df["out_rc_avgst"] - df["rc_avgst"]
+    if "in_st_pred" in df:
+        df["st_pred_adv_in"] = df["in_st_pred"] - df["st_pred"]
+        df["st_pred_adv_out"] = df["out_st_pred"] - df["st_pred"]
     # 1号艇の強さ(イン逃げできるか)は全艇の着順に効く
     lane1 = df[df["lane"] == 1].set_index("race_id")
     for c in ("nat_win_rate", "rating", "rl_win", "class_num"):
@@ -263,7 +286,8 @@ def add_relative(df: pd.DataFrame) -> pd.DataFrame:
 
 GRADE_WORDS = [("優勝", 6), ("準優", 5), ("ドリーム", 4), ("特選", 3), ("特賞", 3), ("選抜", 3),
                ("予選", 2), ("一般", 1)]
-LATE_ONLY = ("exhibit", "course", "wind", "wave", "ex_st", "tilt", "in_", "out_", "st_adv")
+LATE_ONLY = ("exhibit", "course", "wind", "wave", "ex_st", "tilt", "in_", "out_", "st_adv",
+             "st_pred", "weight_diff")
 
 
 def race_grade(s) -> int:
@@ -295,6 +319,20 @@ def build(entries: pd.DataFrame, races: pd.DataFrame | None = None) -> pd.DataFr
 def add_late(df: pd.DataFrame) -> pd.DataFrame:
     """直前情報(展示タイム・進入コース・風・波)から作る特徴量。"""
     df = df.copy()
+    if "ex_st" in df and "st_bias" in df:
+        # 展示STからの本番ST予想。展示を信じられる選手ほど展示を重く、そうでない選手は普段のSTを重く
+        v0 = 0.045 ** 2
+        w = v0 / (v0 + df["st_sd"] ** 2)
+        pred = w * (df["ex_st"] + df["st_bias"]) + (1 - w) * df["rc_avgst"]
+        df["st_pred"] = pred.where(df["ex_st"].notna(), df["rc_avgst"])
+        df["st_pred_w"] = w.where(df["ex_st"].notna())
+        df["ex_st_flying"] = (df["ex_st"] < 0).astype(float).where(df["ex_st"].notna())
+    if "weight_now" in df:
+        df["weight_diff"] = df["weight_now"] - df["weight"]
+    if "wind_dir" in df and "wind" in df:
+        ang = (pd.to_numeric(df["wind_dir"], errors="coerce") - 1) * np.pi / 8
+        df["wind_x"] = df["wind"] * np.cos(ang)
+        df["wind_y"] = df["wind"] * np.sin(ang)
     if "course" in df:
         df["course_shift"] = df["course"] - df["lane"]
         df["course_in"] = (df["course"] == 1).astype(float).where(df["course"].notna())

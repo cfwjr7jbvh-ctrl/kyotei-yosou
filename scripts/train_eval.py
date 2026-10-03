@@ -24,6 +24,7 @@ import pandas as pd
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 from kyotei import features  # noqa: E402
+from kyotei.data import load_history  # noqa: E402
 from kyotei.betting import (COMBOS, backtest_ev, blend, fit_blend, market_probs,  # noqa: E402
                             model_tri_probs, odds_matrix)
 from kyotei.ensemble import Stacker, evaluate  # noqa: E402
@@ -31,16 +32,6 @@ from kyotei.models import available_models, race_softmax  # noqa: E402
 from kyotei.publish import write_json  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-
-
-def load_history():
-    H = ROOT / "data/history"
-    ent = pd.concat([pd.read_csv(p, dtype={"race_id": str}) for p in sorted(H.glob("entries_*.csv.gz"))])
-    races = pd.concat([pd.read_csv(p, dtype={"race_id": str}) for p in sorted(H.glob("races_*.csv.gz"))])
-    odds_files = sorted((ROOT / "data/odds").glob("odds3t_*.csv.gz"))
-    odds = (pd.concat([pd.read_csv(p, dtype={"race_id": str}) for p in odds_files])
-            if odds_files else None)
-    return ent, races, odds
 
 
 def lane_baseline(train, df):
