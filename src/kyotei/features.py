@@ -37,6 +37,31 @@ def _rolling_prior(df: pd.DataFrame, key: list[str], vals: dict[str, str], windo
     return out
 
 
+def _asof_stats(df: pd.DataFrame, key: list[str], vals: dict[str, str], window: str,
+                query: pd.DataFrame) -> pd.DataFrame:
+    """key ごとの「前日までの window 期間の合計」を、query の (key, date) に付ける。
+
+    query 側の key がその日に結果を持たなくても使える(例: 当日の進入コース)。
+    """
+    src = df.dropna(subset=key)
+    g = src.groupby(key + ["date"]).agg(**{k: (v, "sum") for k, v in vals.items()}).reset_index()
+    g["date"] = pd.to_datetime(g["date"])
+    g = g.sort_values("date")
+    cols = list(vals)
+    roll = (g.set_index("date").groupby(key)[cols].rolling(window).sum().reset_index())
+    roll = roll.sort_values("date")
+    q = query[key + ["date"]].copy()
+    q["_row"] = np.arange(len(q))
+    q["date"] = pd.to_datetime(q["date"])
+    q = q.dropna(subset=key).sort_values("date")
+    for k in key:
+        q[k] = q[k].astype(roll[k].dtype)
+    m = pd.merge_asof(q, roll, on="date", by=key, allow_exact_matches=False)
+    out = pd.DataFrame(index=np.arange(len(query)), columns=cols, dtype=float)
+    out.loc[m["_row"].values, cols] = m[cols].values
+    return out
+
+
 def _smoothed(num, den, prior, strength):
     return (num.fillna(0) + prior * strength) / (den.fillna(0) + strength)
 
@@ -52,16 +77,39 @@ def add_history(df: pd.DataFrame) -> pd.DataFrame:
     df["_st"] = df["st"].where(has_res & df["st"].notna(), 0) if "st" in df else 0.0
     df["_has"] = has_res.astype(float)
     df["_has_st"] = (has_res & df["st"].notna()).astype(float) if "st" in df else 0.0
+    # フライング・出遅れ(F/L)。F持ちはスタートを控えるので重要
+    fl = pd.Series(False, index=df.index)
+    for c in ("st_flag", "result_code"):
+        if c in df:
+            fl |= df[c].astype(str).str.startswith(("F", "L"))
+    df["_fl"] = fl.astype(float)
+    if "exhibit_time" in df:
+        df["_exrank"] = df.groupby("race_id")["exhibit_time"].rank().where(has_res, np.nan)
+        df["_has_ex"] = df["_exrank"].notna().astype(float)
+        df["_exrank"] = df["_exrank"].fillna(0)
 
     # 選手の直近180日
     r = _rolling_prior(df, ["racer_id"], {"win": "_win", "top3": "_top3", "fin": "_fin",
-                                          "st": "_st", "has": "_has", "hst": "_has_st"}, "180D", "rc")
+                                          "st": "_st", "has": "_has", "hst": "_has_st",
+                                          "fl": "_fl"}, "180D", "rc")
     df = df.merge(r, on=["racer_id", "date"], how="left")
     df["rc_n"] = df["rc_has"].fillna(0)
     df["rc_win"] = _smoothed(df["rc_win"], df["rc_has"], 1 / 6, 5)
     df["rc_top3"] = _smoothed(df["rc_top3"], df["rc_has"], 0.5, 5)
     df["rc_avgfin"] = _smoothed(df["rc_fin"], df["rc_has"], 3.5, 5)
     df["rc_avgst"] = _smoothed(df["rc_st"], df["rc_hst"], 0.16, 5)
+    df["rc_fcount"] = df["rc_fl"].fillna(0)
+
+    # 選手×実際の進入コース(1年)。直前予想で、展示の進入コースを当てはめて使う
+    if "course" in df and df["course"].notna().any():
+        df["_crs"] = df["course"].where(has_res)
+        for c in range(1, 7):
+            q = df[["racer_id", "date"]].assign(_crs=float(c))
+            st = _asof_stats(df, ["racer_id", "_crs"], {"w": "_win", "s": "_st", "n": "_has",
+                                                        "ns": "_has_st"}, "365D", q)
+            prior = {1: .5, 2: .14, 3: .12, 4: .11, 5: .06, 6: .04}[c]
+            df[f"rcc_win_{c}"] = _smoothed(st["w"], st["n"], prior, 4).values
+            df[f"rcc_st_{c}"] = _smoothed(st["s"], st["ns"], 0.16, 4).values
 
     # 選手×枠(1年)
     r = _rolling_prior(df, ["racer_id", "lane"], {"win": "_win", "top3": "_top3", "has": "_has"},
@@ -77,12 +125,18 @@ def add_history(df: pd.DataFrame) -> pd.DataFrame:
     df["vl_win"] = _smoothed(df["vl_win"], df["vl_has"], lane_prior, 50)
 
     # モーター(場×番号、直近120日。モーターは年1回程度で入れ替わる)
-    r = _rolling_prior(df, ["jcd", "motor_no"], {"top2": "_top2", "has": "_has"}, "120D", "mt")
+    mvals = {"top2": "_top2", "has": "_has"}
+    if "_exrank" in df:
+        mvals.update(exr="_exrank", hex="_has_ex")
+    r = _rolling_prior(df, ["jcd", "motor_no"], mvals, "120D", "mt")
     df = df.merge(r, on=["jcd", "motor_no", "date"], how="left")
     df["mt_top2"] = _smoothed(df["mt_top2"], df["mt_has"], 1 / 3, 10)
+    if "mt_exr" in df:  # モーターの展示タイム順位の平均(小さいほど伸び・出足が良い)
+        df["mt_exrank"] = _smoothed(df["mt_exr"], df["mt_hex"], 3.5, 10)
 
     drop = [c for c in df.columns if c.startswith("_") or c in
-            ("rc_fin", "rc_st", "rc_has", "rc_hst", "rl_has", "vl_has", "mt_has", "rc_n_x")]
+            ("rc_fin", "rc_st", "rc_has", "rc_hst", "rc_fl", "rl_has", "vl_has", "mt_has",
+             "mt_exr", "mt_hex", "rc_n_x")]
     return df.drop(columns=drop)
 
 
@@ -96,6 +150,7 @@ class OnlineRating:
     def __init__(self, lr: float = 0.06, lane_lr: float = 0.002):
         self.lr, self.lane_lr = lr, lane_lr
         self.r: dict[int, float] = {}
+        self.n: dict[int, int] = {}
         self.lane = np.array([1.6, .5, .4, .3, 0., -.3])
 
     def strengths(self, racers, lanes):
@@ -115,7 +170,11 @@ class OnlineRating:
             grad[idx] += 1
             remaining.remove(idx)
         for i, rid in enumerate(racers):
-            self.r[int(rid)] = self.r.get(int(rid), 0.0) + self.lr * grad[i]
+            rid = int(rid)
+            n = self.n.get(rid, 0)
+            lr = self.lr * (1 + 2.0 / (1 + n / 30))  # 経験が浅いほど大きく更新(新人の急成長に追従)
+            self.r[rid] = self.r.get(rid, 0.0) + lr * grad[i]
+            self.n[rid] = n + 1
         np.add.at(self.lane, lanes - 1, self.lane_lr * grad)
 
 
@@ -137,9 +196,39 @@ def add_rating(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def _asof_self(df: pd.DataFrame, col: str, days: int) -> np.ndarray:
+    """選手ごとに、days 日前時点の col の値。"""
+    base = df[["racer_id", "date", col]].dropna().drop_duplicates(["racer_id", "date"])
+    base = base.assign(date=pd.to_datetime(base["date"])).sort_values("date")
+    q = df[["racer_id", "date"]].copy()
+    q["_row"] = np.arange(len(q))
+    q["date"] = pd.to_datetime(q["date"]) - pd.Timedelta(days=days)
+    q = q.sort_values("date")
+    m = pd.merge_asof(q, base.rename(columns={col: "_v"}), on="date", by="racer_id")
+    out = np.full(len(df), np.nan)
+    out[m["_row"].values] = m["_v"].values
+    return out
+
+
+def add_growth(df: pd.DataFrame) -> pd.DataFrame:
+    """選手の成長度(新人の伸びなど)。"""
+    df = df.copy()
+    for d in (90, 180):
+        df[f"rating_growth_{d}"] = df["rating"] - _asof_self(df, "rating", d)
+    df["winrate_growth_180"] = df["nat_win_rate"] - _asof_self(df, "nat_win_rate", 180)
+    has = df["finish"].notna().astype(float) if "finish" in df else 0.0
+    r = _rolling_prior(df.assign(_has=has), ["racer_id"], {"has": "_has"}, "730D", "xp")
+    df = df.merge(r[["racer_id", "date", "xp_has"]], on=["racer_id", "date"], how="left")
+    df["career_n_2y"] = df["xp_has"].fillna(0)
+    df["toban"] = df["racer_id"]
+    return df.drop(columns=["xp_has"])
+
+
 def add_relative(df: pd.DataFrame) -> pd.DataFrame:
     g = df.groupby("race_id")
     src = REL_SRC + ["rating", "rc_win", "rl_win"]
+    if "rating_growth_180" in df:
+        src = src + ["rating_growth_180"]
     if "exhibit_time" in df and df["exhibit_time"].notna().any():
         src = src + ["exhibit_time"]
     if "rc_avgst" in df:
@@ -151,6 +240,20 @@ def add_relative(df: pd.DataFrame) -> pd.DataFrame:
         df[f"{c}_rank"] = g[c].rank(ascending=(c in ("exhibit_time", "rc_avgst")), method="average")
     if "exhibit_time" in df and df["exhibit_time"].notna().any():
         df["exhibit_gap_best"] = df["exhibit_time"] - g["exhibit_time"].transform("min")
+    # 隣の艇(内・外)との関係。進入コースが分かればコース順、なければ枠順
+    pos = df["course"].where(df["course"].notna(), df["lane"]) if "course" in df else df["lane"]
+    key = df["race_id"].astype(str) + "_" + pos.astype(int).astype(str)
+    for c in ("rc_avgst", "rating", "rc_win"):
+        if c not in df:
+            continue
+        mp = pd.Series(df[c].values, index=key).groupby(level=0).first()
+        inner = (df["race_id"].astype(str) + "_" + (pos - 1).astype(int).astype(str)).map(mp)
+        outer = (df["race_id"].astype(str) + "_" + (pos + 1).astype(int).astype(str)).map(mp)
+        df[f"in_{c}"] = inner.values
+        df[f"out_{c}"] = outer.values
+    if "rc_avgst" in df:  # 内の艇より自分のスタートが速いほど、まくりが決まりやすい
+        df["st_adv_in"] = df["in_rc_avgst"] - df["rc_avgst"]
+        df["st_adv_out"] = df["out_rc_avgst"] - df["rc_avgst"]
     # 1号艇の強さ(イン逃げできるか)は全艇の着順に効く
     lane1 = df[df["lane"] == 1].set_index("race_id")
     for c in ("nat_win_rate", "rating", "rl_win", "class_num"):
@@ -160,7 +263,7 @@ def add_relative(df: pd.DataFrame) -> pd.DataFrame:
 
 GRADE_WORDS = [("優勝", 6), ("準優", 5), ("ドリーム", 4), ("特選", 3), ("特賞", 3), ("選抜", 3),
                ("予選", 2), ("一般", 1)]
-LATE_ONLY = ("exhibit", "course", "wind", "wave", "ex_st", "tilt")
+LATE_ONLY = ("exhibit", "course", "wind", "wave", "ex_st", "tilt", "in_", "out_", "st_adv")
 
 
 def race_grade(s) -> int:
@@ -182,7 +285,10 @@ def build(entries: pd.DataFrame, races: pd.DataFrame | None = None) -> pd.DataFr
             df = df.merge(races[["race_id"] + keep], on="race_id", how="left")
     df = add_history(df)
     df = add_rating(df)
+    rating_model = df.attrs.get("rating_model")
+    df = add_growth(df)
     df = add_late(df)
+    df.attrs["rating_model"] = rating_model
     return df.sort_values(["date", "race_id", "lane"]).reset_index(drop=True)
 
 
@@ -192,6 +298,13 @@ def add_late(df: pd.DataFrame) -> pd.DataFrame:
     if "course" in df:
         df["course_shift"] = df["course"] - df["lane"]
         df["course_in"] = (df["course"] == 1).astype(float).where(df["course"].notna())
+        if "rcc_win_1" in df:  # その選手の「このコースでの」成績
+            crs = df["course"].fillna(df["lane"]).clip(1, 6).astype(int).values
+            W = df[[f"rcc_win_{c}" for c in range(1, 7)]].values
+            S = df[[f"rcc_st_{c}" for c in range(1, 7)]].values
+            r = np.arange(len(df))
+            df["course_win_hist"] = W[r, crs - 1]
+            df["course_st_hist"] = S[r, crs - 1]
     return add_relative(df)
 
 
@@ -200,7 +313,7 @@ def feature_columns(df: pd.DataFrame, stage: str = "late") -> list[str]:
                "boat_no", "racer_name", "branch", "rating_strength", "deadline", "result_code",
                "st_flag", "race_type", "weight_now"}
     cols = [c for c in df.columns if c not in exclude and pd.api.types.is_numeric_dtype(df[c])
-            and df[c].notna().mean() > 0.5]
+            and df[c].notna().mean() > 0.5 and not c.startswith(("rcc_", "_"))]
     if stage == "early":
         cols = [c for c in cols if not any(c.startswith(p) for p in LATE_ONLY)]
     return cols

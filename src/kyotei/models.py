@@ -34,6 +34,13 @@ def race_normalize(p: np.ndarray, race_ids: np.ndarray) -> np.ndarray:
     return (s / s.groupby(race_ids).transform("sum")).values
 
 
+def recency_weight(df, half_life_days: float = 365.0):
+    """新しいレースほど重く学習する(1年で重み半分)。"""
+    d = pd.to_datetime(df["date"])
+    age = (d.max() - d).dt.days.values
+    return 0.5 ** (age / half_life_days)
+
+
 def _gbdt_classifier(seed: int):
     if lgb is not None:
         return lgb.LGBMClassifier(n_estimators=600, learning_rate=0.03, num_leaves=31,
@@ -54,7 +61,7 @@ class GBDTWin:
 
     def fit(self, df):
         y = (df["finish"] <= self.target).astype(int)
-        self.m = _gbdt_classifier(self.seed).fit(df[self.feats], y)
+        self.m = _gbdt_classifier(self.seed).fit(df[self.feats], y, sample_weight=recency_weight(df))
         return self
 
     def raw(self, df):
