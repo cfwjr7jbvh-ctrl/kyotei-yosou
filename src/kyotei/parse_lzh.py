@@ -20,7 +20,12 @@ _B_ROW = re.compile(
 _B_RACE = re.compile(r"^\s*([０-９\d]+)Ｒ\s+(\S+).*?Ｈ([０-９\d]+)ｍ.*?締切予定([０-９\d]+)：([０-９\d]+)")
 _K_RACE = re.compile(r"^\s+(\d+)R\s+(.+?)\s+H(\d+)m\s+(\S+)\s+風\s+(\S+)\s+(\d+)m\s+波\s+(\d+)cm")
 _K_ROW = re.compile(r"^  (\S\S?) +([1-6]) (\d{4}) (.{8})(.*)$")
-_K_VAL = re.compile(r"^\s*(\d+)\s+(\d+)\s+(\d\.\d\d)\s+([1-6])\s+([FL]?\d?\.\d\d)")
+_K_VAL = re.compile(r"^\s*(\d+)\s+(\d+)\s+(\d\.\d\d)\s+([1-6])\s+([FL]?\d?\.\d\d)"
+                    r"(?:\s+(\d+)\.(\d\d)\.(\d))?")  # 最後はレースタイム(例 1.51.3、5・6着は空欄が多い)
+# 払戻: (表記, 列名の頭, 組の艇数)。人気があれば {列名}_pop に入れる
+_PAYOUTS = (("単勝", "win", 1), ("2連単", "exa", 2), ("3連単", "tri", 3),
+            ("2連複", "qui", 2), ("3連複", "trio", 3))
+_WIDE = re.compile(r"^([1-6]-[1-6])\s+(\d+)(?:\s+人気\s+(\d+))?")
 
 
 def _split_venues(text: str, kind: str) -> dict[int, str]:
@@ -105,23 +110,52 @@ def parse_result(text: str, date: str) -> tuple[list[dict], list[dict]]:
             if m:
                 code, lane, regno, _name, rest = m.groups()
                 v = _K_VAL.match(rest)
+                rt = (int(v.group(6)) * 60 + int(v.group(7)) + int(v.group(8)) / 10
+                      if v and v.group(6) else np.nan)
                 ent.append(dict(race_id=cur["race_id"], lane=int(lane), racer_id=int(regno),
                                 finish=int(code) if code.isdigit() else np.nan, result_code=code,
                                 exhibit_time=_f(v.group(3)) if v else np.nan,
                                 course=int(v.group(4)) if v else np.nan,
                                 st=_f(v.group(5).lstrip("FL")) if v else np.nan,
-                                st_flag=v.group(5)[0] if v and v.group(5)[0] in "FL" else ""))
+                                st_flag=v.group(5)[0] if v and v.group(5)[0] in "FL" else "",
+                                race_time=rt))  # 結果の情報。特徴量には使わない(features で除外)
                 continue
             s = line.strip()
-            for key, col, n in (("単勝", "win", 1), ("2連単", "exa", 2), ("3連単", "tri", 3)):
+            if cur.get("_wide_n") and not s.startswith(("拡連複",)):
+                mw = _WIDE.match(s)  # 拡連複の2・3組目は次の行に続く
+                if mw and cur["_wide_n"] < 3:
+                    cur["_wide_n"] += 1
+                    k = cur["_wide_n"]
+                    cur[f"wide{k}_combo"], cur[f"wide{k}_pay"] = mw.group(1), int(mw.group(2))
+                    if mw.group(3):
+                        cur[f"wide{k}_pop"] = int(mw.group(3))
+                    continue
+                cur["_wide_n"] = 0
+            for key, col, n in _PAYOUTS:
                 if s.startswith(key) and f"{col}_pay" not in cur:
-                    mm = re.match(rf"{key}\s+([1-6](?:-[1-6]){{{n-1}}})\s+(\d+)", s)
+                    mm = re.match(rf"{key}\s+([1-6](?:-[1-6]){{{n-1}}})\s+(\d+)(?:\s+人気\s+(\d+))?", s)
                     if mm:
                         cur[f"{col}_combo"] = mm.group(1)
                         cur[f"{col}_pay"] = int(mm.group(2))
+                        if mm.group(3):
+                            cur[f"{col}_pop"] = int(mm.group(3))
                     else:
                         cur[f"{col}_pay"] = np.nan
+            if s.startswith("複勝") and "place1_pay" not in cur:
+                mm = re.match(r"複勝\s+([1-6])\s+(\d+)(?:\s+([1-6])\s+(\d+))?", s)
+                if mm:
+                    cur["place1_lane"], cur["place1_pay"] = int(mm.group(1)), int(mm.group(2))
+                    if mm.group(3):
+                        cur["place2_lane"], cur["place2_pay"] = int(mm.group(3)), int(mm.group(4))
+            if s.startswith("拡連複") and "wide1_pay" not in cur:
+                mw = _WIDE.match(s[len("拡連複"):].strip())
+                if mw:
+                    cur["wide1_combo"], cur["wide1_pay"] = mw.group(1), int(mw.group(2))
+                    if mw.group(3):
+                        cur["wide1_pop"] = int(mw.group(3))
+                    cur["_wide_n"] = 1
     for r in races:
+        r.pop("_wide_n", None)
         if isinstance(r.get("win_combo"), str):
             r["win_lane"] = int(r["win_combo"])
     return ent, races

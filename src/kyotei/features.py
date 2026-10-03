@@ -486,7 +486,8 @@ def add_late(df: pd.DataFrame) -> pd.DataFrame:
 def feature_columns(df: pd.DataFrame, stage: str = "late") -> list[str]:
     exclude = {"race_id", "date", "racer_id", "racer_class", "finish", "st", "motor_no",
                "boat_no", "racer_name", "branch", "rating_strength", "deadline", "result_code",
-               "st_flag", "race_type", "weight_now", "kimarite", "series_str"}
+               "st_flag", "race_type", "weight_now", "kimarite", "series_str",
+               "race_time"}  # race_time はレース結果(未来の情報)なので特徴量にしない
     cols = [c for c in df.columns if c not in exclude and pd.api.types.is_numeric_dtype(df[c])
             and df[c].notna().mean() > 0.5 and not c.startswith(("rcc_", "_"))]
     if stage == "early":
