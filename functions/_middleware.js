@@ -88,7 +88,8 @@ export async function onRequest(context) {
     out.headers.set("X-Robots-Tag", "noindex");
     return out;
   }
-  if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/data/")) {
+  const isPageVisit = request.method === "GET" && (request.headers.get("Accept") || "").includes("text/html");
+  if (!isPageVisit && (url.pathname.startsWith("/api/") || url.pathname.startsWith("/data/"))) {
     return new Response(JSON.stringify({ error: "login required" }), { status: 401, headers: { "content-type": "application/json" } });
   }
   return loginPage();
