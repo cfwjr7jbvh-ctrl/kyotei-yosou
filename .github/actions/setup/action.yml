@@ -20,7 +20,8 @@ runs:
       run: |
         mkdir -p models
         if git fetch -q --depth 1 origin model 2>/dev/null; then
-          git show FETCH_HEAD:bundle.pkl > models/bundle.pkl && echo "model loaded"
+          git show FETCH_HEAD:bundle.pkl.enc > /tmp/bundle.pkl.enc
+          python src/kyotei/publish.py decrypt /tmp/bundle.pkl.enc models/bundle.pkl && echo "model loaded"
         else
           echo "model branch not found"
         fi

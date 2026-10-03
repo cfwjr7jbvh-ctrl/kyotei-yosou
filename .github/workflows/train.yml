@@ -32,8 +32,10 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          mkdir -p /tmp/m && cp models/bundle.pkl /tmp/m/ && cd /tmp/m
-          git init -q -b model && git add bundle.pkl
+          mkdir -p /tmp/m
+          python src/kyotei/publish.py encrypt models/bundle.pkl /tmp/m/bundle.pkl.enc
+          cd /tmp/m
+          git init -q -b model && git add bundle.pkl.enc
           git commit -q -m "model ${GITHUB_RUN_ID}"
           git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" model
       - name: 検証レポートをコミット

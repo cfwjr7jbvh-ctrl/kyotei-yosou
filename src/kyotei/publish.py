@@ -60,3 +60,24 @@ def read_json(path: pathlib.Path):
 def write_check():
     """パスワード確認用の小さな暗号化ファイル。"""
     write_json(ROOT / "docs/data/check.json", {"ok": True})
+
+
+def encrypt_file(src, dst):
+    """学習済みモデルなどのファイルをパスワードで暗号化する。"""
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    pw = os.environ.get("SITE_PASSWORD", "")
+    if not pw:
+        raise SystemExit("SITE_PASSWORD が未設定です。モデルは保存しません")
+    iv = os.urandom(12)
+    pathlib.Path(dst).write_bytes(iv + AESGCM(_key(pw)).encrypt(iv, pathlib.Path(src).read_bytes(), None))
+
+
+def decrypt_file(src, dst):
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+    b = pathlib.Path(src).read_bytes()
+    pathlib.Path(dst).write_bytes(AESGCM(_key(os.environ["SITE_PASSWORD"])).decrypt(b[:12], b[12:], None))
+
+
+if __name__ == "__main__":
+    import sys
+    {"encrypt": encrypt_file, "decrypt": decrypt_file}[sys.argv[1]](sys.argv[2], sys.argv[3])
