@@ -40,6 +40,6 @@ jobs:
           git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" model
       - name: 検証レポートをコミット
         run: |
-          git add docs/data/report.json
+          git add docs/data/report.json reports
           git commit -m "report: モデル検証結果を更新" || echo "no changes"
           git pull --rebase -q && git push -q

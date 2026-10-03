@@ -80,6 +80,47 @@ def run_stage(stage, df, races, tr, va, te, report, log):
     return feats, models, stack, p_ens
 
 
+def segment_analysis(te, p_ens):
+    """見直し用: 場・グレード・枠ごとの当たり具合と、確率の正確さ(キャリブレーション)。"""
+    d = te[["race_id", "jcd", "lane", "finish"]].copy()
+    d["grade"] = te["race_grade"].values if "race_grade" in te else 0
+    d["p"] = p_ens
+    d["win"] = (d["finish"] == 1).astype(float)
+    d["lp"] = np.log(np.clip(d["p"], 1e-6, 1))
+    top = d.loc[d.groupby("race_id")["p"].idxmax(), ["race_id", "win"]].rename(columns={"win": "top_hit"})
+    w = d[d["win"] == 1][["race_id", "lp"]]
+    r = d.drop_duplicates("race_id")[["race_id", "jcd", "grade"]].merge(top, on="race_id").merge(w, on="race_id")
+
+    def agg(g):
+        return pd.Series({"races": len(g), "win_logloss": round(float(-g["lp"].mean()), 4),
+                          "win_hit": round(float(g["top_hit"].mean()), 4)})
+    by_venue = r.groupby("jcd").apply(agg).reset_index()
+    by_grade = r.groupby("grade").apply(agg).reset_index()
+    by_lane = d.groupby("lane").agg(pred=("p", "mean"), actual=("win", "mean")).round(4).reset_index()
+    d["bin"] = pd.cut(d["p"], [0, .02, .05, .1, .2, .3, .4, .5, .6, .7, .8, 1.0])
+    calib = d.groupby("bin", observed=True).agg(n=("p", "size"), pred=("p", "mean"),
+                                                 actual=("win", "mean")).round(4).reset_index()
+    calib["bin"] = calib["bin"].astype(str)
+    return {"by_venue": by_venue.to_dict("records"), "by_grade": by_grade.to_dict("records"),
+            "by_lane": by_lane.to_dict("records"), "calibration": calib.to_dict("records")}
+
+
+def write_review_report(report):
+    """予想やモデル本体を含まない「数字だけ」のレポートを平文で保存(定期見直し用)。"""
+    out = ROOT / "reports"
+    out.mkdir(exist_ok=True)
+    (out / "model_report.json").write_text(json.dumps(report, ensure_ascii=False, indent=1, default=float),
+                                           encoding="utf-8")
+    summary = {"generated_at": report["generated_at"], "test": report["period"]["test"]}
+    for st, v in report["stages"].items():
+        m = v["metrics"].get("ensemble", {})
+        summary[st] = {k: m.get(k) for k in ("win_logloss", "win_hit", "tri_logloss", "tri_hit_top1")}
+    if "ev" in report:
+        summary["ev_filtered"] = report["ev"]["ev_filtered"]
+    with open(out / "history.jsonl", "a", encoding="utf-8") as f:
+        f.write(json.dumps(summary, ensure_ascii=False, default=float) + "\n")
+
+
 def ev_analysis(te, p_ens, stack, races, odds, report, log):
     rids = np.sort(te["race_id"].unique())
     O = odds_matrix(odds, rids)
@@ -153,6 +194,7 @@ def main():
     bundle = {"stages": {}, "blend": None, "bet_filter": None}
     for stage in ("early", "late"):
         feats, models, stack, p_ens = run_stage(stage, df, races, tr, va, te, report, log)
+        report["stages"][stage]["segments"] = segment_analysis(te, p_ens)
         if stage == "late" and odds is not None:
             res = ev_analysis(te, p_ens, stack, races, odds, report, log)
             if res:
@@ -172,6 +214,8 @@ def main():
     rep = ROOT / "docs/data/report.json"
     rep.parent.mkdir(parents=True, exist_ok=True)
     write_json(rep, report)
+    if not args.synthetic:
+        write_review_report(report)
     log("done")
 
 

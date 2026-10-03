@@ -39,7 +39,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/data data/history data/previews
+          git add docs/data data/history data/previews reports
           git commit -qm "予想: ${{ steps.d.outputs.today }} 朝" || echo "no changes"
           git pull --rebase -q && git push -q
       - name: 前日分のオッズを保存(検証用)

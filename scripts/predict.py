@@ -138,6 +138,9 @@ def score_day(day: dt.date):
     track["days"] = [d for d in track["days"] if d["date"] != tot["date"]] + [tot]
     track["days"].sort(key=lambda d: d["date"])
     write_json(tp, track)
+    rp = ROOT / "reports/track.json"  # 見直し用の数字だけの集計(平文)
+    rp.parent.mkdir(exist_ok=True)
+    rp.write_text(json.dumps(track, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 def morning(day: dt.date):
