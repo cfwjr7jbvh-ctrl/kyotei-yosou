@@ -1,0 +1,1 @@
+{"generated_at": "2026-10-04T05:31+09:00", "test": ["2024-10-29", "2025-02-04"], "early": {"win_logloss": 1.2314, "win_hit": 0.5682, "tri_logloss": 3.9002, "tri_hit_top1": 0.0898}, "late": {"win_logloss": 1.2121, "win_hit": 0.5744, "tri_logloss": 3.8572, "tri_hit_top1": 0.0933}}
