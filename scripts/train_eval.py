@@ -29,6 +29,7 @@ from kyotei.betting import (COMBOS, BetFilter, backtest_ev, blend, entropy,  # n
                             fit_blend, market_probs, model_tri_probs, odds_matrix)
 from kyotei.ensemble import Stacker, evaluate  # noqa: E402
 from kyotei.models import available_models, race_softmax  # noqa: E402
+from kyotei.plackett import trifecta_logprob_batch  # noqa: E402
 from kyotei.publish import write_json  # noqa: E402
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -44,6 +45,27 @@ def win_matrix(df, p, race_ids):
     d = df[["race_id", "lane"]].assign(p=p)
     return (d.pivot(index="race_id", columns="lane", values="p")
             .reindex(index=race_ids, columns=range(1, 7)).fillna(1e-6).values)
+
+
+PER_RACE: dict[str, pd.DataFrame] = {}  # 改良案の比較用: テストの各レースの誤差
+
+
+def per_race_losses(ev, stack):
+    """テストの各レースの誤差(1着・3連単)。比較で「レース単位の差」の信頼区間を出すのに使う(evaluate と同じ計算)。"""
+    d = ev.sort_values(["race_id", "lane"])
+
+    def piv(c, fill):
+        return d.pivot(index="race_id", columns="lane", values=c).reindex(columns=range(1, 7)).fillna(fill)
+    P = piv("p", 1e-6)
+    F = d.pivot(index="race_id", columns="lane", values="finish").reindex(columns=range(1, 7))
+    ok = (F.fillna(99).values <= 3).sum(1) == 3
+    o = np.argsort(F.fillna(99).values, axis=1)[:, :3][ok]
+    Pv = P.values[ok] / P.values[ok].sum(1, keepdims=True)
+    S2 = piv("s2", 1e-9).values[ok] if "s2" in d else None
+    S3 = piv("s3", 1e-9).values[ok] if "s3" in d else None
+    win = -np.log(Pv[np.arange(len(Pv)), o[:, 0]])
+    tri = -trifecta_logprob_batch(Pv, o, stack.lam2, stack.lam3, S2, S3, getattr(stack, "bonus", None))
+    return pd.DataFrame({"race_id": P.index[ok], "win": win, "tri": tri})
 
 
 def run_stage(stage, df, races, tr, va, te, report, log):
@@ -68,6 +90,7 @@ def run_stage(stage, df, races, tr, va, te, report, log):
     ev["p"] = p_ens
     ev["s2"], ev["s3"] = s23
     res["ensemble"] = evaluate(ev, races, "p", stack.lam2, stack.lam3, s_cols=("s2", "s3"), bonus=stack.bonus)
+    PER_RACE[stage] = per_race_losses(ev, stack)
     report["stages"][stage] = {
         "n_features": len(feats), "metrics": res,
         "ensemble_weights": {k: float(v) for k, v in stack.weights().items()},
@@ -227,6 +250,9 @@ def main():
         pathlib.Path(args.report_out).parent.mkdir(parents=True, exist_ok=True)
         pathlib.Path(args.report_out).write_text(json.dumps(report, ensure_ascii=False, indent=1, default=float),
                                                  encoding="utf-8")
+        # レースごとの誤差(compare.py が「偶然の改善か」を判定するのに使う。リポジトリには保存しない)
+        pd.concat([v.assign(stage=k) for k, v in PER_RACE.items()]).to_csv(
+            args.report_out + ".races.csv.gz", index=False, compression="gzip")
         log("done (experiment)")
         return
     rep = ROOT / "docs/data/report.json"
