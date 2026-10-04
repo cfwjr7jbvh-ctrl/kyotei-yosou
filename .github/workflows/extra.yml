@@ -30,8 +30,11 @@ jobs:
           model: "false"
       - name: 集める(文章と記者の評価は暗号化して保存)
         run: python scripts/fetch_extra.py all --time-limit "${{ inputs.time_limit || '40' }}"
+      - name: 効き目の集計(数字だけ。文章は出さない)
+        continue-on-error: true
+        run: python scripts/extra_eval.py
       - name: コミット(このジョブだけが書くファイルを最新の main に上書き)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          bash scripts/commit_files.sh "[CI Skip] data: 足の評価の収集 $(TZ=Asia/Tokyo date +%m/%d_%H:%M)" data/extra/*
+          bash scripts/commit_files.sh "[CI Skip] data: 足の評価の収集 $(TZ=Asia/Tokyo date +%m/%d_%H:%M)" data/extra/* reports/extra_eval.json
