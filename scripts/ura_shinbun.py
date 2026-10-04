@@ -14,13 +14,13 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import html
-import math
 import pathlib
 import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from kyotei import racer_card as rc  # noqa: E402
+from kyotei.card_render import radar_svg  # noqa: E402
 
 LANE_BG = ["#ffffff", "#17191c", "#e3141b", "#0b5fb4", "#f5d00a", "#12904a"]
 LANE_FG = ["#102230", "#ffffff", "#ffffff", "#ffffff", "#102230", "#ffffff"]
@@ -160,30 +160,6 @@ def venue_fit(d, ids: list[int], jcd: int | None) -> dict:
 
 
 # ---------------------------------------------------------------- 描画
-def radar_svg(vals: dict, W: int = 340, H: int = 236) -> str:
-    """横長の枠に描いて、左右のラベル(「展示の信頼度 50」など)が切れないようにする。"""
-    labels = rc.RADAR
-    c, cy, R, n = W / 2, H / 2, 74, len(labels)
-
-    def pt(i, v):
-        a = -math.pi / 2 + 2 * math.pi * i / n
-        return c + R * v * math.cos(a), cy + R * v * math.sin(a)
-    ring = lambda v: " ".join(f"{x:.1f},{y:.1f}" for x, y in (pt(i, v) for i in range(n)))  # noqa: E731
-    poly = " ".join(f"{x:.1f},{y:.1f}" for x, y in (pt(i, max(0.03, (vals.get(l) or 0) / 100)) for i, l in enumerate(labels)))
-    out = [f'<svg class="radar" viewBox="0 0 {W} {H}" role="img" aria-label="'
-           + "、".join(f"{l} {round(vals[l]) if vals.get(l) is not None else '-'}" for l in labels) + '">']
-    out += [f'<polygon class="rg" points="{ring(v)}"/>' for v in (0.25, 0.5, 0.75, 1)]
-    out += [f'<line class="rg" x1="{c}" y1="{cy}" x2="{pt(i, 1)[0]:.1f}" y2="{pt(i, 1)[1]:.1f}"/>' for i in range(n)]
-    out.append(f'<polygon class="rd" points="{poly}"/>')
-    for i, l in enumerate(labels):
-        x, y = pt(i, 1.17)
-        anchor = "middle" if abs(x - c) < 4 else ("start" if x > c else "end")
-        v = vals.get(l)
-        out.append(f'<text x="{x:.1f}" y="{y + 4:.1f}" text-anchor="{anchor}">{e(l)}<tspan class="rv" dx="3">{round(v) if v is not None else "-"}</tspan></text>')
-    out.append("</svg>")
-    return "".join(out)
-
-
 def lane_tile(i: int) -> str:
     return f'<span class="lt" style="background:{LANE_BG[i]};color:{LANE_FG[i]}">{i + 1}</span>'
 
@@ -319,6 +295,7 @@ def main():
     ap.add_argument("--venue", default=None, help="場名か場コード")
     ap.add_argument("--racers", default="", help="カンマ区切り(登番か名前)")
     ap.add_argument("--file", default=None, help="1行に1人(登番か名前)")
+    ap.add_argument("--assen", default=None, help="出場選手一覧 data/assen/assen_YYYYMM.json:場コード:初日(scripts/fetch_assen.py)")
     ap.add_argument("--n", type=int, default=6, help="注目選手の数")
     ap.add_argument("--note", default="", help="冒頭に添える一文(試作であることなど)")
     ap.add_argument("--out", default=str(ROOT / "out/ura.html"))
@@ -327,6 +304,14 @@ def main():
     if a.file:
         keys += [x.strip() for x in pathlib.Path(a.file).read_text(encoding="utf-8").splitlines() if x.strip()]
     jcd = None
+    if a.assen:
+        import json as _json
+        path, j, hd = a.assen.rsplit(":", 2)
+        ser = next((x for x in _json.loads(pathlib.Path(path).read_text(encoding="utf-8")) if x["jcd"] == int(j) and x["hd"] == hd), None)
+        if not ser:
+            raise SystemExit(f"見つかりません: {a.assen}")
+        keys += [str(r["id"]) for r in ser.get("racers", [])]
+        jcd = int(j)
     if a.venue:
         jcd = int(a.venue) if str(a.venue).isdigit() else next((k for k, v in rc.VENUES.items() if v == a.venue), None)
     d = rc.load_table()

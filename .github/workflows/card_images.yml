@@ -1,0 +1,54 @@
+name: 選手カードの画像を作る
+
+# X・Instagram・note 用の選手カード画像(1080×1350)を作り、実行結果の「Artifacts」から zip でダウンロードできるようにする。
+# 例: racers に「峰竜太,4238,池田浩二」、venue に「尼崎」。大会の出場選手全員なら assen に「data/assen/assen_202610.json:13:20261027」
+on:
+  workflow_dispatch:
+    inputs:
+      racers:
+        description: "選手(名前か登番、カンマ区切り)"
+        default: ""
+      venue:
+        description: "大会の場(任意。ほかの場の「巧者」タグを外す)"
+        default: ""
+      assen:
+        description: "出場選手一覧(任意。data/assen/assen_YYYYMM.json:場コード:初日)"
+        default: ""
+      kicker:
+        description: "画像の上の小見出し"
+        default: "データで見る選手カード"
+
+permissions:
+  contents: read
+
+jobs:
+  images:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - name: 日本語フォントと描画用のブラウザ
+        run: |
+          sudo apt-get install -y -q fonts-noto-cjk fonts-dejavu-core >/dev/null
+          pip install -q playwright
+          python -m playwright install --with-deps chromium >/dev/null
+      - name: 画像を作る
+        env:
+          RACERS: ${{ inputs.racers }}
+          VENUE: ${{ inputs.venue }}
+          ASSEN: ${{ inputs.assen }}
+          KICKER: ${{ inputs.kicker }}
+        run: |
+          ARGS=()
+          IFS=',' read -ra R <<< "$RACERS"; for x in "${R[@]}"; do [ -n "$x" ] && ARGS+=("$x"); done
+          [ -n "$VENUE" ] && ARGS+=(--venue "$VENUE")
+          [ -n "$ASSEN" ] && ARGS+=(--assen "$ASSEN")
+          python scripts/card_images.py "${ARGS[@]}" --kicker "$KICKER" --out out/cards_png
+      - uses: actions/upload-artifact@v4
+        with:
+          name: card-images
+          path: out/cards_png
+          retention-days: 7

@@ -1,0 +1,52 @@
+name: 裏新聞の下書きを作る
+
+# 出場選手から裏新聞の下書き(HTML と note 用の文章)を作り、実行結果の「Artifacts」から zip でダウンロードできるようにする。
+# 例: title「SG ボートレースダービー」、assen「data/assen/assen_202610.json:13:20261027」(または racers に名前か登番をカンマ区切り)
+on:
+  workflow_dispatch:
+    inputs:
+      title:
+        description: "大会名"
+        required: true
+      assen:
+        description: "出場選手一覧(data/assen/assen_YYYYMM.json:場コード:初日)"
+        default: ""
+      racers:
+        description: "または選手(名前か登番、カンマ区切り)"
+        default: ""
+      venue:
+        description: "場(assen を使うときは不要)"
+        default: ""
+      n:
+        description: "注目選手の数"
+        default: "8"
+
+permissions:
+  contents: read
+
+jobs:
+  draft:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - name: 下書きを作る
+        env:
+          TITLE: ${{ inputs.title }}
+          ASSEN: ${{ inputs.assen }}
+          RACERS: ${{ inputs.racers }}
+          VENUE: ${{ inputs.venue }}
+          N: ${{ inputs.n }}
+        run: |
+          ARGS=(--title "$TITLE" --n "$N" --racers "$RACERS" --out out/ura/ura.html)
+          [ -n "$ASSEN" ] && ARGS+=(--assen "$ASSEN")
+          [ -n "$VENUE" ] && ARGS+=(--venue "$VENUE")
+          python scripts/ura_shinbun.py "${ARGS[@]}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ura-shinbun
+          path: out/ura
+          retention-days: 7
