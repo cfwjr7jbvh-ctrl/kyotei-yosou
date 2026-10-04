@@ -26,7 +26,7 @@ from kyotei.betting import COMBOS, blend, entropy, market_probs, model_tri_probs
 from kyotei.data import load_history  # noqa: E402
 from kyotei.parse_lzh import parse_program, parse_result  # noqa: E402
 from kyotei.publish import read_json, write_check, write_json  # noqa: E402
-from kyotei.scrape import fetch, fetch_many, parse_beforeinfo, parse_odds3t, parse_raceresult  # noqa: E402
+from kyotei.scrape import fetch, fetch_many, parse_beforeinfo, parse_odds3t, parse_pcexpect, parse_raceresult  # noqa: E402
 from kyotei.arashi import IN_LOSE_MIN, arashi  # noqa: E402
 from kyotei.notify import notify_bets  # noqa: E402
 from kyotei.tenkai import scenarios, tenkai, traits  # noqa: E402
@@ -212,7 +212,11 @@ def merge_live(day: dt.date, prev_path: str):
     late = {r["race_id"]: r for r in old.get("races", []) if r.get("stage") == "late" or r.get("result")}
     if not late:
         return
+    pcx = {r["race_id"]: r["pcx"] for r in old.get("races", []) if r.get("pcx") is not None}  # 公式のコンピュータ予想
     base["races"] = [late.get(r["race_id"], r) for r in base["races"]]
+    for r in base["races"]:
+        if r.get("pcx") is None and r["race_id"] in pcx:
+            r["pcx"] = pcx[r["race_id"]]
     base["updated_at"] = old.get("updated_at", base.get("updated_at"))
     write_json(jp, base)
     print("merged late races:", len(late))
@@ -382,6 +386,22 @@ def live(day: dt.date, ahead_min: int = 35):
         bx = info.get("boats", {})
         done = len(bx) >= 5 and all(np.isfinite(b.get("exhibit_time", np.nan)) for b in bx.values())
         bi_cache[race["race_id"]] = {"at": now(), "info": info, "complete": done}
+    # 公式のコンピュータ予想(当日の朝に出て変わらない)。締切2時間前からのレースに1回だけ取って付けておく(1周12レースまで)
+    try:  # 表示用のおまけなので、失敗しても直前予想の更新は止めない
+        pcx_need = []
+        for race in data["races"]:
+            if race.get("pcx") is not None or race.get("result") or not race.get("deadline"):
+                continue
+            hh, mm = map(int, race["deadline"].split(":"))
+            if t - dt.timedelta(minutes=1) <= t.replace(hour=hh, minute=mm, second=0, microsecond=0) <= t + dt.timedelta(minutes=120):
+                pcx_need.append(race)
+        pcx_need = sorted(pcx_need, key=lambda r: r["deadline"])[:12]
+        for race, html in zip(pcx_need, fetch_many([("pcexpect", r["jcd"], r["rno"], hd) for r in pcx_need])):
+            x = parse_pcexpect(html) if html else None
+            race["pcx"] = {"marks": x["marks"], "focus3": x["focus3"][:6]} if x else {}
+        perf["pcx"] = len(pcx_need)
+    except Exception as e:  # noqa: BLE001
+        print("pcexpect:", repr(e))
     ready = [race for _, race, _ in win if race["race_id"] in bi_cache and has_ex(bi_cache[race["race_id"]]["info"])]
     odds_html = dict(zip([r["race_id"] for r in ready],
                          fetch_many([("odds3t", r["jcd"], r["rno"], hd) for r in ready])))
@@ -425,6 +445,8 @@ def live(day: dt.date, ahead_min: int = 35):
         for b in new["boats"]:
             if before.get(b["lane"]) is not None:
                 b["p_win_early"] = before[b["lane"]]
+        if race.get("pcx") is not None:
+            new["pcx"] = race["pcx"]
         data["races"][i] = new
         updated.append(new)
         n += 1

@@ -2,7 +2,7 @@
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const state = { day: null, data: null, venue: "all", tab: "now", open: new Set(), latest: null };
+const state = { day: null, data: null, venue: "all", tab: "now", open: new Set(), latest: null, anSeen: new Set(), anSel: {} };
 
 // ---- パスワード(予想データは暗号化して置いてある) ----
 let KEY = null;
@@ -271,6 +271,7 @@ function tenkaiHTML(r) {
   const legend = KIM.filter((n) => k[n] >= 0.01).map((n) => `<span><i class="k${KIM.indexOf(n)}"></i>${n} <b>${Math.round(k[n] * 100)}%</b></span>`).join("");
   return `<div class="tenkai"><h3>展開予測</h3>
     <div class="kbar" aria-hidden="true">${seg}</div><div class="klegend">${legend}</div>
+    ${animHTML(r)}
     ${scenarioHTML(r)}
     <h4>スリット予想<small>${r.stage === "late" ? "展示STから" : "平均STから"}・右ほど早い</small></h4>${slitHTML(r)}</div>`;
 }
@@ -290,6 +291,205 @@ function scenarioHTML(r) {
   return `<h4>展開シナリオ<small>勝ち筋ごとの2着と本線</small></h4><div class="scns">${sc.map(row).join("")}</div>`;
 }
 
+// ---- 1マークの展開アニメ ----
+// 勝ち筋(展開シナリオ)ごとに「スリット隊形 → 1マークの回り方 → 着順」を動かして見せる。
+// スリットの並びは予想ST(直前は展示ST込み)、進入は直前なら展示の進入。1マークの回り方は決まり手ごとの典型の形で、
+// 実際の航跡のデータではない。着順はそのシナリオの本線(この艇が勝つなら、いちばんありそうな3連単)。
+const AN = { slitX: 150, mx: 292, my: 92, y: (c) => 128 + (c - 1) * 16, endX: [50, 84, 114, 142, 167, 190],
+  T: [0, 1.4, 2.3, 3.3, 4.2, 5.8], hold: 1.6 };
+const anReduce = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+function animHTML(r) {
+  const sc = (r.tenkai && r.tenkai.scenarios) || [];
+  if (!sc.length || !r.boats || r.boats.length < 6) return "";
+  const chips = sc.map((x, i) => `<button type="button" class="an-chip" data-i="${i}" aria-pressed="${i === 0}">${tile(x.lane)}<span>${esc(x.type || "1着")}</span><b>${Math.round(x.p_win * 100)}%</b></button>`).join("");
+  return `<div class="anim" data-id="${r.race_id}">
+    <h4>1マークの展開<small>勝ち筋を選ぶと動きます</small></h4>
+    <div class="an-chips">${chips}</div>
+    <div class="an-stage"><svg viewBox="0 0 360 232" role="img" aria-label="スタートから1マークまでの展開のアニメーション">
+      <rect class="an-water" x="0" y="0" width="360" height="232" rx="10"/>
+      <line class="an-slit" x1="${AN.slitX}" y1="112" x2="${AN.slitX}" y2="226"/>
+      <text class="an-lbl" x="${AN.slitX + 4}" y="229">スタートライン</text>
+      <circle class="an-mark2" cx="24" cy="${AN.my}" r="4"/><text class="an-lbl" x="32" y="${AN.my + 4}">2マーク</text>
+      <circle class="an-mark" cx="${AN.mx}" cy="${AN.my}" r="5"/><text class="an-lbl" x="${AN.mx - 9}" y="${AN.my + 4}" text-anchor="end">1マーク</text>
+      <text class="an-phase" x="12" y="24"></text>
+      <g class="an-trails"></g><g class="an-boats"></g></svg>
+      <button type="button" class="an-re" aria-label="もう一度再生">↻ もう一度</button></div>
+    <p class="an-cap"></p>
+    <p class="an-note">動きは決まり手ごとの典型の形です。スリットの並びは予想ST、着順はその勝ち筋の本線。</p></div>`;
+}
+
+const qb = (a, c, b, n = 24) => Array.from({ length: n + 1 }, (_, k) => {
+  const t = k / n, u = 1 - t;
+  return [u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]];
+});
+function anPath(segs) {
+  const pts = [], marks = [];
+  for (const s of segs) { pts.push(...(pts.length ? s.slice(1) : s)); marks.push(pts.length - 1); }
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  return { pts, cum, at: marks.map((i) => cum[i]) };  // at = 各区切り(スリット・ターン入口・出口・ゴール)までの距離
+}
+function anPos(p, s) {
+  const { pts, cum } = p;
+  if (s <= 0) return { x: pts[0][0], y: pts[0][1], i: 0 };
+  let lo = 0, hi = cum.length - 1;
+  if (s >= cum[hi]) return { x: pts[hi][0], y: pts[hi][1], i: hi };
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (cum[m] < s) lo = m; else hi = m; }
+  const f = (s - cum[lo]) / (cum[hi] - cum[lo] || 1);
+  return { x: pts[lo][0] + f * (pts[hi][0] - pts[lo][0]), y: pts[lo][1] + f * (pts[hi][1] - pts[lo][1]), i: lo };
+}
+
+// シナリオから各艇の動き(スリットの位置、ターンの半径、ターンの早さ、最後の順位)を決める
+function anModel(r, x) {
+  const st = Object.fromEntries(slitRows(r).map((s) => [s.b.lane, s]));
+  const sts = Object.values(st).map((s) => s.st);
+  const ref = sts.length ? sts.reduce((a, b) => a + b, 0) / sts.length : 0;
+  const boats = r.boats.map((b) => ({ lane: b.lane, c: courseOf(r, b), p: b.p_win, s: st[b.lane] }));
+  const byC = Object.fromEntries(boats.map((b) => [b.c, b]));
+  const combo = (x.best && x.best.combo || "").split("-").map(Number);
+  const order = [x.lane, combo[1], combo[2]].filter((v, i, a) => v && a.indexOf(v) === i);
+  boats.slice().sort((a, b) => b.p - a.p).forEach((b) => { if (!order.includes(b.lane)) order.push(b.lane); });
+  const A = boats.find((b) => b.lane === x.lane), ca = A.c, type = x.type || (ca === 1 ? "逃げ" : "差し");
+  for (const b of boats) {
+    b.lead = b.s ? Math.max(-26, Math.min(26, (ref - b.s.st) * 240)) : 0;
+    b.r = 18 + (b.c - 1) * 7; b.ex = 1; b.d = (b.c - 1) * 0.09; b.cx = AN.mx - 50;
+    b.rank = order.indexOf(b.lane);
+  }
+  const in1 = byC[1];
+  if (type === "逃げ" || ca === 1) {
+    A.r = 16; A.d = -0.08;
+    const B = boats.find((b) => b.lane === order[1]);
+    if (B && B.c === 2) { B.r = 12; B.d = 0.14; } else if (B) { B.r = 21; B.d = 0.1; }
+  } else if (type === "まくり") {
+    A.lead += 14; A.r = 22; A.d = -0.3; A.cx = AN.mx - 95;
+    for (const b of boats) if (b.c < ca) { b.r = 30 + b.c * 6; b.ex = 1.25; b.d = 0.12 + b.c * 0.04; }
+    const F = byC[ca + 1];
+    if (F) { F.r = 32; F.d = 0; }
+  } else if (type === "まくり差し") {
+    A.lead += 6; A.r = 13; A.d = 0.1; A.cx = AN.mx - 70;
+    if (in1 && in1 !== A) { in1.r = 24; in1.ex = 1.2; in1.d = -0.05; }
+    for (const b of boats) if (b.c > 1 && b.c < ca) { b.r = 32 + b.c * 4; b.ex = 1.15; b.d = 0.04; }
+  } else {  // 差し(抜き・恵まれなどもこの形で見せる)
+    if (in1 && in1 !== A) { in1.r = 26; in1.ex = 1.2; in1.d = 0; }
+    A.r = 11; A.d = 0.12;
+  }
+  for (const b of boats) {
+    const y0 = AN.y(b.c), dash = b.c >= 4;
+    const p0 = [AN.slitX - (dash ? 120 : 62) + b.lead, y0], p1 = [AN.slitX + b.lead, y0], p2 = [AN.slitX + b.lead + 10, y0];
+    const e = [AN.mx, AN.my + b.r], xo = [AN.mx, AN.my - b.r];
+    const arc = Array.from({ length: 31 }, (_, k) => {
+      const th = Math.PI / 2 - (Math.PI * k) / 30;
+      return [AN.mx + b.r * b.ex * Math.cos(th), AN.my + b.r * Math.sin(th)];
+    });
+    const fin = [AN.endX[b.rank], AN.my - 16 - Math.min(b.r, 50) * 0.55 + (b.rank % 2) * 5];
+    b.path = anPath([[p0, p1], [p1, p2], qb(p2, [b.cx, e[1]], e), arc, qb(xo, [AN.mx - 70, xo[1]], fin)]);
+  }
+  const lines = {
+    "逃げ": `${x.lane}号艇が先にターンして逃げる`,
+    "差し": `${in1 && in1 !== A ? in1.lane + "号艇のターンが膨らんだ内を、" : ""}${x.lane}号艇が差す`,
+    "まくり": `${x.lane}号艇がスリットで先手、内の艇の外から一気にまくる`,
+    "まくり差し": `${x.lane}号艇が内の艇の間を割って、1マークで差し込む`,
+  };
+  const slit = slitRows(r).filter((s) => s.atk || s.dent).map((s) => `${s.b.lane}号艇${s.atk ? "が攻め" : "が凹み"}`).join("・");
+  return { boats, type, cap: [`スタート: ${slit ? slit + "の隊形" : "予想STの隊形"}`, `1マーク: ${lines[type] || lines["差し"]}`,
+    `決着: ${order.slice(0, 3).join("-")}(この展開の中で${Math.round((x.best.p_cond || 0) * 100)}%)`] };
+}
+
+function anDraw(el, m, t) {
+  const T = AN.T, svg = el.querySelector("svg");
+  const tr = svg.querySelector(".an-trails"), bg = svg.querySelector(".an-boats");
+  if (!tr.childElementCount) {
+    tr.innerHTML = m.boats.map((b) => `<polyline class="an-tr l${b.lane}" points=""/>`).join("");
+    bg.innerHTML = m.boats.map((b) => `<g class="an-bt l${b.lane}"><circle r="8.5"/><text y="4.2" text-anchor="middle">${b.lane}</text><text class="an-flag" y="-12" text-anchor="middle"></text></g>`).join("");
+  }
+  const phase = t < T[2] ? 0 : t < T[4] ? 1 : 2;
+  svg.querySelector(".an-phase").textContent = ["スタート", "1マーク", "決着"][phase];
+  const cap = el.querySelector(".an-cap");
+  if (cap.dataset.p !== String(phase)) { cap.dataset.p = phase; cap.textContent = m.cap[phase]; }
+  m.boats.forEach((b, i) => {
+    const P = b.path, ks = [[T[0], 0], [T[1], P.at[0]], [T[2], P.at[1]], [T[3] + b.d, P.at[2]], [T[4] + b.d, P.at[3]], [T[5], P.at[4]]];
+    let s = P.at[4];
+    for (let k = 1; k < ks.length; k++) if (t <= ks[k][0]) { const f = (t - ks[k - 1][0]) / (ks[k][0] - ks[k - 1][0]); s = ks[k - 1][1] + Math.max(0, f) * (ks[k][1] - ks[k - 1][1]); break; }
+    const p = anPos(P, s);
+    tr.children[i].setAttribute("points", P.pts.slice(0, p.i + 1).concat([[p.x, p.y]]).map((q) => q[0].toFixed(1) + "," + q[1].toFixed(1)).join(" "));
+    const g = bg.children[i];
+    g.setAttribute("transform", `translate(${p.x.toFixed(1)},${p.y.toFixed(1)})`);
+    const flag = t >= T[1] - 0.2 && t < T[3] && b.s ? (b.s.atk ? "攻め" : b.s.dent ? "凹み" : "") : t >= T[5] && b.rank < 3 ? `${b.rank + 1}着` : "";
+    const fe = g.querySelector(".an-flag");
+    if (fe.textContent !== flag) {
+      const fin = t >= T[5];  // スリットでは艇の右、決着では艇の上に出す
+      fe.textContent = flag;
+      fe.setAttribute("class", "an-flag" + (!fin && b.s && b.s.atk ? " atk" : fin ? " fin" : ""));
+      fe.setAttribute("x", fin ? 0 : 12); fe.setAttribute("y", fin ? -12 : 3.5); fe.setAttribute("text-anchor", fin ? "middle" : "start");
+    }
+  });
+}
+
+function anPlay(el, i) {
+  const r = state.data && state.data.races.find((x) => x.race_id === el.dataset.id);
+  const x = r && r.tenkai && r.tenkai.scenarios && r.tenkai.scenarios[i];
+  if (!x) return;
+  el.querySelectorAll(".an-chip").forEach((c) => c.setAttribute("aria-pressed", c.dataset.i === String(i)));
+  const m = anModel(r, x);
+  el.querySelector(".an-trails").innerHTML = "";
+  if (el._raf) cancelAnimationFrame(el._raf);
+  el._i = i;
+  state.anSel[el.dataset.id] = i;
+  state.anSeen.add(el.dataset.id);
+  const end = AN.T[5] + 0.01;
+  if (anReduce()) { anDraw(el, m, end); return; }
+  const t0 = performance.now();
+  const step = (now) => {
+    const t = (now - t0) / 1000;
+    anDraw(el, m, Math.min(t, end));
+    el._raf = t < end ? requestAnimationFrame(step) : 0;
+  };
+  el._raf = requestAnimationFrame(step);
+}
+
+// 初めて見えたときに1回だけ自動で再生する(2分ごとの描き直しでは再生し直さない)
+const anObs = "IntersectionObserver" in window ? new IntersectionObserver((es) => es.forEach((e) => {
+  if (e.isIntersecting && !state.anSeen.has(e.target.dataset.id)) anPlay(e.target, e.target._i || 0);
+}), { threshold: 0.5 }) : null;
+function setupAnims(root) {
+  $$(".anim", root).forEach((el) => {
+    if (el._ready) return;
+    el._ready = true;
+    el.addEventListener("click", (ev) => {
+      const c = ev.target.closest(".an-chip");
+      if (c) { anPlay(el, +c.dataset.i); return; }
+      if (ev.target.closest(".an-re")) anPlay(el, el._i || 0);
+    });
+    const r = state.data.races.find((x) => x.race_id === el.dataset.id);
+    const i = Math.min(state.anSel[el.dataset.id] || 0, r ? r.tenkai.scenarios.length - 1 : 0);
+    el._i = i;
+    el.querySelectorAll(".an-chip").forEach((c) => c.setAttribute("aria-pressed", c.dataset.i === String(i)));
+    if (r) anDraw(el, anModel(r, r.tenkai.scenarios[i]), AN.T[5] + 0.01);  // まず決着の形を出しておく
+    if (anObs && !anReduce()) anObs.observe(el);
+  });
+}
+
+// ---- 公式サイトへのリンクと公式のコンピュータ予想 ----
+const OFFICIAL = "https://www.boatrace.jp/owpc/pc/race/";
+function officialHTML(r) {
+  const id = String(r.race_id || "");
+  if (id.length < 12) return "";
+  const q = `?rno=${+id.slice(10, 12)}&jcd=${id.slice(8, 10)}&hd=${id.slice(0, 8)}`;
+  const links = [["racelist", "出走表"], ["beforeinfo", "直前情報"], ["odds3t", "オッズ"], ["pcexpect", "コンピュータ予想"], ["raceresult", "結果"]]
+    .map(([p, n]) => `<a href="${OFFICIAL}${p}${q}" target="_blank" rel="noopener">${n}</a>`).join("");
+  let pcx = "";
+  const x = r.pcx;
+  if (x && x.marks && Object.keys(x.marks).length) {
+    const ms = Object.entries(x.marks).sort((a, b) => a[1] - b[1]).map(([lane, k]) => `<span class="pm">${MARKS[k - 1] || ""}${tile(+lane)}</span>`).join("");
+    const f3 = (x.focus3 || []).slice(0, 4).map((c) => tri(c)).join("");
+    const ai = r.top && r.top[0] ? r.top[0].combo : "";
+    const same = ai && (x.focus3 || []).includes(ai);
+    pcx = `<div class="pcx"><div class="pcx-h">公式のコンピュータ予想</div>
+      <div class="pcx-m">${ms}</div>${f3 ? `<div class="pcx-f">${f3}${ai ? `<span class="pcx-ai">${same ? "AIの本命と一致" : "AIの本命は別"}</span>` : ""}</div>` : ""}</div>`;
+  }
+  return `<div class="official">${pcx}<div class="olinks"><span class="k">公式サイト</span>${links}</div></div>`;
+}
+
 function resultHTML(r) {
   if (!r.result) return "";
   return `<div class="result">結果 ${tri(r.result.tri_combo)}<span class="pay">${r.result.tri_pay.toLocaleString()}円</span>${r.result.kimarite ? `<span class="kim">${esc(r.result.kimarite)}</span>` : ""}</div>`;
@@ -301,8 +501,8 @@ function stageHTML(r) {
     : `<div class="stage">朝の予想(展示前)</div>`;
 }
 
-// 見る順: AIのひと言 → 荒れ度 → 結果 → 本命 → 期待値の買い目 → AIの狙い目 → 展開予測 → 各艇 → ほかの候補
-const bodyHTML = (r) => stageHTML(r) + aiLine(r) + arashiHTML(r) + resultHTML(r) + honmeiHTML(r) + evHTML(r) + pickHTML(r) + tenkaiHTML(r) + boatsHTML(r) + combosHTML(r);
+// 見る順: AIのひと言 → 荒れ度 → 結果 → 本命 → 期待値の買い目 → AIの狙い目 → 展開予測(アニメ・シナリオ・スリット) → 各艇 → ほかの候補 → 公式サイト
+const bodyHTML = (r) => stageHTML(r) + aiLine(r) + arashiHTML(r) + resultHTML(r) + honmeiHTML(r) + evHTML(r) + pickHTML(r) + tenkaiHTML(r) + boatsHTML(r) + combosHTML(r) + officialHTML(r);
 
 function clockHTML(r) {
   const left = minsLeft(r);
@@ -362,6 +562,7 @@ function renderNow() {
   }
   if (done.length) html += `<h2 class="sect">終わったレース</h2><div class="list">${done.map(rowHTML).join("")}</div>`;
   box.innerHTML = html;
+  setupAnims(box);
 }
 
 function renderBets() {
@@ -379,6 +580,7 @@ function renderBets() {
   if (up.length) html += `<div class="cards">${up.map(heroHTML).join("")}</div>`;
   if (done.length) html += `<h2 class="sect">終わったレース</h2><div class="list">${done.map(rowHTML).join("")}</div>`;
   box.innerHTML = html;
+  setupAnims(box);
 }
 
 function stat(k, v, cls = "") { return `<div class="stat"><div class="k">${k}</div><div class="v ${cls}">${v}</div></div>`; }

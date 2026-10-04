@@ -275,3 +275,52 @@ details.row[open]>summary{border-bottom:1px solid var(--rule)}
   .upd .dot{animation:pulse 2s ease-in-out infinite}
   @keyframes pulse{50%{opacity:.35}}
 }
+
+/* 1マークの展開アニメ */
+.anim{margin:6px 0 4px}
+.an-chips{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+.an-chip{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--rule);background:var(--deck);border-radius:999px;
+  padding:3px 10px 3px 4px;font-size:12.5px;cursor:pointer}
+.an-chip .lane{width:22px;height:22px;font-size:14px;border-radius:999px}
+.an-chip b{font-family:var(--num);font-size:14px}
+.an-chip[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink);font-weight:700}
+.an-stage{position:relative}
+.an-stage svg{display:block;width:100%;height:auto;max-width:560px}
+.an-water{fill:var(--soft);stroke:var(--rule)}
+.an-slit{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:3 3;opacity:.55}
+.an-mark{fill:var(--mark)} .an-mark2{fill:var(--mute);opacity:.5}
+.an-lbl{font-size:9.5px;fill:var(--mute)}
+.an-phase{font-size:15px;font-weight:700;fill:var(--ink)}
+.an-tr{fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:.5}
+.an-tr.l1{stroke:var(--bar1)} .an-tr.l2{stroke:var(--l2)} .an-tr.l3{stroke:var(--l3)}
+.an-tr.l4{stroke:var(--l4)} .an-tr.l5{stroke:var(--l5)} .an-tr.l6{stroke:var(--l6)}
+@media (prefers-color-scheme:dark){ .an-tr.l2{stroke:var(--l2edge)} }
+.an-bt circle{stroke-width:1.2}
+.an-bt text{font:700 11.5px var(--num)}
+.an-bt.l1 circle{fill:var(--l1);stroke:var(--l1edge)} .an-bt.l1 text{fill:var(--l1i)}
+.an-bt.l2 circle{fill:var(--l2);stroke:var(--l2edge)} .an-bt.l2 text{fill:var(--l2i)}
+.an-bt.l3 circle{fill:var(--l3);stroke:none} .an-bt.l3 text{fill:var(--l3i)}
+.an-bt.l4 circle{fill:var(--l4);stroke:none} .an-bt.l4 text{fill:var(--l4i)}
+.an-bt.l5 circle{fill:var(--l5);stroke:none} .an-bt.l5 text{fill:var(--l5i)}
+.an-bt.l6 circle{fill:var(--l6);stroke:none} .an-bt.l6 text{fill:var(--l6i)}
+.an-bt text.an-flag{font:700 9.5px "BIZ UDPGothic",system-ui,sans-serif;fill:var(--mute)}
+.an-bt text.an-flag.atk{fill:var(--mark)} .an-bt text.an-flag.fin{fill:var(--ink)}
+.an-re{position:absolute;right:8px;top:8px;border:1px solid var(--rule);background:var(--deck);border-radius:999px;
+  padding:3px 10px;font-size:12px;cursor:pointer}
+.an-cap{margin:6px 0 0;font-size:13.5px;font-weight:700;min-height:1.5em}
+.an-note{margin:2px 0 0;font-size:11px;color:var(--mute)}
+
+/* 公式サイトへのリンクと公式のコンピュータ予想 */
+.official{margin-top:12px;border-top:1px solid var(--rule);padding-top:10px}
+.pcx{margin-bottom:8px}
+.pcx-h{font-size:13px;color:var(--mute);font-weight:700;display:flex;align-items:center;gap:8px}
+.pcx-h .conf{font-weight:400;font-size:12px;letter-spacing:.05em}
+.pcx-m{display:flex;gap:10px;margin:5px 0;flex-wrap:wrap}
+.pcx-m .pm{display:inline-flex;align-items:center;gap:2px;font-size:15px;color:var(--mark);font-weight:700}
+.pcx-m .lane{width:24px;height:24px;font-size:15px}
+.pcx-f{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pcx-ai{font-size:12px;color:var(--mute)}
+.olinks{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.olinks .k{font-size:12px;color:var(--mute);margin-right:2px}
+.olinks a{font-size:12.5px;color:var(--ink);text-decoration:none;border:1px solid var(--rule);border-radius:999px;padding:3px 10px;background:var(--deck)}
+.olinks a::after{content:" ↗";color:var(--mute);font-size:11px}
