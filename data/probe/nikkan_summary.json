@@ -1,0 +1,336 @@
+{
+ "portal": null,
+ "slugs": {
+  "toda": "AI&直前予想",
+  "tsu": "ＡＩ予想",
+  "biwako": "直前予想",
+  "tokuyama": "AI&直前予想",
+  "shimonoseki": "直前予想",
+  "fukuoka": "ＡＩ予想",
+  "wakamatsu": "AI&直前予想"
+ },
+ "dates": {
+  "tokuyama/20261003": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20261003/1",
+   "len": 47558,
+   "comment_rows": 6,
+   "sign_rows": 27,
+   "comment_kinds": {
+    "前日": 6
+   }
+  },
+  "tokuyama/20260920": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20260920/1",
+   "len": 10654,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "tokuyama/20260801": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20260801/1",
+   "len": 49611,
+   "comment_rows": 6,
+   "sign_rows": 27,
+   "comment_kinds": {
+    "前日": 6
+   }
+  },
+  "tokuyama/20260401": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20260401/1",
+   "len": 10654,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "tokuyama/20260101": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20260101/1",
+   "len": 10654,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "tokuyama/20250701": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20250701/1",
+   "len": 10654,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "tokuyama/20250101": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20250101/1",
+   "len": 10654,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "tokuyama/20240601": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20240601/1",
+   "len": 10654,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "tokuyama/20231015": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20231015/1",
+   "len": 10654,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "toda/20261003": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20261003/1",
+   "len": 34123,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "toda/20260920": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20260920/1",
+   "len": 39970,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "toda/20260801": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20260801/1",
+   "len": 8140,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "toda/20260401": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20260401/1",
+   "len": 8140,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "toda/20260101": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20260101/1",
+   "len": 8140,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "toda/20250701": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20250701/1",
+   "len": 8140,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "toda/20250101": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20250101/1",
+   "len": 8140,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "toda/20240601": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20240601/1",
+   "len": 8140,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "toda/20231015": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20231015/1",
+   "len": 8140,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "toda/20261004": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20261004/1",
+   "len": 36689,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "tsu/20261004": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tsu/20261004/1",
+   "len": 40692,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "biwako/20261004": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/biwako/20261004/1",
+   "len": 73031,
+   "comment_rows": 0,
+   "sign_rows": 27,
+   "comment_kinds": {}
+  },
+  "tokuyama/20261004": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20261004/1",
+   "len": 48765,
+   "comment_rows": 6,
+   "sign_rows": 27,
+   "comment_kinds": {
+    "前日": 6
+   }
+  },
+  "shimonoseki/20261004": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/shimonoseki/20261004/1",
+   "len": 40445,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "fukuoka/20261004": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/fukuoka/20261004/1",
+   "len": 36732,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "wakamatsu/20261004": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/wakamatsu/20261004/1",
+   "len": 8009,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  }
+ },
+ "race_page": {
+  "url": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20261004/1",
+  "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20261004/1",
+  "status": 200,
+  "len": 48765,
+  "comment_rows": 6,
+  "sign_rows": 27,
+  "comment_kinds": {
+   "前日": 6
+  },
+  "heads": [
+   "",
+   "10/4 スカパー！・ＪＬＣ杯徳山ルーキーシリーズ第１８戦（",
+   "渕上記者 密着予想 1R",
+   "とっておき情報",
+   "渕上記者 直前気配 1R",
+   "選手コメント 1R",
+   "オリジナル展示情報 1R",
+   "水面気象情報 1R",
+   "渕上記者の徳山攻略法 1R",
+   "ＡＩ予想 1R",
+   "コンピ予想 1R",
+   "1マーク予想 1R",
+   "ボートＡＩ予想",
+   "ボートＡＩ予想自信度"
+  ],
+  "tables": [
+   {
+    "class": "writer_win",
+    "rows": 2,
+    "th": [
+     "的中率",
+     "回収率"
+    ]
+   },
+   {
+    "class": "sign_head",
+    "rows": 7,
+    "th": [
+     "枠",
+     "登録番号/級別 氏名",
+     "1",
+     "2",
+     "3",
+     "4",
+     "5",
+     "6"
+    ]
+   },
+   {
+    "class": "sign_table",
+    "rows": 27,
+    "th": [
+     "写真",
+     "支部/出身地 年齢/体重",
+     "直前気配",
+     "コンピ 指数",
+     "F数 L数 平均ST",
+     "全国",
+     "当地",
+     "モーター",
+     "ボート",
+     "",
+     "レースNo（艇番色） 進",
+     "早見",
+     "行き足",
+     "回り足",
+     "ピット 離れ",
+     "モーター 評価"
+    ]
+   },
+   {
+    "class": "comment_table",
+    "rows": 6,
+    "th": [
+     "仲道 大輔",
+     "中野 仁照",
+     "眞崎 武蔵",
+     "村松 栄太",
+     "木山 大聖",
+     "三馬 崇史"
+    ]
+   },
+   {
+    "class": "start_table",
+    "rows": 7,
+    "th": [
+     "コース",
+     "並び",
+     "ST",
+     "展示 タイム",
+     "一周 タイム",
+     "回り足 タイム"
+    ]
+   },
+   {
+    "class": "exp_table",
+    "rows": 6,
+    "th": [
+     "推奨順",
+     "買い目",
+     "自信度",
+     "結果"
+    ]
+   },
+   {
+    "class": "exp_table",
+    "rows": 9,
+    "th": [
+     "推奨順",
+     "買い目",
+     "結果"
+    ]
+   }
+  ]
+ }
+}
