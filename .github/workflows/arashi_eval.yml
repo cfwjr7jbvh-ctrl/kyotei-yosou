@@ -33,11 +33,10 @@ jobs:
           model: "false"
       - name: 全期間で検証
         run: python scripts/upset_eval.py --walk-forward --cache "$RUNNER_TEMP/wf.pkl"
-      - name: 勝てる根拠が出たか判定(変わったら LINE で知らせる)
+      - name: 勝てる根拠が出たか判定(変わったら LINE で知らせる。本番の買い方は最新の学習レポートから)
         run: python scripts/edge_check.py || true
       - name: 結果をコミット
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add reports/upset_eval.json reports/edge_status.json
-          if git commit -q -m "[CI Skip] report: 荒れ狙いの検証(全期間)"; then bash scripts/push.sh; else echo "no changes"; fi
+          bash scripts/commit_files.sh "[CI Skip] report: 荒れ狙いの検証(全期間)" reports/upset_eval.json reports/edge_status.json
