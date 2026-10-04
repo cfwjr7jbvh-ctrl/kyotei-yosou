@@ -93,6 +93,31 @@ def headlines(c: dict, t: dict) -> list[str]:
     return [f"{n}の{t['t']}"]
 
 
+# 予想のヒント: 買い目ではなく「この材料をどう使うと予想が楽しくなるか」。断定や的中をうたう言い方はしない
+HINT = {
+    "start": "スタート勝負になりそうな並びなら主役候補。展示のSTも合わせて見ておきたい",
+    "ex": "展示のSTがそのまま本番に出やすいタイプ。展示で速ければ、信じてみる価値あり",
+    "ex2": "展示より本番で踏み込むタイプ。展示のSTが遅めでも、慌てなくていいかも",
+    "nige": "1号艇のときは素直に信頼するか、あえて崩れる筋を探すか。考えどころ",
+    "sashi": "2コースに入ったら差しの筋を一考。内の艇が流れる展開を想像してみて",
+    "makuri": "3〜4コースに入ったら一撃に注意。内の艇のスタートと合わせて考えたい",
+    "mz": "3コースより外ならまくり差しの筋。1マークで内の艇の間が空くかがカギ",
+    "out": "外枠でも3着内に残すことが多い。ヒモに入れるかどうか、悩みどころ",
+    "front": "進入が動きやすい。展示の進入を見てから組み立てると楽しい",
+    "rough": "風や波がある日に出番。当日の水面の情報をチェック",
+    "kake": "予選の最終日にボーダー付近なら注目",
+    "big": "準優・優勝戦でも崩れにくい。大会の後半が本番かも",
+    "exlate": "展示タイムが平凡でも、評価を下げすぎないのが吉",
+    "growth": "いま勢いがある。直近の着順もあわせてチェック",
+    "stable": "とにかく舟券に絡む。3着までに入れるかどうかの判断材料に",
+    "venue": "この水面との相性は数字に出ている。当地での走りに注目",
+}
+
+
+def hint(t: dict) -> str:
+    return HINT.get(t["cat"], "")
+
+
 def comment(c: dict, picked: dict, venue: dict | None) -> str:
     """ひと言コメント: 一番の特徴の根拠 + 2つ目の特徴(なければコース別の数字)。数字はカードのまま。"""
     parts = [picked["why"] + "。"]
@@ -177,6 +202,7 @@ def card_block(c: dict, t: dict, heads: list[str], com: str, idx: int) -> str:
   {f'<ul class="alt"><li class="lbl">見出しの別案</li>{alt}</ul>' if alt else ''}
   <div class="pick-body">
     <div class="pick-text"><p class="com">{e(com)}</p>
+      {f'<p class="hint"><b>予想のヒント</b>{e(hint(t))}</p>' if hint(t) else ''}
       <ul class="tags">{tags}</ul></div>
     <figure class="pick-card">{radar_svg(c['radar'])}
       <figcaption>{e(g)}の中での位置(100がトップ)</figcaption>
@@ -218,6 +244,8 @@ body{background:var(--paper);color:var(--ink);font:15px/1.7 var(--body);padding-
 .pick-body{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start}
 @media (max-width:640px){.pick-body{grid-template-columns:1fr}}
 .com{margin:0;font-size:15px}
+.hint{margin:10px 0 0;font-size:14px;background:var(--paper2);border-radius:6px;padding:8px 10px}
+.hint b{display:inline-block;color:var(--stamp);margin-right:8px;font-size:12.5px}
 .tags{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
 .tags li{display:grid;gap:1px;padding-left:10px;border-left:3px solid var(--stamp)}
 .tags b{font-size:14px}
@@ -278,15 +306,81 @@ def render(title: str, venue_name: str | None, picks, all_cards, corners: list[t
 </div>"""
 
 
-def to_text(title, venue_name, picks, corners_txt) -> str:
-    out = [f"【裏新聞】{title}", f"{venue_name}開催" if venue_name else "", ""]
+def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str] | None = None) -> str:
+    """note に貼る本文の下書き。考え方(発信方針): 答え(買い目)ではなく、読んだ人が自分で予想するのが楽しくなる「材料」を届ける。
+    無料部分で1人分を丸ごと見せて中身の質を伝え、有料部分の中身は見出しで見せる。"""
+    n_all, n_pick = len(sel), len(picks)
+    fi = next((i for i, (_, t, *_r) in enumerate(picks) if t["cat"] == "venue"), 0)
+    picks = [picks[fi]] + [x for k, x in enumerate(picks) if k != fi]  # 無料で見せる1人を注目1に
+    free_i = 0
+    trust = free_corner or []
+    out = ["【タイトル案】",
+           f"1. 【ウラ新聞】{title}|出場{n_all}人をデータで読む 予想が楽しくなる“材料”集",
+           f"2. {title}の出場{n_all}人、データで分かる“型”まとめ",
+           f"3. 【保存版】{title} 全{n_all}人のひと言タグと注目{n_pick}人",
+           "", "――――――――――(ここから無料)――――――――――", "",
+           f"{title}{'(' + venue_name + ')' if venue_name else ''}の出場予定{n_all}人を、過去3年・約17万レースの成績から読みました。",
+           "このノートは買い目を売るものではありません。あなたが自分で予想するときに「へえ、この人はこういう型なのか」と使える材料を集めたものです。",
+           "", "■この記事でわかること",
+           f"・データで目立つ注目{n_pick}人と、それぞれの“型”",
+           "・展示STを信じていい選手",
+           f"・{venue_name + 'と' if venue_name else ''}相性のいい選手、勝負駆けや荒れ水面に強い選手、よく当たるライバル",
+           f"・保存版:出場{n_all}人全員のひと言タグ一覧(現地観戦のおともに)", ""]
+    c, t, heads, com = picks[free_i]
+    out += [f"■注目1(無料で公開):{c['name']}({c['class']}・{c['branch']})", f"〔画像:{c['id']}_{c['name']}.png〕", f"【{heads[0]}】", com]
+    if hint(t):
+        out += [f"予想のヒント:{hint(t)}"]
+    out += [""]
+    if trust:
+        out += trust + [""]
+    out += ["■有料パートの中身"]
+    out += [f"・注目{i} {pc['name']}({pt['t']})" for i, (pc, pt, *_r) in enumerate(picks, 1) if i - 1 != free_i]
+    out += [f"・{x[1:]}" for x in corners_txt if x.startswith("■") and not x.startswith("■展示ST")]
+    out += [f"・保存版:出場{n_all}人のひと言タグ一覧", "",
+            "数字はすべて、公式の成績データを自分たちで集計したものです。根拠の数字と判定の基準も全部載せています。", "",
+            "――――――――――(ここから有料:note の有料エリアの線をここに)――――――――――", ""]
     for i, (c, t, heads, com) in enumerate(picks, 1):
-        out += [f"■注目{i} {c['name']}({c['class']}・{c['branch']})", f"見出し案: {heads[0]}"]
-        out += [f"  別案: {h}" for h in heads[1:]]
-        out += [com, "タグ: " + " / ".join(f"{x['t']}({x['why']})" for x in c["tags"][:5]), ""]
-    out += corners_txt
-    out += ["", "※公式の成績データを自分たちで集計した数字です。舟券の的中や利益を約束するものではありません。"]
-    return "\n".join(x for x in out if x is not None)
+        if i - 1 == free_i:
+            continue
+        out += [f"■注目{i} {c['name']}({c['class']}・{c['branch']})", f"〔画像:{c['id']}_{c['name']}.png〕", f"【{heads[0]}】", com]
+        if hint(t):
+            out += [f"予想のヒント:{hint(t)}"]
+        out += [""]
+    out += [x for x in corners_txt if not x.startswith("■展示ST") and x not in trust] + [""]
+    out += [f"■保存版:出場{n_all}人のひと言タグ一覧"]
+    for c in sel:
+        tags = [t["t"] for t in c["tags"][:2]]
+        out.append(f"・{c['name']}({c['class']}・{c['branch']}){' / '.join(tags) if tags else '(目立つタグなし)'}")
+    out += ["", "■この記事のデータについて",
+            "・公式の成績データ(番組表・競走成績、2023年10月〜)を自分たちで集計しています。出走表・オッズの表・写真は使っていません",
+            "・「上位◯%」は同じ級別(A1・A2・B級)の中での位置です。3着内率はコースの有利不利を差し引いた値で比べています",
+            "・タグは決まった基準を満たした選手だけに付けています(基準は画像の下と下書きのHTMLに全文)",
+            "・この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません", "",
+            "■次回予告",
+            "次のSG・G1の出場選手が発表されたら、また“材料”をまとめます。フォローしておくと見逃しません。"]
+    return "\n".join(out)
+
+
+def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: list[str]) -> str:
+    """X の投稿案(3つのスレッド)。1投稿は全角140字以内に収める。"""
+    n_all = len(sel)
+    import re as _re
+    short = _re.sub(r"第[0-9０-９]+回", "", title)
+    short = _re.sub(r"[(（].*?[)）]", "", short)
+    short = _re.sub(r"^\s*(SG|PG1|G1|GⅠ|G2|GⅡ|G3|GⅢ)\s*", "", short).strip()
+    tag = "#" + "".join(ch for ch in short if ch not in " 　") if short else ""
+    posts = [
+        f"{title}、出場予定{n_all}人をデータで読みました📰\n\n買い目ではなく、予想が楽しくなる“材料”をまとめています。\n\nまずは「展示STを信じていい選手」👇\n" + "\n".join(f"・{x}" for x in trust_names[:3]),
+        (f"{venue_name}と相性がいい選手(3着内率が普段より上)\n" + "\n".join(f"・{x}" for x in venue_names[:3])) if venue_names else
+        f"注目選手のカードを1枚だけ先に公開。{picks[0][0]['name']}は「{picks[0][1]['t']}」",
+        f"注目{len(picks)}人の“型”と、全{n_all}人のひと言タグ一覧はnoteにまとめました(現地観戦のおともに)\n\n(noteのURL)\n\n#競艇 #ボートレース {tag}",
+    ]
+    out = []
+    for i, p in enumerate(posts, 1):
+        warn = "  ※140字を超えています" if len(p) > 140 else ""
+        out += [f"--- 投稿{i}({len(p)}字){warn} ---", p, ""]
+    out.append("画像: 投稿1に注目1人目のカード、投稿2に今回の場と相性のいい選手のカードを添える")
+    return "\n".join(out)
 
 
 def main():
@@ -380,8 +474,12 @@ def main():
     out = pathlib.Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(render(a.title, rc.VENUES.get(jcd) if jcd else None, picks, sel, corners, meta, a.note), encoding="utf-8")
-    out.with_suffix(".txt").write_text(to_text(a.title, rc.VENUES.get(jcd) if jcd else None, picks, txt), encoding="utf-8")
-    print("wrote", out, out.with_suffix(".txt"))
+    vname = rc.VENUES.get(jcd) if jcd else None
+    trust_lines = ["■展示STを信じていい選手(展示と本番のSTのずれが小さい)"] + [f"・{c['name']}(ずれ平均{c['ex']['mae']:.3f}秒、{c['ex']['n']}走)" for c in trust] if trust else []
+    out.with_suffix(".txt").write_text(note_text(a.title, vname, picks, sel, txt, trust_lines), encoding="utf-8")
+    vnames = [c["name"] for v, c in vv[:3]] if jcd and "vv" in locals() else []
+    out.with_name(out.stem + "_x.txt").write_text(x_text(a.title, vname, picks, sel, [c["name"] for c in trust], vnames), encoding="utf-8")
+    print("wrote", out, out.with_suffix(".txt"), out.with_name(out.stem + "_x.txt"))
 
 
 if __name__ == "__main__":
