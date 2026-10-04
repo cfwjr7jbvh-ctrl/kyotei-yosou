@@ -30,10 +30,26 @@ def _key(password: str) -> bytes:
     return PBKDF2HMAC(hashes.SHA256(), 32, salt, ITER).derive(password.encode())
 
 
+def _clean(o):
+    """NaN・無限大は JSON にできない(ブラウザで読めなくなる)ので null にする。"""
+    if isinstance(o, float):
+        return o if o == o and o not in (float("inf"), float("-inf")) else None
+    if isinstance(o, dict):
+        return {k: _clean(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [_clean(v) for v in o]
+    if hasattr(o, "item") and not isinstance(o, (str, bytes)):
+        try:
+            return _clean(o.item())
+        except (ValueError, AttributeError):
+            return o
+    return o
+
+
 def write_json(path: pathlib.Path, obj, encrypt: bool = True):
     path = pathlib.Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    raw = json.dumps(obj, ensure_ascii=False, separators=(",", ":"), default=_default)
+    raw = json.dumps(_clean(obj), ensure_ascii=False, separators=(",", ":"), default=_default, allow_nan=False)
     pw = os.environ.get("SITE_PASSWORD", "")
     if encrypt and not pw:
         print(f"SITE_PASSWORD が未設定のため {path.name} は公開しません")

@@ -5,31 +5,29 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>競艇AI予想</title>
 <meta name="description" content="複数の予想モデルとオッズから期待値のある買い目を出す競艇予想">
-<meta name="theme-color" content="#0b1e33">
+<meta name="theme-color" content="#102230">
+<meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Roboto+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="top">
+<header class="bar">
   <div class="brand">
-    <span class="wake" aria-hidden="true"></span>
-    <div>
-      <h1>競艇AI予想</h1>
-      <p class="sub" id="updated">読み込み中…</p>
-    </div>
+    <span class="flags" aria-hidden="true"><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i><i class="l5"></i><i class="l6"></i></span>
+    <h1>競艇AI予想</h1>
   </div>
-  <label class="date">
-    <span class="sr">日付</span>
-    <select id="day"></select>
-  </label>
+  <div class="status">
+    <span id="updated" class="upd" role="status">読み込み中</span>
+    <label class="day"><span class="sr">日付</span><select id="day"></select></label>
+  </div>
 </header>
 
 <section id="login" class="login" hidden>
   <form id="login-form" autocomplete="on">
-    <h2>会員専用ページ</h2>
-    <p>パスワードを入力してください</p>
+    <h2>パスワードを入力</h2>
+    <p>予想データは暗号化しています。この端末で一度入れれば次からは不要です。</p>
     <input type="text" name="username" value="kyotei" autocomplete="username" hidden>
     <input id="pw" type="password" autocomplete="current-password" placeholder="パスワード" required>
     <label class="rem"><input type="checkbox" id="remember" checked> この端末で記憶する</label>
@@ -39,38 +37,23 @@
 </section>
 
 <div id="app">
-<nav class="tabs" role="tablist">
-  <button role="tab" data-tab="ev" aria-selected="true">期待値の買い目</button>
-  <button role="tab" data-tab="all" aria-selected="false">全レース</button>
-  <button role="tab" data-tab="track" aria-selected="false">成績・検証</button>
-</nav>
-
-<main>
-  <section id="tab-ev" class="panel"></section>
-  <section id="tab-all" class="panel" hidden>
-    <div class="venues" id="venues"></div>
-    <div id="all-list"></div>
-  </section>
-  <section id="tab-track" class="panel" hidden></section>
-</main>
-
+  <div class="venues" id="venues" role="group" aria-label="場で絞り込む"></div>
+  <main>
+    <section id="tab-now" class="panel"></section>
+    <section id="tab-bets" class="panel" hidden></section>
+    <section id="tab-track" class="panel" hidden></section>
+  </main>
+  <nav class="tabs" role="tablist" aria-label="表示の切り替え">
+    <button role="tab" data-tab="now" aria-selected="true">レース</button>
+    <button role="tab" data-tab="bets" aria-selected="false">買い目</button>
+    <button role="tab" data-tab="track" aria-selected="false">成績</button>
+  </nav>
 </div>
 
 <footer class="foot">
   <p>予想は過去データからの確率計算で、的中や利益を保証するものではありません。舟券の購入は20歳以上、余裕資金の範囲で。</p>
-  <p>データ出典: BOAT RACE 公式サイト ・ <button id="logout" class="link">この端末のパスワードを消す</button></p>
+  <p>データ出典: BOAT RACE 公式サイト<button id="logout" class="link">この端末のパスワードを消す</button></p>
 </footer>
-
-<template id="race-tpl">
-  <article class="race">
-    <header class="race-h">
-      <div class="race-t"><b class="v"></b><b class="r"></b><span class="type"></span></div>
-      <div class="race-m"><span class="badge"></span><time></time></div>
-    </header>
-    <ol class="boats"></ol>
-    <div class="picks"></div>
-  </article>
-</template>
 
 <script src="app.js"></script>
 </body>

@@ -1,8 +1,8 @@
 "use strict";
 const $ = (s, el = document) => el.querySelector(s);
-const pct = (p, d = 1) => (p * 100).toFixed(d) + "%";
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const state = { day: null, data: null, venue: "all" };
+const state = { day: null, data: null, venue: "all", tab: "now", open: new Set(), latest: null };
 
 // ---- パスワード(予想データは暗号化して置いてある) ----
 let KEY = null;
@@ -44,67 +44,183 @@ function showLogin(msg) {
   $("#pw").focus();
 }
 
-function boatRow(b, maxP) {
-  const meta = [b.class, b.age ? b.age + "歳" : "", b.branch,
-    b.nat_win_rate != null ? "勝率" + Number(b.nat_win_rate).toFixed(2) : "",
-    b.motor_2rate != null ? "機" + Number(b.motor_2rate).toFixed(0) + "%" : "",
-    b.exhibit_time != null ? "展示" + Number(b.exhibit_time).toFixed(2) : "",
-    b.course != null && b.course !== b.lane ? b.course + "コース" : ""].filter(Boolean).join(" ・ ");
-  return `<li class="boat">
-    <span class="lane l${b.lane}">${b.lane}</span>
-    <div class="who"><div class="n">${esc(b.name)}</div><div class="d">${esc(meta)}</div>
-      <div class="bar"><i style="width:${Math.max(2, (b.p_win / maxP) * 100)}%"></i></div></div>
-    <div class="pw">${pct(b.p_win)}<small>1着率</small></div></li>`;
+// ---- 時刻(日本時間) ----
+function jst() {
+  const d = new Date(Date.now() + 9 * 3600e3);
+  return { date: d.toISOString().slice(0, 10), min: d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60 };
+}
+function minsLeft(r) {
+  const t = jst();
+  if (state.day !== t.date || !r.deadline) return null;
+  const [h, m] = r.deadline.split(":").map(Number);
+  return h * 60 + m - t.min;
+}
+function finished(r) {
+  if (r.result) return true;
+  const t = jst();
+  if (state.day < t.date) return true;
+  const left = minsLeft(r);
+  return left != null && left < -1;
+}
+function leftText(left) {
+  if (left == null) return "";
+  if (left < 0) return "締切";
+  if (left < 1) return "まもなく";
+  if (left >= 120) return `${Math.floor(left / 60)}時間後`;
+  return `あと${Math.floor(left)}分`;
 }
 
-function raceCard(r) {
-  const el = $("#race-tpl").content.firstElementChild.cloneNode(true);
-  $(".v", el).textContent = r.venue;
-  $(".r", el).textContent = r.rno + "R";
-  $(".type", el).textContent = r.race_type || "";
-  const badge = $(".badge", el);
-  badge.textContent = r.stage === "late" ? "直前 " + r.updated_at : "朝予想";
-  if (r.stage === "late") badge.classList.add("late");
-  $("time", el).textContent = r.deadline ? "締切 " + r.deadline : "";
+// ---- 部品 ----
+const pct1 = (p) => (p * 100).toFixed(1);
+const tile = (lane) => `<span class="lane l${lane}" aria-label="${lane}号艇">${lane}</span>`;
+function tri(combo, big = false) {
+  return `<span class="tri${big ? " big" : ""}" aria-label="3連単 ${combo}">${combo.split("-").map((x) => tile(+x)).join("")}</span>`;
+}
+const MARKS = ["◎", "○", "▲", "△"];
+function marksOf(r) {
+  const order = [...r.boats].sort((a, b) => b.p_win - a.p_win).map((b) => b.lane);
+  return Object.fromEntries(order.slice(0, 4).map((lane, i) => [lane, MARKS[i]]));
+}
+
+function boatsHTML(r) {
+  const mk = marksOf(r);
   const maxP = Math.max(...r.boats.map((b) => b.p_win));
-  $(".boats", el).innerHTML = r.boats.map((b) => boatRow(b, maxP)).join("");
-  const res = r.result;
-  let html = "";
-  if (r.bets && r.bets.length) {
-    html += `<h4>期待値のある買い目(3連単)</h4>` + r.bets.map((b) => `
-      <div class="bet${b.hit ? " hit" : ""}"><span class="c">${b.combo}</span>
-        <span class="meta">確率 ${pct(b.prob)} ・ オッズ ${b.odds}倍</span>
-        <span class="ev">${b.ev.toFixed(2)}<small>期待値</small></span></div>`).join("");
-  }
-  html += `<h4>予想上位(3連単)</h4><div class="chips">` + r.top.slice(0, 6).map((t) =>
-    `<span class="chip${res && res.tri_combo === t.combo ? " hit" : ""}"><span class="c">${t.combo}</span>
-     <span class="p">${pct(t.prob)}${t.odds ? " ・" + t.odds + "倍" : ""}</span></span>`).join("") + `</div>`;
-  if (res) html += `<div class="result">結果 <b>${res.tri_combo}</b> ・ 払戻 <b>${res.tri_pay.toLocaleString()}円</b></div>`;
-  $(".picks", el).innerHTML = html;
-  return el;
+  return `<ol class="boats">` + r.boats.map((b) => {
+    const meta = [
+      b.class ? `<span class="cls">${esc(b.class)}</span>` : "",
+      b.nat_win_rate != null ? `<span>勝率${Number(b.nat_win_rate).toFixed(2)}</span>` : "",
+      b.motor_2rate != null ? `<span>機${Number(b.motor_2rate).toFixed(0)}%</span>` : "",
+      b.exhibit_time != null ? `<span>展示${Number(b.exhibit_time).toFixed(2)}</span>` : "",
+      b.ex_st != null ? `<span>ST ${b.ex_st < 0 ? "F" + Math.abs(b.ex_st).toFixed(2).slice(1) : Number(b.ex_st).toFixed(2).slice(1)}</span>` : "",
+      b.course != null && b.course !== b.lane ? `<span class="move">${b.course}コース進入</span>` : "",
+    ].join("");
+    let delta = "";
+    if (r.stage === "late" && b.p_win_early != null) {
+      const d = (b.p_win - b.p_win_early) * 100;
+      if (Math.abs(d) >= 1) delta = `<span class="delta ${d > 0 ? "up" : "down"}" title="展示前との差">${d > 0 ? "+" : "−"}${Math.abs(d).toFixed(1)}</span>`;
+    }
+    return `<li class="boat">${tile(b.lane)}<span class="shirushi" aria-label="${mk[b.lane] ? "印 " + mk[b.lane] : ""}">${mk[b.lane] || ""}</span>
+      <div class="who"><b>${esc(b.name)}</b><div class="meta">${meta}</div></div>
+      <div class="prob"><span class="pct">${pct1(b.p_win)}<small>%</small></span>${delta}</div>
+      <div class="meter" aria-hidden="true"><i class="b${b.lane}" style="width:${Math.max(3, (b.p_win / maxP) * 100)}%"></i></div></li>`;
+  }).join("") + `</ol>`;
 }
 
-function renderEV() {
-  const box = $("#tab-ev");
-  const races = state.data.races;
-  const withBets = races.filter((r) => r.bets && r.bets.length);
-  const lateN = races.filter((r) => r.stage === "late").length;
-  box.innerHTML = `<p class="note">締切30分前ごろに展示タイム・進入・オッズを取り込み、確率×オッズ(期待値)が1.2以上の組を表示します。直前更新済み ${lateN} / ${races.length} レース</p>`;
-  if (!withBets.length) {
-    box.insertAdjacentHTML("beforeend", `<div class="empty">今のところ期待値の高い買い目はありません。<br>締切が近づくと自動で更新されます。</div>`);
+// 本命の3連単(いちばん大きく)と、オッズの1番人気
+function honmeiHTML(r) {
+  if (!r.top || !r.top.length) return "";
+  const t0 = r.top[0];
+  const hit = r.result && r.result.tri_combo === t0.combo;
+  const pop = r.market_top && r.market_top.length
+    ? `<div class="pop">オッズの1番人気${tri(r.market_top[0].combo)}</div>` : "";
+  return `<div class="honmei${hit ? " hit" : ""}">${tri(t0.combo, true)}
+    <div class="lbl">本命${hit ? " 的中" : ""}<b>${pct1(t0.prob)}%</b>${t0.odds ? `${t0.odds}倍` : ""}</div>${pop}</div>`;
+}
+
+// 本命以外の候補
+function combosHTML(r) {
+  if (!r.top || r.top.length < 2) return "";
+  const res = r.result && r.result.tri_combo;
+  return `<div class="picks"><h3>ほかの候補(3連単)</h3><div class="combos">` + r.top.slice(1, 7).map((t) =>
+    `<div class="combo${res === t.combo ? " hit" : ""}">${tri(t.combo)}
+      <span class="p">${pct1(t.prob)}%${t.odds ? `<small>${t.odds}倍</small>` : ""}</span></div>`).join("") + `</div></div>`;
+}
+
+function evHTML(r) {
+  if (!r.bets || !r.bets.length) return "";
+  return `<div class="ev"><h3>期待値のある買い目</h3>` + r.bets.map((b) => `
+    <div class="bet${b.hit ? " hit" : ""}">${tri(b.combo)}
+      <div class="m">確率 <b>${pct1(b.prob)}%</b> オッズ <b>${b.odds}</b>倍${b.hit ? " 的中" : ""}</div>
+      <div class="e">${b.ev.toFixed(2)}<small>期待値</small></div></div>`).join("") + `</div>`;
+}
+
+function resultHTML(r) {
+  if (!r.result) return "";
+  return `<div class="result">結果 ${tri(r.result.tri_combo)}<span class="pay">${r.result.tri_pay.toLocaleString()}円</span></div>`;
+}
+
+function stageHTML(r) {
+  return r.stage === "late"
+    ? `<div class="stage late">展示を反映した直前予想(${esc(r.updated_at)})</div>`
+    : `<div class="stage">朝の予想(展示前)</div>`;
+}
+
+// 見る順: 結果 → 本命 → 期待値の買い目 → 各艇 → ほかの候補
+const bodyHTML = (r) => stageHTML(r) + resultHTML(r) + honmeiHTML(r) + evHTML(r) + boatsHTML(r) + combosHTML(r);
+
+function clockHTML(r) {
+  const left = minsLeft(r);
+  return left == null ? "" : left < 1 ? `<span class="cd soon">まもなく</span>`
+    : left >= 120 ? `<span class="cd">${Math.floor(left / 60)}<small>時間後</small></span>`
+      : `<span class="cd${left < 10 ? " soon" : ""}">${Math.floor(left)}<small>分</small></span>`;
+}
+
+function heroHTML(r) {
+  return `<section class="next" data-id="${r.race_id}">
+    <div class="next-h"><div class="where"><span class="v">${esc(r.venue)}</span><span class="r">${r.rno}<small>R</small></span>
+      <span class="type">${esc(r.race_type || "")}</span></div>
+      <div class="clock"><span class="cdw" data-id="${r.race_id}">${clockHTML(r)}</span><span class="dl">締切 ${esc(r.deadline || "")}</span></div></div>
+    ${bodyHTML(r)}</section>`;
+}
+
+function hitBadge(r) {
+  if (!r.result) return "";
+  const b = [];
+  if (r.top && r.top[0] && r.top[0].combo === r.result.tri_combo) b.push("本命的中");
+  if (r.bets && r.bets.some((x) => x.hit)) b.push("買い目的中");
+  return b.map((x) => `<span class="badge">${x}</span>`).join("");
+}
+
+function subHTML(r) {
+  const left = minsLeft(r);
+  return `<small class="${left != null && left >= 0 && left < 10 ? "soon" : ""}">${r.result ? `${r.result.tri_pay.toLocaleString()}円` : leftText(left)}</small>`;
+}
+
+function rowHTML(r) {
+  const right = r.result ? tri(r.result.tri_combo) : (r.top && r.top[0] ? tri(r.top[0].combo) : "");
+  return `<details class="row" data-id="${r.race_id}"${state.open.has(r.race_id) ? " open" : ""}>
+    <summary><span class="t">${esc(r.deadline || "")}<span class="subw" data-id="${r.race_id}">${subHTML(r)}</span></span>
+      <span class="vr"><b>${esc(r.venue)}</b><span class="n">${r.rno}R</span>${r.stage === "late" ? `<span class="late" title="直前予想"></span>` : ""}</span>
+      <span class="hits">${hitBadge(r)}</span>${right}</summary>
+    <div class="body">${bodyHTML(r)}</div></details>`;
+}
+
+// ---- 画面 ----
+function visibleRaces() {
+  return state.data.races.filter((r) => state.venue === "all" || r.venue === state.venue);
+}
+const byTime = (a, b) => (a.deadline || "").localeCompare(b.deadline || "") || a.jcd - b.jcd;
+
+function renderNow() {
+  const box = $("#tab-now");
+  const races = visibleRaces();
+  if (!races.length) { box.innerHTML = `<div class="empty">この日の予想はまだありません。</div>`; return; }
+  const up = races.filter((r) => !finished(r)).sort(byTime);
+  const done = races.filter(finished).sort((a, b) => byTime(b, a));
+  let html = "";
+  if (up.length) {
+    html += `<div class="now-grid"><div><h2 class="sect">次の締切</h2>${heroHTML(up[0])}</div><div>`;
+    if (up.length > 1) html += `<h2 class="sect">このあと</h2><div class="list">${up.slice(1).map(rowHTML).join("")}</div>`;
+    html += `</div></div>`;
+  }
+  if (done.length) html += `<h2 class="sect">終わったレース</h2><div class="list">${done.map(rowHTML).join("")}</div>`;
+  box.innerHTML = html;
+}
+
+function renderBets() {
+  const box = $("#tab-bets");
+  const races = visibleRaces().filter((r) => r.bets && r.bets.length);
+  const late = state.data.races.filter((r) => r.stage === "late").length;
+  let html = `<p class="note">締切の約30分前から、展示とオッズを取り込んで5分ごとに更新します。確率×オッズ(期待値)が1.2以上の組だけ出します。直前予想 ${late} / ${state.data.races.length} レース</p>`;
+  if (!races.length) {
+    box.innerHTML = html + `<div class="empty">今のところ期待値の高い買い目はありません。締切が近づくと出てきます。</div>`;
     return;
   }
-  withBets.forEach((r) => box.appendChild(raceCard(r)));
-}
-
-function renderAll() {
-  const vs = [...new Set(state.data.races.map((r) => r.venue))];
-  $("#venues").innerHTML = ["all", ...vs].map((v) =>
-    `<button data-v="${esc(v)}" aria-pressed="${state.venue === v}">${v === "all" ? "すべて" : esc(v)}</button>`).join("");
-  const list = $("#all-list");
-  list.innerHTML = "";
-  state.data.races.filter((r) => state.venue === "all" || r.venue === state.venue)
-    .forEach((r) => list.appendChild(raceCard(r)));
+  const up = races.filter((r) => !finished(r)).sort(byTime);
+  const done = races.filter(finished).sort((a, b) => byTime(b, a));
+  if (up.length) html += `<div class="cards">${up.map(heroHTML).join("")}</div>`;
+  if (done.length) html += `<h2 class="sect">終わったレース</h2><div class="list">${done.map(rowHTML).join("")}</div>`;
+  box.innerHTML = html;
 }
 
 function stat(k, v, cls = "") { return `<div class="stat"><div class="k">${k}</div><div class="v ${cls}">${v}</div></div>`; }
@@ -118,32 +234,32 @@ async function renderTrack() {
     for (const k of ["races", "top1_hit", "bets", "bet_hits", "invest", "return"]) a[k] = (a[k] || 0) + d[k];
     return a;
   }, {});
-  let html = `<div class="box"><h3>実際の成績(公開後の予想)</h3>`;
+  let html = `<div class="box"><h3>実際の成績</h3>`;
   if (t.races) {
     const roi = t.invest ? t.return / t.invest : 0;
-    html += `<p>${track.days[0].date} 〜 ${track.days[track.days.length - 1].date}(${track.days.length}日)</p>
-      <div class="stats">${stat("期待値買いの回収率", t.invest ? pct(roi) : "-", roi >= 1 ? "good" : "bad")}
-      ${stat("収支(1点100円)", (t.return - t.invest).toLocaleString() + "円")}
-      ${stat("買い目の的中率", t.bets ? pct(t.bet_hits / t.bets) : "-")}
-      ${stat("本命3連単の的中率", pct(t.top1_hit / t.races))}</div>`;
-  } else html += `<p>予想の公開後、翌朝から集計されます。</p>`;
+    html += `<p>${track.days[0].date} 〜 ${track.days[track.days.length - 1].date}(${track.days.length}日、${t.races}レース)</p>
+      <div class="stats">${stat("期待値買いの回収率", t.invest ? (roi * 100).toFixed(0) + "%" : "-", roi >= 1 ? "good" : "bad")}
+      ${stat("収支(1点100円)", (t.return - t.invest >= 0 ? "+" : "") + (t.return - t.invest).toLocaleString() + "円")}
+      ${stat("買い目の的中率", t.bets ? pct1(t.bet_hits / t.bets) + "%" : "-")}
+      ${stat("本命3連単の的中率", pct1(t.top1_hit / t.races) + "%")}</div>`;
+  } else html += `<p>予想を始めた翌朝から集計します。</p>`;
   html += `</div>`;
   if (rep) {
     const st = rep.stages.late || rep.stages.early;
     const names = { baseline_lane: "枠番だけ(基準)", gbdt_win: "勾配ブースティング(1着)", gbdt_place: "勾配ブースティング(3着内)",
-      rank: "ランキング学習", pl_logit: "条件付きロジット", rating: "レーティング", ensemble: "アンサンブル" };
+      rank: "ランキング学習", pl_logit: "条件付きロジット", rating: "レーティング", ensemble: "アンサンブル(本番)" };
     const rows = Object.entries(st.metrics).map(([k, m]) => `<tr class="${k === "ensemble" ? "best" : ""}">
-      <td>${names[k] || k}</td><td>${m.win_logloss.toFixed(3)}</td><td>${pct(m.win_hit)}</td>
-      <td>${pct(m.tri_hit_top1)}</td><td>${pct(m.tri_hit_top5)}</td></tr>`).join("");
-    html += `<div class="box"><h3>モデル比較(過去データでの検証)</h3>
-      <p>テスト期間 ${rep.period.test[0]} 〜 ${rep.period.test[1]}。誤差(小さいほど良い)と的中率。</p>
-      <div class="scroll"><table class="tbl"><thead><tr><th>モデル</th><th>誤差</th><th>1着</th><th>3連単本命</th><th>3連単上位5</th></tr></thead>
+      <td>${names[k] || k}</td><td>${m.win_logloss.toFixed(3)}</td><td>${pct1(m.win_hit)}%</td>
+      <td>${pct1(m.tri_hit_top1)}%</td><td>${pct1(m.tri_hit_top5)}%</td></tr>`).join("");
+    html += `<div class="box"><h3>モデルの比較(過去データでの検証)</h3>
+      <p>テスト期間 ${rep.period.test[0]} 〜 ${rep.period.test[1]}。誤差は小さいほど良い。</p>
+      <div class="scroll"><table class="tbl"><thead><tr><th>モデル</th><th>誤差</th><th>1着</th><th>3連単本命</th><th>上位5点</th></tr></thead>
       <tbody>${rows}</tbody></table></div></div>`;
     if (rep.ev) {
       const e = rep.ev;
       const evRows = e.ev_blend.map((r, i) => `<tr><td>${r.ev_min.toFixed(1)}以上</td><td>${r.bets}</td>
-        <td>${r.hit_rate != null ? pct(r.hit_rate) : "-"}</td><td>${r.roi != null ? pct(r.roi) : "-"}</td>
-        <td>${e.ev_model[i].roi != null ? pct(e.ev_model[i].roi) : "-"}</td></tr>`).join("");
+        <td>${r.hit_rate != null ? pct1(r.hit_rate) + "%" : "-"}</td><td>${r.roi != null ? (r.roi * 100).toFixed(0) + "%" : "-"}</td>
+        <td>${e.ev_model[i].roi != null ? (e.ev_model[i].roi * 100).toFixed(0) + "%" : "-"}</td></tr>`).join("");
       html += `<div class="box"><h3>期待値で買った場合の検証</h3>
         <p>${e.period[0]} 〜 ${e.period[1]} の ${e.races} レース。締切時オッズで1点100円、実際の払戻金で計算。</p>
         <div class="scroll"><table class="tbl"><thead><tr><th>期待値</th><th>点数</th><th>的中率</th><th>回収率</th><th>モデル単体</th></tr></thead>
@@ -156,20 +272,53 @@ async function renderTrack() {
   box.innerHTML = html;
 }
 
+function renderVenues() {
+  const vs = [...new Set(state.data.races.map((r) => r.venue))];
+  if (state.venue !== "all" && !vs.includes(state.venue)) state.venue = "all";
+  $("#venues").innerHTML = ["all", ...vs].map((v) =>
+    `<button data-v="${esc(v)}" aria-pressed="${state.venue === v}">${v === "all" ? "すべて" : esc(v)}</button>`).join("");
+}
+
+function renderHeader() {
+  const d = state.data;
+  const today = state.day === jst().date;
+  const late = d.races.some((r) => r.stage === "late");
+  $("#updated").innerHTML = d.races.length
+    ? (today && late ? `<span class="dot"></span>` : "") + `${d.updated_at ? esc(d.updated_at) + " 更新" : esc(state.day)}`
+    : "予想の準備中";
+}
+
+function render() {
+  state.doneCount = state.data.races.filter(finished).length;
+  renderHeader();
+  renderVenues();
+  if (state.tab === "now") renderNow();
+  if (state.tab === "bets") renderBets();
+  if (state.tab === "track") renderTrack();
+}
+
 async function loadDay(day) {
   state.day = day;
   try {
     state.data = await getJSON(`api/data/days/${day}.json`);
   } catch (e) {
-    if (e instanceof Locked) { showLogin(KEY ? "パスワードが変更されました。再入力してください" : ""); return false; }
+    if (e instanceof Locked) { showLogin(KEY ? "パスワードが変わりました。もう一度入力してください" : ""); return false; }
     state.data = { races: [] };
   }
   $("#login").hidden = true;
   $("#app").hidden = false;
-  $("#updated").textContent = `${day} ・ ${state.data.races.length}レース` + (state.data.updated_at ? ` ・ ${state.data.updated_at}更新` : "");
-  renderEV();
-  renderAll();
+  render();
   return true;
+}
+
+// 締切までの残り時間だけ書き換える(締切を過ぎたレースが出たら並べ直す)
+function tick() {
+  if (!state.data || state.day !== jst().date || state.tab === "track") return;
+  const done = state.data.races.filter(finished).length;
+  if (done !== state.doneCount) { state.doneCount = done; render(); return; }
+  const byId = Object.fromEntries(state.data.races.map((r) => [r.race_id, r]));
+  $$(".cdw").forEach((el) => { const r = byId[el.dataset.id]; if (r) el.innerHTML = clockHTML(r); });
+  $$(".subw").forEach((el) => { const r = byId[el.dataset.id]; if (r) el.innerHTML = subHTML(r); });
 }
 
 async function init() {
@@ -194,26 +343,36 @@ async function init() {
   let idx = { days: [] };
   try { idx = await getJSON("api/data/index.json"); } catch (e) { }
   // 今日の予想が一覧より先にできている(直前予想のループが先に作った)場合も今日を出す
-  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  const today = jst().date;
   if (!idx.days.includes(today)) {
     try { await getJSON(`api/data/days/${today}.json`); idx.days.push(today); idx.latest = today; } catch (e) { }
   }
+  state.latest = idx.latest;
   const sel = $("#day");
-  sel.innerHTML = idx.days.slice().reverse().map((d) => `<option value="${d}">${d.slice(5).replace("-", "/")}</option>`).join("");
-  sel.onchange = () => loadDay(sel.value);
-  document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => {
-    document.querySelectorAll(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
-    document.querySelectorAll(".panel").forEach((p) => p.hidden = p.id !== "tab-" + b.dataset.tab);
-    if (b.dataset.tab === "track") renderTrack();
+  sel.innerHTML = idx.days.slice().reverse().map((d) => `<option value="${d}">${+d.slice(5, 7)}/${+d.slice(8)}</option>`).join("");
+  sel.onchange = () => { state.open.clear(); loadDay(sel.value); };
+  $$(".tabs button").forEach((b) => b.onclick = () => {
+    state.tab = b.dataset.tab;
+    $$(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
+    $$(".panel").forEach((p) => p.hidden = p.id !== "tab-" + state.tab);
+    $("#venues").hidden = state.tab === "track";
+    render();
+    window.scrollTo({ top: 0 });
   });
   $("#venues").onclick = (e) => {
     const v = e.target.closest("button");
-    if (v) { state.venue = v.dataset.v; renderAll(); }
+    if (v) { state.venue = v.dataset.v; render(); }
   };
+  // 開いた行は、更新しても開いたままにする
+  document.addEventListener("toggle", (e) => {
+    const d = e.target;
+    if (d.matches && d.matches("details.row")) d.open ? state.open.add(d.dataset.id) : state.open.delete(d.dataset.id);
+  }, true);
   state.day = idx.latest;
   try { await getJSON("api/data/check.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
   if (idx.latest) await loadDay(idx.latest);
-  else { $("#updated").textContent = "予想データの準備中です"; $("#tab-ev").innerHTML = `<div class="empty">最初の予想は、過去データの学習が終わり次第ここに表示されます。</div>`; }
-  setInterval(() => { if (state.day === idx.latest) loadDay(state.day); }, 5 * 60 * 1000);
+  else { $("#updated").textContent = "予想の準備中"; $("#tab-now").innerHTML = `<div class="empty">最初の予想は、過去データの学習が終わりしだいここに出ます。</div>`; }
+  setInterval(tick, 30 * 1000);
+  setInterval(() => { if (state.day === state.latest) loadDay(state.day); }, 2 * 60 * 1000);
 }
 init();

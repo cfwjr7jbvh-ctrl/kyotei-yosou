@@ -327,8 +327,14 @@ def live(day: dt.date, ahead_min: int = 35):
                       for c, v in od.items() if c in COMBOS]
         odds = np.array([od.get(c, np.nan) for c in COMBOS]) if od else None
         p, stack, s23 = predict_win(bundle, "late", rdf)
-        data["races"][i] = race_payload(rdf, p, stack, "late", odds, bundle.get("blend"),
-                                        bundle.get("bet_filter"), s23=s23)
+        new = race_payload(rdf, p, stack, "late", odds, bundle.get("blend"), bundle.get("bet_filter"), s23=s23)
+        # 展示前(朝予想)の1着率を残し、アプリで「展示を見てどう変わったか」を出せるようにする
+        before = {b["lane"]: b.get("p_win_early", b.get("p_win") if race.get("stage") != "late" else None)
+                  for b in race.get("boats", [])}
+        for b in new["boats"]:
+            if before.get(b["lane"]) is not None:
+                b["p_win_early"] = before[b["lane"]]
+        data["races"][i] = new
         n += 1
     data["updated_at"] = t.strftime("%H:%M")
     write_json(jp, data)

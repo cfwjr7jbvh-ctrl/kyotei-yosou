@@ -30,16 +30,17 @@ function loginPage() {
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex"><title>競艇AI予想</title>
 <style>
-:root{--bg:#f3f5f8;--card:#fff;--ink:#0d1b2a;--muted:#5b6b7d;--line:#e1e6ec;--accent:#ff6a13;--bad:#c23b3b}
-@media (prefers-color-scheme:dark){:root{--bg:#0a1420;--card:#121f2f;--ink:#e8eef5;--muted:#93a3b5;--line:#22344a}}
+:root{--bg:#e8edf1;--card:#fff;--ink:#102230;--muted:#5c6f80;--line:#d2dbe2;--accent:#102230;--accent-ink:#fff;--bad:#d3141c}
+@media (prefers-color-scheme:dark){:root{--bg:#0b141d;--card:#121e2a;--ink:#e6edf3;--muted:#8fa1b2;--line:#233343;--accent:#e6edf3;--accent-ink:#102230;--bad:#ff4a4f}}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,"Hiragino Sans",sans-serif;min-height:100vh;display:grid;place-items:center;padding:16px}
-form{width:100%;max-width:340px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px 20px;display:grid;gap:12px}
+form{width:100%;max-width:360px;background:var(--card);border-top:5px solid var(--ink);border-radius:4px 4px 14px 14px;padding:24px 20px;display:grid;gap:12px}
+.flags{display:flex;gap:2px;margin-bottom:2px}.flags i{width:5px;height:20px;border-radius:1px}
 h1{margin:0;font-size:20px}p{margin:0;color:var(--muted);font-size:13px}
 input{font:inherit;font-size:16px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
-button{font:inherit;font-weight:700;font-size:15px;border:0;border-radius:10px;padding:12px;background:var(--accent);color:#fff}
+button{font:inherit;font-weight:700;font-size:16px;border:0;border-radius:8px;padding:12px;background:var(--accent);color:var(--accent-ink)}
 .msg{min-height:1.2em;color:var(--bad)}
 </style></head><body>
-<form id="f"><h1>競艇AI予想</h1><p>自分専用のページです。パスワードを入力してください。</p>
+<form id="f"><span class="flags" aria-hidden="true"><i style="background:#fff;box-shadow:inset 0 0 0 1px #102230"></i><i style="background:#3a3f45"></i><i style="background:#e3141b"></i><i style="background:#0b5fb4"></i><i style="background:#f5d00a"></i><i style="background:#12904a"></i></span><h1>競艇AI予想</h1><p>自分専用のページです。パスワードを入力してください。</p>
 <input type="text" name="username" value="kyotei" autocomplete="username" hidden>
 <input id="pw" type="password" autocomplete="current-password" placeholder="パスワード" required autofocus>
 <button>ひらく</button><p class="msg" id="m"></p></form>
