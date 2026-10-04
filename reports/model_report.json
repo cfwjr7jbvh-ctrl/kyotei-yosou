@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-04T17:41+09:00",
+ "generated_at": "2026-10-05T06:30+09:00",
  "synthetic": false,
  "period": {
   "train": [
@@ -124,12 +124,12 @@
     "2nd_rating": 0.016,
     "3rd_gbdt_win": -0.048,
     "3rd_gbdt_place": 0.643,
-    "3rd_rank": -0.385,
+    "3rd_rank": -0.384,
     "3rd_pl_logit": 0.406,
     "3rd_rating": 0.006
    },
-   "lam2": 0.6406974399207904,
-   "lam3": 0.4395798334945509,
+   "lam2": 0.6406974070109833,
+   "lam3": 0.4395797982235882,
    "top_features": {
     "vl_win": 891,
     "sx_ex_diff": 599,
@@ -865,122 +865,136 @@
  },
  "arashi_confirm_split": {
   "rule": "1号艇が負ける確率 ≥ 0.63 のレースだけ、モデルの期待値100%以上を買う",
-  "races": 1160,
-  "hi_races": 227,
+  "races": 21927,
+  "hi_races": 4847,
   "passed": false,
   "period": [
-   "20260922",
+   "20260509",
    "20260929"
   ],
-  "roi_all": 0.8929,
-  "roi_hi": 0.6099,
-  "bets_hi": 1099,
-  "note": "条件に合うレースが600未満のため判定待ち"
+  "roi_all": 0.8309,
+  "roi_hi": 0.8164,
+  "bets_hi": 23638,
+  "days": 144,
+  "diff_ci90": [
+   -0.0915,
+   0.0673
+  ],
+  "roi_hi_ci90": [
+   0.7248,
+   0.9102
+  ]
  },
  "ev": {
-  "races": 597,
+  "races": 7519,
   "period": [
-   "20260930",
+   "20260816",
    "20261003"
   ],
-  "blend_a_model": 0.034,
-  "blend_b_market": 1.019,
+  "blend_a_model": 0.344,
+  "blend_b_market": 0.727,
   "tri_logloss": {
-   "model": 3.773628326143961,
-   "market": 3.7170061551124127,
-   "blend": 3.7132288133088474
+   "model": 3.7500063903816288,
+   "market": 3.7086822996561875,
+   "blend": 3.7025237074146315
   },
   "ev_model": [
    {
     "ev_min": 1.0,
-    "bets": 2822,
-    "hit_rate": 0.0138,
-    "roi": 0.6,
-    "profit_yen": -112870,
-    "roi_lo90": 0.4313,
-    "roi_hi90": 0.7731
+    "bets": 35383,
+    "hit_rate": 0.016,
+    "roi": 0.8019,
+    "profit_yen": -700770,
+    "roi_lo90": 0.7343,
+    "roi_hi90": 0.8673
    },
    {
     "ev_min": 1.1,
-    "bets": 2522,
-    "hit_rate": 0.0135,
-    "roi": 0.6182,
-    "profit_yen": -96300,
-    "roi_lo90": 0.4142,
-    "roi_hi90": 0.8325
+    "bets": 30785,
+    "hit_rate": 0.0145,
+    "roi": 0.8066,
+    "profit_yen": -595420,
+    "roi_lo90": 0.7354,
+    "roi_hi90": 0.8843
    },
    {
     "ev_min": 1.2,
-    "bets": 2067,
-    "hit_rate": 0.0116,
-    "roi": 0.5806,
-    "profit_yen": -86700,
-    "roi_lo90": 0.3747,
-    "roi_hi90": 0.8026
+    "bets": 25074,
+    "hit_rate": 0.0132,
+    "roi": 0.8143,
+    "profit_yen": -465520,
+    "roi_lo90": 0.7279,
+    "roi_hi90": 0.9018
    },
    {
     "ev_min": 1.3,
-    "bets": 1642,
-    "hit_rate": 0.0091,
-    "roi": 0.5551,
-    "profit_yen": -73060,
-    "roi_lo90": 0.3238,
-    "roi_hi90": 0.8154
+    "bets": 19667,
+    "hit_rate": 0.0116,
+    "roi": 0.8158,
+    "profit_yen": -362170,
+    "roi_lo90": 0.7148,
+    "roi_hi90": 0.9209
    },
    {
     "ev_min": 1.5,
-    "bets": 985,
-    "hit_rate": 0.0041,
-    "roi": 0.2222,
-    "profit_yen": -76610,
-    "roi_lo90": 0.0379,
-    "roi_hi90": 0.477
+    "bets": 11490,
+    "hit_rate": 0.0096,
+    "roi": 0.8058,
+    "profit_yen": -223100,
+    "roi_lo90": 0.6662,
+    "roi_hi90": 0.9594
    },
    {
     "ev_min": 2.0,
-    "bets": 259,
-    "hit_rate": 0.0,
-    "roi": 0.0,
-    "profit_yen": -25900,
-    "roi_lo90": 0.0,
-    "roi_hi90": 0.0
+    "bets": 2891,
+    "hit_rate": 0.0073,
+    "roi": 0.8245,
+    "profit_yen": -50750,
+    "roi_lo90": 0.4893,
+    "roi_hi90": 1.1765
    }
   ],
   "ev_blend": [
    {
     "ev_min": 1.0,
-    "bets": 0,
-    "hit_rate": null,
-    "roi": null,
-    "profit_yen": 0
+    "bets": 2152,
+    "hit_rate": 0.0186,
+    "roi": 0.6484,
+    "profit_yen": -75670,
+    "roi_lo90": 0.4539,
+    "roi_hi90": 0.8462
    },
    {
     "ev_min": 1.1,
-    "bets": 0,
-    "hit_rate": null,
-    "roi": null,
-    "profit_yen": 0
+    "bets": 283,
+    "hit_rate": 0.0071,
+    "roi": 0.1466,
+    "profit_yen": -24150,
+    "roi_lo90": 0.0,
+    "roi_hi90": 0.3533
    },
    {
     "ev_min": 1.2,
-    "bets": 0,
-    "hit_rate": null,
-    "roi": null,
-    "profit_yen": 0
+    "bets": 49,
+    "hit_rate": 0.0204,
+    "roi": 0.2755,
+    "profit_yen": -3550,
+    "roi_lo90": 0.0,
+    "roi_hi90": 0.8104
    },
    {
     "ev_min": 1.3,
-    "bets": 0,
-    "hit_rate": null,
-    "roi": null,
-    "profit_yen": 0
+    "bets": 13,
+    "hit_rate": 0.0,
+    "roi": 0.0,
+    "profit_yen": -1300
    },
    {
     "ev_min": 1.5,
-    "bets": 0,
-    "hit_rate": null,
-    "roi": null,
-    "profit_yen": 0
+    "bets": 9,
+    "hit_rate": 0.0,
+    "roi": 0.0,
+    "profit_yen": -900
    },
    {
     "ev_min": 2.0,
@@ -993,31 +1007,33 @@
   "ev_filtered": [
    {
     "ev_min": 1.0,
-    "bets": 0,
-    "hit_rate": null,
-    "roi": null,
-    "profit_yen": 0
+    "bets": 40,
+    "hit_rate": 0.025,
+    "roi": 0.3375,
+    "profit_yen": -2650,
+    "roi_lo90": 0.0,
+    "roi_hi90": 1.0398
    },
    {
     "ev_min": 1.1,
-    "bets": 0,
-    "hit_rate": null,
-    "roi": null,
-    "profit_yen": 0
+    "bets": 10,
+    "hit_rate": 0.0,
+    "roi": 0.0,
+    "profit_yen": -1000
    },
    {
     "ev_min": 1.2,
-    "bets": 0,
-    "hit_rate": null,
-    "roi": null,
-    "profit_yen": 0
+    "bets": 6,
+    "hit_rate": 0.0,
+    "roi": 0.0,
+    "profit_yen": -600
    },
    {
     "ev_min": 1.3,
-    "bets": 0,
-    "hit_rate": null,
-    "roi": null,
-    "profit_yen": 0
+    "bets": 3,
+    "hit_rate": 0.0,
+    "roi": 0.0,
+    "profit_yen": -300
    },
    {
     "ev_min": 1.5,
@@ -1037,17 +1053,25 @@
  },
  "arashi_confirm": {
   "rule": "1号艇が負ける確率 ≥ 0.63 のレースだけ、モデルの期待値100%以上を買う",
-  "races": 1160,
-  "hi_races": 226,
+  "races": 21927,
+  "hi_races": 4696,
   "passed": false,
   "period": [
-   "20260922",
+   "20260509",
    "20260929"
   ],
-  "roi_all": 0.9202,
-  "roi_hi": 0.4857,
-  "bets_hi": 1095,
-  "note": "条件に合うレースが600未満のため判定待ち",
+  "roi_all": 0.828,
+  "roi_hi": 0.7756,
+  "bets_hi": 22965,
+  "days": 144,
+  "diff_ci90": [
+   -0.1263,
+   0.0226
+  ],
+  "roi_hi_ci90": [
+   0.6839,
+   0.8632
+  ],
   "source": "walk_forward"
  }
 }
