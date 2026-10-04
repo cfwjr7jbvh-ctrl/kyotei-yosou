@@ -1,0 +1,21 @@
+{
+ "days": [
+  {
+   "date": "2026-10-04",
+   "races": 156,
+   "top1_hit": 19,
+   "bets": 0,
+   "bet_hits": 0,
+   "invest": 0,
+   "return": 0,
+   "nerai_races": 10,
+   "nerai_bets": 50,
+   "nerai_hits": 1,
+   "nerai_return": 6410,
+   "pick_races": 17,
+   "pick_bets": 49,
+   "pick_hits": 1,
+   "pick_return": 1970
+  }
+ ]
+}
