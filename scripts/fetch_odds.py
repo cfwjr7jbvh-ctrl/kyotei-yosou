@@ -52,10 +52,11 @@ def todo_races(days: int) -> pd.DataFrame:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--days", type=int, default=240, help="直近何日分を対象にするか")
+    ap.add_argument("--days", type=int, default=1200, help="直近何日分を対象にするか(既定は全期間)")
     ap.add_argument("--time-limit", type=float, default=5.0)
     ap.add_argument("--merge-from", default=None, help="このフォルダのオッズを data/odds に足して終わる")
     ap.add_argument("--left", action="store_true", help="まだ取っていないレース数を出して終わる")
+    ap.add_argument("--shard", default="0/1", help="並行して取るときの分担(例: 1/3 = 3つに分けた2番目)")
     a = ap.parse_args()
     ODDS.mkdir(parents=True, exist_ok=True)
     if a.merge_from:
@@ -65,7 +66,9 @@ def main():
         print(len(todo_races(a.days)))
         return
     todo = todo_races(a.days)
-    print(f"todo {len(todo)} races")
+    k, n = map(int, a.shard.split("/"))
+    todo = todo.iloc[k::n]  # 新しい日から順のまま、n 個のジョブで1レースずつ交互に分担
+    print(f"todo {len(todo)} races (shard {a.shard})")
     t0 = time.time()
     buf = []
 
