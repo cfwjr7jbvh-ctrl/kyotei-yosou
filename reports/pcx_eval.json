@@ -1,0 +1,157 @@
+{
+ "races": 2326,
+ "by_market_prob": [
+  {
+   "market_prob": "0.000〜0.005",
+   "focus": {
+    "combos": 4407,
+    "hits": 11,
+    "expected": 12.8,
+    "ratio": 0.86,
+    "ratio_ci90": [
+     0.467,
+     1.326
+    ]
+   },
+   "other": {
+    "combos": 178841,
+    "hits": 238,
+    "expected": 291.1,
+    "ratio": 0.818,
+    "ratio_ci90": [
+     0.738,
+     0.899
+    ]
+   }
+  },
+  {
+   "market_prob": "0.005〜0.010",
+   "focus": {
+    "combos": 4085,
+    "hits": 15,
+    "expected": 30.2,
+    "ratio": 0.497,
+    "ratio_ci90": [
+     0.3,
+     0.717
+    ]
+   },
+   "other": {
+    "combos": 32504,
+    "hits": 229,
+    "expected": 230.5,
+    "ratio": 0.994,
+    "ratio_ci90": [
+     0.899,
+     1.092
+    ]
+   }
+  },
+  {
+   "market_prob": "0.010〜0.020",
+   "focus": {
+    "combos": 5034,
+    "hits": 74,
+    "expected": 72.5,
+    "ratio": 1.021,
+    "ratio_ci90": [
+     0.832,
+     1.215
+    ]
+   },
+   "other": {
+    "combos": 22150,
+    "hits": 297,
+    "expected": 310.5,
+    "ratio": 0.957,
+    "ratio_ci90": [
+     0.878,
+     1.04
+    ]
+   }
+  },
+  {
+   "market_prob": "0.020〜0.040",
+   "focus": {
+    "combos": 4517,
+    "hits": 115,
+    "expected": 127.7,
+    "ratio": 0.9,
+    "ratio_ci90": [
+     0.768,
+     1.043
+    ]
+   },
+   "other": {
+    "combos": 12776,
+    "hits": 419,
+    "expected": 356.4,
+    "ratio": 1.176,
+    "ratio_ci90": [
+     1.088,
+     1.259
+    ]
+   }
+  },
+  {
+   "market_prob": "0.040〜0.080",
+   "focus": {
+    "combos": 3264,
+    "hits": 184,
+    "expected": 182.9,
+    "ratio": 1.006,
+    "ratio_ci90": [
+     0.901,
+     1.124
+    ]
+   },
+   "other": {
+    "combos": 6049,
+    "hits": 349,
+    "expected": 329.4,
+    "ratio": 1.059,
+    "ratio_ci90": [
+     0.976,
+     1.145
+    ]
+   }
+  },
+  {
+   "market_prob": "0.080〜1.000",
+   "focus": {
+    "combos": 1773,
+    "hits": 219,
+    "expected": 202.9,
+    "ratio": 1.079,
+    "ratio_ci90": [
+     0.975,
+     1.179
+    ]
+   },
+   "other": {
+    "combos": 1560,
+    "hits": 158,
+    "expected": 161.2,
+    "ratio": 0.98,
+    "ratio_ci90": [
+     0.867,
+     1.096
+    ]
+   }
+  }
+ ],
+ "roi_all_focus": {
+  "roi": 0.6388,
+  "ci90": [
+   0.5639,
+   0.7248
+  ]
+ },
+ "roi_all_other": {
+  "roi": 0.5988,
+  "ci90": [
+   0.5493,
+   0.6533
+  ]
+ }
+}
