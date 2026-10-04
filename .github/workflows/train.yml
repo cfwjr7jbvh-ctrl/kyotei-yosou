@@ -20,6 +20,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+      LINE_CHANNEL_TOKEN: ${{ secrets.LINE_CHANNEL_TOKEN }}
+      LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
     timeout-minutes: 300
     steps:
       - uses: actions/checkout@v4
@@ -38,6 +40,8 @@ jobs:
           git init -q -b model && git add bundle.pkl.enc
           git commit -q -m "[CI Skip] model ${GITHUB_RUN_ID}"
           git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" model
+      - name: 勝てる根拠が出たか判定(変わったら LINE で知らせる)
+        run: python scripts/edge_check.py || true
       - name: 検証レポートをコミット
         run: |
           git add docs/data/report.json reports
