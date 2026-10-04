@@ -391,8 +391,10 @@ function todayBox() {
 async function renderTrack() {
   const box = $("#tab-track");
   let track = { days: [] }, rep = null;
-  try { track = await getJSON("api/data/track.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
-  try { rep = await getJSON("api/data/report.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
+  // 成績・検証レポートは予想とは別のジョブが書くので、読めなくても(古い鍵・作り直し中など)ログイン画面には戻さず、その欄だけ出さない
+  let repNote = "";
+  try { track = await getJSON("api/data/track.json"); } catch (e) { /* まだ無い(翌朝から集計) */ }
+  try { rep = await getJSON("api/data/report.json"); } catch (e) { repNote = e instanceof Locked ? "検証レポートを作り直し中です。しばらくすると見られます。" : ""; }
   const t = track.days.reduce((a, d) => {
     for (const k of ["races", "top1_hit", "bets", "bet_hits", "invest", "return", "nerai_races", "nerai_bets", "nerai_hits", "nerai_return"]) a[k] = (a[k] || 0) + (d[k] || 0);
     return a;
@@ -415,6 +417,7 @@ async function renderTrack() {
     }
   } else html += `<p>予想を始めた翌朝から集計します。</p>`;
   html += `</div>`;
+  if (!rep && repNote) html += `<div class="box"><p>${repNote}</p></div>`;
   if (rep) {
     const st = rep.stages.late || rep.stages.early;
     const names = { baseline_lane: "枠番だけ(基準)", gbdt_win: "勾配ブースティング(1着)", gbdt_place: "勾配ブースティング(3着内)",
