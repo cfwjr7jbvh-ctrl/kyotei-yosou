@@ -8,12 +8,13 @@ on:
     inputs:
       days:
         description: "直近何日分"
-        default: "120"
+        default: "240"
   schedule:
     - cron: "7 17 * * *"   # 毎日 2:07 JST、少しずつ埋める
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: odds
@@ -29,10 +30,16 @@ jobs:
         with:
           model: "false"
       - name: オッズ取得
-        run: python scripts/fetch_odds.py --days "${{ github.event.inputs.days || '120' }}" --time-limit 3
-      - name: コミット
+        run: python scripts/fetch_odds.py --days "${{ github.event.inputs.days || '240' }}" --time-limit 3
+      - name: コミット(ほかのジョブとぶつかっても消えないよう、最新の main に足し合わせる)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/odds
-          if git commit -q -m "[CI Skip] data: 過去オッズ"; then bash scripts/push.sh; else echo "no changes"; fi
+          bash scripts/commit_odds.sh 過去オッズ
+      - name: 残りがあれば続きを起動
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LEFT=$(python scripts/fetch_odds.py --days "${{ github.event.inputs.days || '240' }}" --left)
+          echo "残り ${LEFT} レース"
+          if [ "$LEFT" -gt 50 ]; then gh workflow run odds.yml --ref main -f days="${{ github.event.inputs.days || '240' }}"; fi

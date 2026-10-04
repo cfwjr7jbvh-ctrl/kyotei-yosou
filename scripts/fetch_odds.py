@@ -19,20 +19,52 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 ODDS = ROOT / "data/odds"
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--days", type=int, default=120, help="直近何日分を対象にするか")
-    ap.add_argument("--time-limit", type=float, default=5.0)
-    a = ap.parse_args()
-    ODDS.mkdir(parents=True, exist_ok=True)
+def merge_from(src: pathlib.Path) -> int:
+    """src にある odds3t_*.csv.gz を data/odds の同名ファイルに足し合わせる。増えたレース数を返す。
+
+    ほかのジョブ(朝の予想)も同じ月のファイルに書くので、git の取り込みでぶつかる。
+    最新の main に取り直してからこれで足せば、どちらの分も消えない。
+    """
+    added = 0
+    for p in sorted(src.glob("odds3t_*.csv.gz")):
+        new = pd.read_csv(p, dtype={"race_id": str})
+        dst = ODDS / p.name
+        old = pd.read_csv(dst, dtype={"race_id": str}) if dst.exists() else new.iloc[:0]
+        n = len(set(new["race_id"]) - set(old["race_id"]))
+        if n == 0:  # 書き直すと中身が同じでも圧縮ファイルが変わるので触らない
+            continue
+        added += n
+        pd.concat([old, new]).drop_duplicates(["race_id", "combo"]).sort_values(["race_id", "combo"]).to_csv(
+            dst, index=False, compression="gzip")
+    return added
+
+
+def todo_races(days: int) -> pd.DataFrame:
     races = pd.concat([pd.read_csv(p, dtype={"race_id": str}, usecols=["race_id", "date", "jcd", "rno"])
                        for p in sorted((ROOT / "data/history").glob("races_*.csv.gz"))])
-    dates = sorted(races["date"].unique())[-a.days:]
+    dates = sorted(races["date"].unique())[-days:]
     races = races[races["date"].isin(dates)].sort_values("race_id", ascending=False)
     have = set()
     for p in ODDS.glob("odds3t_*.csv.gz"):
         have |= set(pd.read_csv(p, dtype={"race_id": str}, usecols=["race_id"])["race_id"])
-    todo = races[~races["race_id"].isin(have)]
+    return races[~races["race_id"].isin(have)]
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--days", type=int, default=240, help="直近何日分を対象にするか")
+    ap.add_argument("--time-limit", type=float, default=5.0)
+    ap.add_argument("--merge-from", default=None, help="このフォルダのオッズを data/odds に足して終わる")
+    ap.add_argument("--left", action="store_true", help="まだ取っていないレース数を出して終わる")
+    a = ap.parse_args()
+    ODDS.mkdir(parents=True, exist_ok=True)
+    if a.merge_from:
+        print(merge_from(pathlib.Path(a.merge_from)))
+        return
+    if a.left:
+        print(len(todo_races(a.days)))
+        return
+    todo = todo_races(a.days)
     print(f"todo {len(todo)} races")
     t0 = time.time()
     buf = []

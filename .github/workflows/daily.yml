@@ -51,7 +51,7 @@ jobs:
       - name: 前日分のオッズを保存(検証用)
         run: |
           python scripts/fetch_odds.py --days 3 --time-limit 0.5
-          git add data/odds && if git commit -q -m "[CI Skip] data: オッズ"; then bash scripts/push.sh; else echo "no changes"; fi
+          bash scripts/commit_odds.sh オッズ
       - name: 過去データに抜けがあれば取得を再開
         env:
           GH_TOKEN: ${{ github.token }}
