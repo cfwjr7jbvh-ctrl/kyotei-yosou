@@ -10,210 +10,128 @@
   "wakamatsu": "AI&直前予想"
  },
  "dates": {
-  "tokuyama/20261003": {
+  "tokuyama/20231102": {
    "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20261003/1",
-   "len": 47558,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20231102/1",
+   "len": 10654,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "tokuyama/20240804": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20240804/1",
+   "len": 10654,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "tokuyama/20250601": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20250601/1",
+   "len": 10654,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "tokuyama/20251104": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20251104/1",
+   "len": 10654,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "tokuyama/20260301": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20260301/1",
+   "len": 10654,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "tokuyama/20260605": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20260605/1",
+   "len": 10654,
+   "comment_rows": 0,
+   "sign_rows": 0,
+   "comment_kinds": {}
+  },
+  "tokuyama/20260705": {
+   "status": 200,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20260705/1",
+   "len": 47472,
    "comment_rows": 6,
    "sign_rows": 27,
    "comment_kinds": {
     "前日": 6
    }
   },
-  "tokuyama/20260920": {
+  "tokuyama/20260901": {
    "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20260920/1",
-   "len": 10654,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "tokuyama/20260801": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20260801/1",
-   "len": 49611,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20260901/1",
+   "len": 47401,
    "comment_rows": 6,
    "sign_rows": 27,
    "comment_kinds": {
     "前日": 6
    }
   },
-  "tokuyama/20260401": {
+  "biwako/20231105": {
    "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20260401/1",
-   "len": 10654,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/biwako/20231105/1",
+   "len": 9911,
    "comment_rows": 0,
    "sign_rows": 0,
    "comment_kinds": {}
   },
-  "tokuyama/20260101": {
+  "biwako/20240801": {
    "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20260101/1",
-   "len": 10654,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/biwako/20240801/1",
+   "len": 9911,
    "comment_rows": 0,
    "sign_rows": 0,
    "comment_kinds": {}
   },
-  "tokuyama/20250701": {
+  "biwako/20250601": {
    "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20250701/1",
-   "len": 10654,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/biwako/20250601/1",
+   "len": 9911,
    "comment_rows": 0,
    "sign_rows": 0,
    "comment_kinds": {}
   },
-  "tokuyama/20250101": {
+  "biwako/20251101": {
    "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20250101/1",
-   "len": 10654,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/biwako/20251101/1",
+   "len": 9911,
    "comment_rows": 0,
    "sign_rows": 0,
    "comment_kinds": {}
   },
-  "tokuyama/20240601": {
+  "biwako/20260303": {
    "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20240601/1",
-   "len": 10654,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/biwako/20260303/1",
+   "len": 9911,
    "comment_rows": 0,
    "sign_rows": 0,
    "comment_kinds": {}
   },
-  "tokuyama/20231015": {
+  "biwako/20260601": {
    "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20231015/1",
-   "len": 10654,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/biwako/20260601/1",
+   "len": 9911,
    "comment_rows": 0,
    "sign_rows": 0,
    "comment_kinds": {}
   },
-  "toda/20261003": {
+  "biwako/20260904": {
    "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20261003/1",
-   "len": 34123,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "toda/20260920": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20260920/1",
-   "len": 39970,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "toda/20260801": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20260801/1",
-   "len": 8140,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "toda/20260401": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20260401/1",
-   "len": 8140,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "toda/20260101": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20260101/1",
-   "len": 8140,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "toda/20250701": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20250701/1",
-   "len": 8140,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "toda/20250101": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20250101/1",
-   "len": 8140,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "toda/20240601": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20240601/1",
-   "len": 8140,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "toda/20231015": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20231015/1",
-   "len": 8140,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "toda/20261004": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/toda/20261004/1",
-   "len": 36689,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "tsu/20261004": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/tsu/20261004/1",
-   "len": 40692,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "biwako/20261004": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/biwako/20261004/1",
-   "len": 73031,
+   "final": "https://nikkansports.raceyosou.jp/boatrace/biwako/20260904/1",
+   "len": 72381,
    "comment_rows": 0,
    "sign_rows": 27,
-   "comment_kinds": {}
-  },
-  "tokuyama/20261004": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20261004/1",
-   "len": 48765,
-   "comment_rows": 6,
-   "sign_rows": 27,
-   "comment_kinds": {
-    "前日": 6
-   }
-  },
-  "shimonoseki/20261004": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/shimonoseki/20261004/1",
-   "len": 40445,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "fukuoka/20261004": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/fukuoka/20261004/1",
-   "len": 36732,
-   "comment_rows": 0,
-   "sign_rows": 0,
-   "comment_kinds": {}
-  },
-  "wakamatsu/20261004": {
-   "status": 200,
-   "final": "https://nikkansports.raceyosou.jp/boatrace/wakamatsu/20261004/1",
-   "len": 8009,
-   "comment_rows": 0,
-   "sign_rows": 0,
    "comment_kinds": {}
   }
  },
