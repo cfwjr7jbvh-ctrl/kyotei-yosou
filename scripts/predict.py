@@ -438,8 +438,16 @@ def live(day: dt.date, ahead_min: int = 35):
     write_json(jp, data)
     save_own_previews(own_rows)
     save_live_odds(odds_rows)
+    # 買い目が出ているレースの数(締切前のもの。中身は書かない)
+    upcoming = [r for r in data["races"] if not r.get("result") and r.get("stage") == "late"]
     perf.update({"updated": n, "sec_fetch": round(perf["sec_fetch"], 1), "sec_predict": round(perf["sec_predict"], 1),
-                 "sec_total": round((now() - t).total_seconds(), 1)})
+                 "sec_total": round((now() - t).total_seconds(), 1),
+                 "late_races_open": len(upcoming),
+                 "bets_races_open": sum(1 for r in upcoming if r.get("bets")),
+                 "bets_open": sum(len(r.get("bets") or []) for r in upcoming),
+                 "bets_ev_max": round(max([b["ev"] for r in upcoming for b in r.get("bets") or []] or [0]), 2),
+                 "bets_races_today": sum(1 for r in data["races"] if r.get("bets")),
+                 "pick_races_open": sum(1 for r in upcoming if r.get("pick"))})
     print("live updated:", n, "races", json.dumps(perf, ensure_ascii=False))
     try:  # 1周の内訳(レース数・取得回数・秒数)。直前予想ループが live ブランチに置く(中身は数字だけ)
         (CACHE / "live_perf.json").write_text(json.dumps(perf, ensure_ascii=False), encoding="utf-8")
