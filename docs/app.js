@@ -157,10 +157,10 @@ function combosHTML(r) {
       <span class="p">${pct1(t.prob)}%${t.odds ? `<small>${t.odds}倍</small>` : ""}</span></div>`).join("") + `</div></div>`;
 }
 
-const betRows = (list) => list.map((b) => `
+const betRows = (list, label = "期待値") => list.map((b) => `
     <div class="bet${b.hit ? " hit" : ""}">${tri(b.combo)}
       <div class="m">確率 <b>${pct1(b.prob)}%</b> オッズ <b>${b.odds}</b>倍${b.hit ? " 的中" : ""}</div>
-      <div class="e${b.ev >= 1.2 ? " strong" : ""}">${Math.round(b.ev * 100)}<small>%</small><span>期待値</span></div></div>`).join("");
+      <div class="e${b.ev >= 1.2 ? " strong" : ""}">${Math.round(b.ev * 100)}<small>%</small><span>${label}</span></div></div>`).join("");
 function evHTML(r) {
   if (!r.bets || !r.bets.length) return "";
   return `<div class="ev"><h3>期待値のある買い目</h3>${betRows(r.bets)}</div>`;
@@ -170,7 +170,7 @@ function pickHTML(r) {
   if (!r.pick || !r.pick.length) return "";
   return `<div class="ev pick"><h3>AIの狙い目<em>参考</em></h3>
     <p class="cap">モデルの確率×オッズが100%以上の組(期待値の高い順に3点まで)。オッズと合わせた本当の期待値ではなく、過去の検証では回収率80%前後と100%に届いていません。実際の成績は成績タブで集計しています。</p>
-    ${betRows(r.pick)}</div>`;
+    ${betRows(r.pick, "AIの見積もり")}</div>`;
 }
 
 // ---- 荒れ度 ----
