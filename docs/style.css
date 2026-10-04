@@ -342,3 +342,4 @@ details.row[open]>summary{border-bottom:1px solid var(--rule)}
 .tbl.dm .tri .lane{width:19px;height:21px;font-size:14px}
 .box h4.tb small{font-weight:400;font-size:11.5px;color:var(--mute);margin-left:6px}
 .dm-note{margin-top:10px}
+.tbl td.good{color:var(--live);font-weight:700}

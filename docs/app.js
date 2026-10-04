@@ -616,6 +616,41 @@ function todayBox() {
     ${block("期待値のある買い目", ev, "")}</div>`;
 }
 
+// ---- 期待値で買った場合の検証 ----
+// 全期間(scripts/upset_eval.py --walk-forward → docs/data/ev_check.json): 各レースより前のデータだけで学習したモデルの確率 × 確定オッズ
+const pc0 = (x) => x == null ? "-" : `${Math.round(x * 100)}%`;
+const ci0 = (c) => c ? `${Math.round(c[0] * 100)}〜${Math.round(c[1] * 100)}%` : "-";
+const ymd = (s) => `${String(s).slice(0, 4)}/${+String(s).slice(4, 6)}/${+String(s).slice(6, 8)}`;
+function evCheckHTML(d) {
+  const a = d.all;
+  const pr = a.pick_rule, ev = a.all_ev100;
+  const band = (b) => b.band[1] == null ? `${Math.round(b.band[0] * 100)}%以上` : `${Math.round(b.band[0] * 100)}〜${Math.round(b.band[1] * 100)}%`;
+  const rows = a.bands.map((b) => `<tr><td>${band(b)}</td><td>${b.bets.toLocaleString()}</td><td>${b.hits}</td>
+    <td class="${b.roi >= 1 ? "good" : ""}">${pc0(b.roi)}</td><td>${ci0(b.roi_ci90)}</td></tr>`).join("");
+  const half = (h, n) => h ? `${n}(${ymd(h.period[0])}〜${ymd(h.period[1])})${pc0(h.pick_rule.roi)}` : "";
+  const bl = a.blend_ev100;
+  return `<div class="box"><h3>期待値で買った場合の検証<small>全期間</small></h3>
+    <p>${ymd(a.period[0])} 〜 ${ymd(a.period[1])} のオッズのある ${a.races.toLocaleString()} レースを、そのレースより前のデータだけで学習したモデルで予想し直し、確定オッズで1点100円買った場合(本番より少し甘め: 本番は締切前のオッズで判断)。</p>
+    <h4 class="tb">AIの狙い目と同じ買い方<small>期待値100%以上を高い順に3点まで</small></h4>
+    <div class="stats">${stat("回収率", pc0(pr.roi), pr.roi >= 1 ? "good" : "bad")}${stat("90%区間", ci0(pr.roi_ci90))}
+      ${stat("点数", pr.bets.toLocaleString())}${stat("的中", `${pr.hits}<small>本</small>`)}</div>
+    <p class="tbn">${half(d.first_half, "前半")}・${half(d.second_half, "後半")}。期待値100%以上を全部買うと ${pc0(ev.roi)}(${ev.bets.toLocaleString()}点)</p>
+    <h4 class="tb">期待値の帯ごと</h4>
+    <div class="scroll"><table class="tbl"><thead><tr><th>期待値</th><th>点数</th><th>的中</th><th>回収率</th><th>90%区間</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <p class="tbn">90%区間は日ごとに引き直したブレの幅。期待値が高い組ほど当たりにくく、見積もりのずれも大きい。${bl ? `モデルとオッズを合わせた本当の期待値で100%を超えた組は、この期間で ${bl.bets.toLocaleString()}点だけ(「期待値のある買い目」がめったに出ないのはこのため)。` : ""}</p></div>`;
+}
+// 全期間の検証がまだ無いとき: 学習レポートの直近のテスト期間の分
+function evRecentHTML(e) {
+  const evRows = e.ev_blend.map((r, i) => `<tr><td>${Math.round(r.ev_min * 100)}%以上</td><td>${r.bets}</td>
+    <td>${r.hit_rate != null ? pct1(r.hit_rate) + "%" : "-"}</td><td>${r.roi != null ? (r.roi * 100).toFixed(0) + "%" : "-"}</td>
+    <td>${e.ev_model[i].roi != null ? (e.ev_model[i].roi * 100).toFixed(0) + "%" : "-"}</td></tr>`).join("");
+  return `<div class="box"><h3>期待値で買った場合の検証<small>直近</small></h3>
+    <p>${e.period[0]} 〜 ${e.period[1]} の ${e.races} レース。締切時オッズで1点100円、実際の払戻金で計算。</p>
+    <div class="scroll"><table class="tbl"><thead><tr><th>期待値</th><th>点数</th><th>的中率</th><th>回収率</th><th>モデル単体</th></tr></thead>
+    <tbody>${evRows}</tbody></table></div></div>`;
+}
+
 // ---- 出目の期待値(過去の回収率) ----
 // 公式の結果(2023-10〜)から、条件ごとに「その出目を買い続けたら」の的中と回収率。総当たりの検証(scripts/deme_scan.py)の結果も添える
 const DEME = { data: null, v: "all", c: "all", r: "all", q: "3-256-256" };
@@ -729,6 +764,8 @@ async function renderTrack() {
   let repNote = "";
   try { track = await getJSON("api/data/track.json"); } catch (e) { /* まだ無い(翌朝から集計) */ }
   try { rep = await getJSON("api/data/report.json"); } catch (e) { repNote = e instanceof Locked ? "検証レポートを作り直し中です。しばらくすると見られます。" : ""; }
+  let evc = null;
+  try { evc = await getJSON("api/data/ev_check.json"); } catch (e) { /* まだ無い(全期間の検証が終わると出る) */ }
   const t = track.days.reduce((a, d) => {
     for (const k of ["races", "top1_hit", "bets", "bet_hits", "invest", "return", "pick_races", "pick_bets", "pick_hits", "pick_return"]) a[k] = (a[k] || 0) + (d[k] || 0);
     return a;
@@ -751,6 +788,7 @@ async function renderTrack() {
     }
   } else html += `<p>予想を始めた翌朝から集計します。</p>`;
   html += `</div>`;
+  html += evc ? evCheckHTML(evc) : (rep && rep.ev ? evRecentHTML(rep.ev) : "");
   html += `<div class="box deme" id="deme-box"></div>`;
   if (!rep && repNote) html += `<div class="box"><p>${repNote}</p></div>`;
   if (rep) {
@@ -764,16 +802,6 @@ async function renderTrack() {
       <p>テスト期間 ${rep.period.test[0]} 〜 ${rep.period.test[1]}。誤差は小さいほど良い。</p>
       <div class="scroll"><table class="tbl"><thead><tr><th>モデル</th><th>誤差</th><th>1着</th><th>3連単本命</th><th>上位5点</th></tr></thead>
       <tbody>${rows}</tbody></table></div></div>`;
-    if (rep.ev) {
-      const e = rep.ev;
-      const evRows = e.ev_blend.map((r, i) => `<tr><td>${Math.round(r.ev_min * 100)}%以上</td><td>${r.bets}</td>
-        <td>${r.hit_rate != null ? pct1(r.hit_rate) + "%" : "-"}</td><td>${r.roi != null ? (r.roi * 100).toFixed(0) + "%" : "-"}</td>
-        <td>${e.ev_model[i].roi != null ? (e.ev_model[i].roi * 100).toFixed(0) + "%" : "-"}</td></tr>`).join("");
-      html += `<div class="box"><h3>期待値で買った場合の検証</h3>
-        <p>${e.period[0]} 〜 ${e.period[1]} の ${e.races} レース。締切時オッズで1点100円、実際の払戻金で計算。</p>
-        <div class="scroll"><table class="tbl"><thead><tr><th>期待値</th><th>点数</th><th>的中率</th><th>回収率</th><th>モデル単体</th></tr></thead>
-        <tbody>${evRows}</tbody></table></div></div>`;
-    }
     if (st.top_features) {
       html += `<div class="box"><h3>よく効いている要素</h3><p>${Object.keys(st.top_features).slice(0, 10).map(esc).join("、")}</p></div>`;
     }

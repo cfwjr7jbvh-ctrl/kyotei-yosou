@@ -140,6 +140,78 @@ def _calib(pred, actual, bins=10):
              "n": int((b == i).sum())} for i in range(len(q) - 1) if (b == i).any()]
 
 
+EV_BANDS = [(1.0, 1.2), (1.2, 1.5), (1.5, 2.0), (2.0, np.inf)]
+
+
+def _day_ci(cost, ret, days, rng, n_boot=2000):
+    """日ごとに引き直した回収率の90%区間(同じ日のレースはまとめて引く)。"""
+    u, inv = np.unique(days, return_inverse=True)
+    c = np.bincount(inv, weights=cost, minlength=len(u))
+    r = np.bincount(inv, weights=ret, minlength=len(u))
+    if c.sum() < 3000 or len(u) < 5:
+        return None
+    w = rng.poisson(1.0, (n_boot, len(u)))
+    b = (w @ r) / np.maximum(w @ c, 1)
+    return [round(float(np.quantile(b, q)), 4) for q in (0.05, 0.95)]
+
+
+def _ev_row(cost, ret, days, rng):
+    n = int(cost.sum() // 100)
+    return {"bets": n, "races": int((cost > 0).sum()), "hits": int((ret > 0).sum()),
+            "roi": round(float(ret.sum() / cost.sum()), 4) if n else None, "profit_yen": int(ret.sum() - cost.sum()),
+            "roi_ci90": _day_ci(cost, ret, days, rng) if n else None}
+
+
+def ev_detail(P, O, y, pay, rids, PB=None, n_boot=2000, seed=1) -> dict:
+    """モデルの確率×確定オッズの期待値で買った場合の内訳(サイトの成績タブ用)。
+    - 期待値の帯ごと(確率1%以上の組を全部、帯ごとに分けて)
+    - サイトの「AIの狙い目」と同じ買い方(期待値100%以上・確率1%以上の組を、期待値の高い順に1レース3点まで)
+    - 比べる買い方: 期待値100〜150%の組だけを期待値の高い順に3点まで(高すぎる期待値は見積もり違いが多いかを見る)
+    - 本物の期待値(モデル×市場の合成)で100%以上になった組の数
+    いずれも前半・後半に分けても出す。"""
+    rng = np.random.default_rng(seed)
+    days = np.array([r[:8] for r in rids])
+    n = len(y)
+    EV = P * np.nan_to_num(O, nan=0.0)
+    ok = (P >= 0.01) & (EV >= 1.0)
+    hit = np.zeros_like(ok)
+    hit[np.arange(n), y] = True
+    payout = np.where(hit, pay[:, None], 0.0)
+
+    def rule(lo, hi, k):
+        m = ok & (EV >= lo) & (EV < hi)
+        cost, ret = np.zeros(n), np.zeros(n)
+        for i in np.where(m.any(1))[0]:
+            j = np.where(m[i])[0]
+            j = j[np.argsort(-EV[i, j])][:k]
+            cost[i] = 100.0 * len(j)
+            ret[i] = payout[i, j].sum()
+        return cost, ret
+
+    def summarize(sl):
+        out = {"period": [str(days[sl][0]), str(days[sl][-1])], "races": int(len(days[sl]))}
+        bands = []
+        for lo, hi in EV_BANDS:
+            m = ok[sl] & (EV[sl] >= lo) & (EV[sl] < hi)
+            row = _ev_row(100.0 * m.sum(1), (payout[sl] * m).sum(1), days[sl], rng)
+            row["band"] = [lo, None if not np.isfinite(hi) else hi]
+            bands.append(row)
+        out["bands"] = bands
+        out["all_ev100"] = _ev_row(100.0 * ok[sl].sum(1), (payout[sl] * ok[sl]).sum(1), days[sl], rng)
+        c, r = rule(1.0, np.inf, 3)
+        out["pick_rule"] = _ev_row(c[sl], r[sl], days[sl], rng)
+        c, r = rule(1.0, 1.5, 3)
+        out["pick_mid"] = _ev_row(c[sl], r[sl], days[sl], rng)
+        if PB is not None:
+            EB = PB[sl] * np.nan_to_num(O[sl], nan=0.0)
+            mb = (PB[sl] >= 0.01) & (EB >= 1.0)
+            out["blend_ev100"] = _ev_row(100.0 * mb.sum(1), (payout[sl] * mb).sum(1), days[sl], rng)
+        return out
+
+    h = n // 2
+    return {"all": summarize(slice(0, n)), "first_half": summarize(slice(0, h)), "second_half": summarize(slice(h, n))}
+
+
 def study(rids, W, PM, O, y, pay, log=print, n_boot=2000, seed=0) -> dict:
     rng = np.random.default_rng(seed)
     n = len(y)
@@ -195,6 +267,8 @@ def study(rids, W, PM, O, y, pay, log=print, n_boot=2000, seed=0) -> dict:
             halves[name] = {"period": [rids[has][sl][0][:8], rids[has][sl][-1][:8]],
                             **{k: _compare(c, r, Ao[k][sl], cuts_o[k], ii) for k in ("in_lose", "manshu_odds")}}
         res["ev_model_by_half"] = halves
+        res["ev_detail"] = ev_detail(Pm, Oo, yy, pp, np.asarray(rids)[has], PB)
+        log("ev_detail", json.dumps({k: res["ev_detail"]["all"][k] for k in ("all_ev100", "pick_rule", "pick_mid")}, ensure_ascii=False))
     res["confirm"] = confirm(rids, W, PM, O, y, pay)
     return res
 

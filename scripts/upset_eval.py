@@ -132,6 +132,14 @@ def main():
         res["folds"] = folds
     pathlib.Path(a.out).write_text(json.dumps(res, ensure_ascii=False, indent=1, default=float), encoding="utf-8")
     log("wrote", a.out)
+    if folds is not None and res.get("ev_detail") and a.out == str(ROOT / "reports/upset_eval.json"):
+        # サイトの成績タブ「期待値で買った場合の検証(全期間)」用(暗号化)
+        import datetime as dt
+        from kyotei.publish import write_json
+        write_json(ROOT / "docs/data/ev_check.json", {
+            "generated_at": dt.datetime.now(dt.timezone(dt.timedelta(hours=9))).strftime("%Y-%m-%d %H:%M"),
+            "folds": folds, **res["ev_detail"]})
+        log("wrote docs/data/ev_check.json")
 
 
 if __name__ == "__main__":

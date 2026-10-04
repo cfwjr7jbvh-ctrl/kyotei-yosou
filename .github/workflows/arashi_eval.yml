@@ -39,4 +39,4 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          bash scripts/commit_files.sh "[CI Skip] report: 荒れ狙いの検証(全期間)" reports/upset_eval.json reports/edge_status.json
+          bash scripts/commit_files.sh "[CI Skip] report: 荒れ狙いの検証(全期間)" reports/upset_eval.json reports/edge_status.json docs/data/ev_check.json
