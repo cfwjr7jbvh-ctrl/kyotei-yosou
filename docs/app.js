@@ -131,7 +131,7 @@ function evHTML(r) {
   return `<div class="ev"><h3>期待値のある買い目</h3>` + r.bets.map((b) => `
     <div class="bet${b.hit ? " hit" : ""}">${tri(b.combo)}
       <div class="m">確率 <b>${pct1(b.prob)}%</b> オッズ <b>${b.odds}</b>倍${b.hit ? " 的中" : ""}</div>
-      <div class="e">${b.ev.toFixed(2)}<small>期待値</small></div></div>`).join("") + `</div>`;
+      <div class="e${b.ev >= 1.2 ? " strong" : ""}">${Math.round(b.ev * 100)}<small>%</small><span>期待値</span></div></div>`).join("") + `</div>`;
 }
 
 function resultHTML(r) {
@@ -211,7 +211,7 @@ function renderBets() {
   const box = $("#tab-bets");
   const races = visibleRaces().filter((r) => r.bets && r.bets.length);
   const late = state.data.races.filter((r) => r.stage === "late").length;
-  let html = `<p class="note">締切の約30分前から、展示とオッズを取り込んで5分ごとに更新します。確率×オッズ(期待値)が1.2以上の組だけ出します。直前予想 ${late} / ${state.data.races.length} レース</p>`;
+  let html = `<p class="note">締切の約30分前から、展示とオッズを取り込んで5分ごとに更新します。確率×オッズ(期待値)が100%以上の組を出します。120%以上は赤で強調。直前予想 ${late} / ${state.data.races.length} レース</p>`;
   if (!races.length) {
     box.innerHTML = html + `<div class="empty">今のところ期待値の高い買い目はありません。締切が近づくと出てきます。</div>`;
     return;
@@ -257,7 +257,7 @@ async function renderTrack() {
       <tbody>${rows}</tbody></table></div></div>`;
     if (rep.ev) {
       const e = rep.ev;
-      const evRows = e.ev_blend.map((r, i) => `<tr><td>${r.ev_min.toFixed(1)}以上</td><td>${r.bets}</td>
+      const evRows = e.ev_blend.map((r, i) => `<tr><td>${Math.round(r.ev_min * 100)}%以上</td><td>${r.bets}</td>
         <td>${r.hit_rate != null ? pct1(r.hit_rate) + "%" : "-"}</td><td>${r.roi != null ? (r.roi * 100).toFixed(0) + "%" : "-"}</td>
         <td>${e.ev_model[i].roi != null ? (e.ev_model[i].roi * 100).toFixed(0) + "%" : "-"}</td></tr>`).join("");
       html += `<div class="box"><h3>期待値で買った場合の検証</h3>
