@@ -67,6 +67,9 @@ publish_live() {  # 当日(と前日)の予想ファイルだけの1コミット
   if [ -f "$sent" ]; then
     GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w "$sent"),notify/$(basename "$sent")"
   fi
+  if [ -f data/cache/live_perf.json ]; then  # 1周の内訳(数字だけ。速さの見直し用)
+    GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w data/cache/live_perf.json),perf/live_perf.json"
+  fi
   tree=$(GIT_INDEX_FILE=$idx git write-tree)
   rm -f "$idx"
   c=$(echo "[CI Skip] live $(jst +%H:%M)" | git commit-tree "$tree")

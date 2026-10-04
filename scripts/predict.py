@@ -347,6 +347,15 @@ def live(day: dt.date, ahead_min: int = 35):
     own_rows = []
     odds_rows = []
     updated = []
+    # 直前情報(展示)は出そろえば変わらないので、12分以内に取ったものは使い回し、オッズだけ毎回取り直す。
+    # 締切が近いレースほど何度も取り直していたため、1周に6〜10分かかっていた
+    bi_path = CACHE / f"beforeinfo_{day.isoformat()}.pkl"
+    try:
+        bi_cache = pickle.loads(bi_path.read_bytes()) if bi_path.exists() else {}
+    except Exception:  # noqa: BLE001
+        bi_cache = {}
+    perf = {"started": t.strftime("%H:%M:%S"), "window": 0, "beforeinfo": 0, "beforeinfo_cached": 0, "odds": 0,
+            "sec_fetch": 0.0, "sec_predict": 0.0}
     for i, race in enumerate(data["races"]):
         if not race.get("deadline"):
             continue
@@ -355,8 +364,20 @@ def live(day: dt.date, ahead_min: int = 35):
         if not (t - dt.timedelta(minutes=1) <= dl <= t + dt.timedelta(minutes=ahead_min)):
             continue
         rdf = df[df["race_id"] == race["race_id"]].copy()
-        html = fetch("beforeinfo", race["jcd"], race["rno"], hd)
-        info = parse_beforeinfo(html) if html else {"boats": {}}
+        perf["window"] += 1
+        c = bi_cache.get(race["race_id"])
+        if c and c["complete"] and (now() - c["at"]).total_seconds() < 12 * 60:
+            info = c["info"]
+            perf["beforeinfo_cached"] += 1
+        else:
+            t1 = time.time()
+            html = fetch("beforeinfo", race["jcd"], race["rno"], hd)
+            perf["sec_fetch"] += time.time() - t1
+            perf["beforeinfo"] += 1
+            info = parse_beforeinfo(html) if html else {"boats": {}}
+            bx = info.get("boats", {})
+            done = len(bx) >= 5 and all(np.isfinite(b.get("exhibit_time", np.nan)) for b in bx.values())
+            bi_cache[race["race_id"]] = {"at": now(), "info": info, "complete": done}
         boats = info.get("boats", {})
         if not boats or all(not np.isfinite(b.get("exhibit_time", np.nan)) for b in boats.values()):
             continue  # 展示前
@@ -374,15 +395,20 @@ def live(day: dt.date, ahead_min: int = 35):
         if wind_tab is not None:
             rdf = features.apply_wind(rdf, wind_tab)
         rdf = features.add_late(rdf)
+        t1 = time.time()
         oh = fetch("odds3t", race["jcd"], race["rno"], hd)
+        perf["sec_fetch"] += time.time() - t1
+        perf["odds"] += 1
         od = parse_odds3t(oh) if oh else {}
         mins = round((dl - now()).total_seconds() / 60, 1)  # 締切まで何分の時点のオッズか
         odds_rows += [{"race_id": race["race_id"], "min_before": mins, "combo": c, "odds": v}
                       for c, v in od.items() if c in COMBOS]
         odds = np.array([od.get(c, np.nan) for c in COMBOS]) if od else None
+        t1 = time.time()
         p, stack, s23 = predict_win(bundle, "late", rdf)
         new = race_payload(rdf, p, stack, "late", odds, bundle.get("blend"), bundle.get("bet_filter"), s23=s23,
                            bet_rule=bundle.get("bet_rule"))
+        perf["sec_predict"] += time.time() - t1
         # 展示前(朝予想)の1着率を残し、アプリで「展示を見てどう変わったか」を出せるようにする
         before = {b["lane"]: b.get("p_win_early", b.get("p_win") if race.get("stage") != "late" else None)
                   for b in race.get("boats", [])}
@@ -392,12 +418,25 @@ def live(day: dt.date, ahead_min: int = 35):
         data["races"][i] = new
         updated.append(new)
         n += 1
-    attach_results(data, now(), hd)  # 終わったレースの結果と的中
+    t1 = time.time()
+    perf["results"] = attach_results(data, now(), hd)  # 終わったレースの結果と的中
+    perf["sec_results"] = round(time.time() - t1, 1)
+    try:
+        bi_path.parent.mkdir(parents=True, exist_ok=True)
+        bi_path.write_bytes(pickle.dumps(bi_cache))
+    except Exception:  # noqa: BLE001
+        pass
     data["updated_at"] = t.strftime("%H:%M")
     write_json(jp, data)
     save_own_previews(own_rows)
     save_live_odds(odds_rows)
-    print("live updated:", n, "races")
+    perf.update({"updated": n, "sec_fetch": round(perf["sec_fetch"], 1), "sec_predict": round(perf["sec_predict"], 1),
+                 "sec_total": round((now() - t).total_seconds(), 1)})
+    print("live updated:", n, "races", json.dumps(perf, ensure_ascii=False))
+    try:  # 1周の内訳(レース数・取得回数・秒数)。直前予想ループが live ブランチに置く(中身は数字だけ)
+        (CACHE / "live_perf.json").write_text(json.dumps(perf, ensure_ascii=False), encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
     notify_bets(day, updated, now(), EV_MIN)  # 新しく出た期待値100%以上の買い目を LINE へ(設定があるときだけ)
 
 
