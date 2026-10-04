@@ -29,7 +29,10 @@ GROUP_NAME = {"A1": "A1", "A2": "A2", "B": "B級"}
 
 
 def st_fmt(v) -> str:
-    return ("F" if v < 0 else "") + f"{abs(v):.2f}"[1:]
+    """ST の表示(.12)。アプリ(JavaScript の toFixed)と同じく四捨五入する。"""
+    import math
+    x = math.floor(abs(v) * 100 + 0.5 + 1e-9) / 100
+    return ("F" if v < 0 else "") + f"{x:.2f}"[1:]
 
 
 def load_table(since: str | None = None) -> pd.DataFrame:

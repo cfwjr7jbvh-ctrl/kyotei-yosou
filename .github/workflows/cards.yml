@@ -1,0 +1,35 @@
+name: 選手カードの更新
+
+# 公式の成績データを自分たちで集計した選手カード(特性・ひと言タグ・レーダーチャート)を作り、
+# 暗号化して cards ブランチに1コミットだけで置く(履歴を積み上げない)。アプリは選手名をタップしたときに読む。
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "5 22 * * *"   # 毎日 7:05 JST(朝の予想で前日までの成績が入ったあと)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cards
+  cancel-in-progress: true
+
+jobs:
+  cards:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - name: 選手カードを作る
+        run: python scripts/racer_cards.py build --out "$RUNNER_TEMP/out"
+      - name: cards ブランチに置く(1コミットだけ)と、基準とタグの数をコミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/push_cards.sh "$RUNNER_TEMP/out"
+          bash scripts/commit_files.sh "[CI Skip] report: 選手カードの基準とタグの数" reports/racer_cards_meta.json

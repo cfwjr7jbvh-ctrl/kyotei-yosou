@@ -301,19 +301,19 @@ async function loadCard(id) {
   if (!CARDS.buckets[b]) CARDS.buckets[b] = await getJSON(`api/data/cards/b${String(b).padStart(2, "0")}.json`);
   return CARDS.buckets[b].cards[String(id)] || null;
 }
-function radarSVG(vals, labels, size = 240) {
-  const c = size / 2, R = size / 2 - 42, n = labels.length;
-  const pt = (i, v) => { const a = -Math.PI / 2 + (2 * Math.PI * i) / n; return [c + R * v * Math.cos(a), c + R * v * Math.sin(a)]; };
+function radarSVG(vals, labels, W = 340, H = 236) {
+  const c = W / 2, cy = H / 2, R = 74, n = labels.length;  // 横長の枠で、左右のラベルが切れないようにする
+  const pt = (i, v) => { const a = -Math.PI / 2 + (2 * Math.PI * i) / n; return [c + R * v * Math.cos(a), cy + R * v * Math.sin(a)]; };
   const ring = (v) => labels.map((_, i) => pt(i, v).map((x) => x.toFixed(1)).join(",")).join(" ");
   const poly = labels.map((l, i) => pt(i, Math.max(0.03, (vals[l] ?? 0) / 100)).map((x) => x.toFixed(1)).join(",")).join(" ");
   const lab = labels.map((l, i) => {
-    const [x, y] = pt(i, 1.2);
+    const [x, y] = pt(i, 1.16);
     const anchor = Math.abs(x - c) < 4 ? "middle" : x > c ? "start" : "end";
     return `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="${anchor}">${esc(l)}<tspan class="rv" dx="3">${vals[l] == null ? "-" : Math.round(vals[l])}</tspan></text>`;
   }).join("");
-  return `<svg class="radar" viewBox="0 0 ${size} ${size}" role="img" aria-label="${labels.map((l) => `${l} ${vals[l] == null ? "-" : Math.round(vals[l])}`).join("、")}">
+  return `<svg class="radar" viewBox="0 0 ${W} ${H}" role="img" aria-label="${labels.map((l) => `${l} ${vals[l] == null ? "-" : Math.round(vals[l])}`).join("、")}">
     ${[0.25, 0.5, 0.75, 1].map((v) => `<polygon class="rg" points="${ring(v)}"/>`).join("")}
-    ${labels.map((_, i) => { const [x, y] = pt(i, 1); return `<line class="rg" x1="${c}" y1="${c}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join("")}
+    ${labels.map((_, i) => { const [x, y] = pt(i, 1); return `<line class="rg" x1="${c}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join("")}
     <polygon class="rd" points="${poly}"/>${lab}</svg>`;
 }
 const pctTop = (p) => p == null ? "" : `上位${Math.max(1, Math.round(100 - p))}%`;
