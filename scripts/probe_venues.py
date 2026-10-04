@@ -1,8 +1,9 @@
 """各場の公式サイトに「選手コメント」などのページがあるかを調べる(調査用、1回きり)。
 
 各場のトップ(PC・スマホ)から、リンクの文字かURLに「コメント」「comment」「前検」「オリジナル展示」「展示」などを含むものを集め、
-それぞれ最初の数ページを保存する。robots.txt も保存する。結果は out/venues/ に置き、ワークフローの成果物として1日だけ残す
-(公開リポジトリにページそのものはコミットしない)。アクセスは全体で1秒に1回以下。
+それぞれ最初の数ページを調べる。robots.txt も見る。公開リポジトリにページそのものは置かず、
+ページの作り(コメントらしい文の例を短く数件、それを囲むタグ、日付やレースの切り替えのリンク)だけを
+data/probe/venues_summary.json にまとめる。アクセスは全体で1秒に1回以下。
 """
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ import urllib.parse
 import requests
 from bs4 import BeautifulSoup
 
-OUT = pathlib.Path("out/venues")
+OUT = pathlib.Path("data/probe/venues_summary.json")
 UA = {"User-Agent": "Mozilla/5.0 (kyotei-yosou research; personal use)"}
 SITES = {1: "https://www.kiryu-kyotei.com/", 2: "https://www.boatrace-toda.jp/", 3: "https://www.boatrace-edogawa.com/",
          4: "https://www.heiwajima.gr.jp/", 5: "https://www.boatrace-tamagawa.com/", 6: "https://www.boatrace-hamanako.jp/",
@@ -43,26 +44,57 @@ def get(url: str):
     return r, None
 
 
+WORDS = r"出足|伸び|回り足|行き足|まわり足|乗りやすい|舟足|足色|レース足|ターン"
+
+
+def css_path(el, depth=4) -> str:
+    out = []
+    while el is not None and getattr(el, "name", None) and el.name not in ("html", "body") and len(out) < depth:
+        cls = ".".join(el.get("class", [])[:2])
+        out.append(el.name + (("." + cls) if cls else "") + (("#" + el["id"]) if el.get("id") else ""))
+        el = el.parent
+    return " < ".join(out)
+
+
+def describe(html: str, url: str) -> dict:
+    soup = BeautifulSoup(html, "html.parser")
+    for t in soup(["script", "style"]):
+        t.decompose()
+    hits = [t for t in soup.find_all(string=re.compile(WORDS))]
+    ex = []
+    for t in hits[:6]:
+        txt = re.sub(r"\s+", " ", str(t)).strip()
+        ex.append({"text": txt[:60], "path": css_path(t.parent)})
+    nav = []
+    for a in soup.select("a[href]"):
+        h = a["href"]
+        if re.search(r"(day|date|hd|ymd|kaisai|race|rno|r=|no=|sel)", h, re.I) and len(nav) < 25:
+            nav.append({"text": a.get_text(" ", strip=True)[:20], "href": urllib.parse.urljoin(url, h)[:160]})
+    sels = [{"name": s_.get("name"), "options": [o.get_text(strip=True)[:15] for o in s_.select("option")][:12]} for s_ in soup.select("select")][:5]
+    title = soup.title.get_text(strip=True)[:80] if soup.title else ""
+    return {"title": title, "n_comment_words": len(hits), "examples": ex, "nav": nav, "selects": sels,
+            "iframes": [f.get("src", "")[:160] for f in soup.select("iframe")][:5],
+            "scripts_json": bool(re.search(r"\.json|ajax|api/", html))}
+
+
 def safe(s: str) -> str:
     return re.sub(r"[^\w\-.]+", "_", s)[:120]
 
 
 def main():
-    OUT.mkdir(parents=True, exist_ok=True)
+    OUT.parent.mkdir(parents=True, exist_ok=True)
     summary = {}
     for jcd, top in SITES.items():
         info = {"top": top, "pages": [], "links": []}
         rb, err = get(urllib.parse.urljoin(top, "/robots.txt"))
-        if rb is not None and rb.ok:
-            (OUT / f"{jcd:02d}_robots.txt").write_text(rb.text[:20000], encoding="utf-8")
-            info["robots"] = rb.text[:2000]
+        if rb is not None and rb.ok and "<html" not in rb.text[:500].lower():
+            info["robots"] = rb.text[:1500]
         cand = {}
         for start in (top, urllib.parse.urljoin(top, "/sp/")):
             r, err = get(start)
             if r is None or not r.ok:
                 info["pages"].append({"url": start, "status": getattr(r, "status_code", None), "err": err})
                 continue
-            (OUT / f"{jcd:02d}_top_{safe(start)}.html").write_text(r.text, encoding="utf-8")
             info["pages"].append({"url": r.url, "status": r.status_code, "len": len(r.text)})
             soup = BeautifulSoup(r.text, "html.parser")
             for a in soup.select("a[href]"):
@@ -76,14 +108,13 @@ def main():
         for i, (u, t) in enumerate(pri[:4]):
             r, err = get(u)
             ok = r is not None and r.ok
+            page = {"url": u, "text": t, "status": getattr(r, "status_code", None), "err": err, "len": len(r.text) if ok else 0}
             if ok:
-                (OUT / f"{jcd:02d}_p{i}_{safe(u.split('//', 1)[-1])}.html").write_text(r.text, encoding="utf-8")
-            info["pages"].append({"url": u, "text": t, "status": getattr(r, "status_code", None), "err": err,
-                                  "len": len(r.text) if ok else 0,
-                                  "has_comment_words": bool(ok and re.search(r"出足|伸び|回り足|行き足|まわり足|乗りやすい|舟足", r.text))})
+                page.update(describe(r.text, r.url))
+            info["pages"].append(page)
         summary[jcd] = info
-        print(jcd, top, "links", len(cand), [(p.get("text"), p.get("status"), p.get("has_comment_words")) for p in info["pages"][2:]])
-    (OUT / "summary.json").write_text(json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(jcd, top, "links", len(cand), [(p.get("text"), p.get("status"), p.get("n_comment_words")) for p in info["pages"][2:]])
+    OUT.write_text(json.dumps(summary, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 if __name__ == "__main__":

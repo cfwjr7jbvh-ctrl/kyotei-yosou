@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   probe:
@@ -17,9 +17,10 @@ jobs:
           python-version: "3.12"
       - run: pip install -q requests beautifulsoup4
       - run: python scripts/probe_venues.py
-      # ページそのものは公開リポジトリにコミットせず、成果物として1日だけ残す
-      - uses: actions/upload-artifact@v4
-        with:
-          name: venues
-          path: out/venues
-          retention-days: 1
+      - name: 調査結果(ページの作りの要約だけ)をコミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/probe/venues_summary.json
+          git commit -q -m "[CI Skip] probe: 各場の公式サイトの作り" || echo "no changes"
+          bash scripts/push.sh
