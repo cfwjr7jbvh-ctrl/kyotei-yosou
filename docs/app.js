@@ -277,7 +277,7 @@ function tenkaiHTML(r) {
 
 function resultHTML(r) {
   if (!r.result) return "";
-  return `<div class="result">結果 ${tri(r.result.tri_combo)}<span class="pay">${r.result.tri_pay.toLocaleString()}円</span></div>`;
+  return `<div class="result">結果 ${tri(r.result.tri_combo)}<span class="pay">${r.result.tri_pay.toLocaleString()}円</span>${r.result.kimarite ? `<span class="kim">${esc(r.result.kimarite)}</span>` : ""}</div>`;
 }
 
 function stageHTML(r) {
@@ -368,6 +368,26 @@ function renderBets() {
 
 function stat(k, v, cls = "") { return `<div class="stat"><div class="k">${k}</div><div class="v ${cls}">${v}</div></div>`; }
 
+// 表示中の日の途中成績(終わったレースの結果は直前予想の更新のたびに付く)
+function todayBox() {
+  const races = (state.data && state.data.races || []).filter((r) => r.result);
+  if (!races.length) return "";
+  let top = 0, bets = 0, betRet = 0, betHit = 0, nb = 0, nRet = 0, nHit = 0, nRaces = 0;
+  for (const r of races) {
+    if (r.top && r.top[0] && r.top[0].combo === r.result.tri_combo) top++;
+    for (const b of r.bets || []) { bets++; if (b.combo === r.result.tri_combo) { betHit++; betRet += r.result.tri_pay; } }
+    if (r.nerai && r.nerai.length) nRaces++;
+    for (const b of r.nerai || []) { nb++; if (b.combo === r.result.tri_combo) { nHit++; nRet += r.result.tri_pay; } }
+  }
+  const pl = (v) => (v >= 0 ? "+" : "") + v.toLocaleString() + "円";
+  let h = `<div class="box"><h3>${state.data.date === jst().date ? "今日" : esc(state.data.date)}の成績<small>途中経過</small></h3>
+    <p>結果の出た ${races.length} レース(1点100円で買ったとして計算)</p>
+    <div class="stats">${stat("本命3連単の的中", `${top}<small>/${races.length}</small>`)}${stat("本命の的中率", pct1(top / races.length) + "%")}`;
+  if (nb) h += stat("荒れ狙いの収支", pl(nRet - nb * 100), nRet >= nb * 100 ? "good" : "bad") + stat("荒れ狙いの的中", `${nHit}<small>/${nRaces}レース</small>`);
+  if (bets) h += stat("期待値買いの収支", pl(betRet - bets * 100), betRet >= bets * 100 ? "good" : "bad") + stat("期待値買いの的中", `${betHit}<small>/${bets}点</small>`);
+  return h + `</div></div>`;
+}
+
 async function renderTrack() {
   const box = $("#tab-track");
   let track = { days: [] }, rep = null;
@@ -377,7 +397,8 @@ async function renderTrack() {
     for (const k of ["races", "top1_hit", "bets", "bet_hits", "invest", "return", "nerai_races", "nerai_bets", "nerai_hits", "nerai_return"]) a[k] = (a[k] || 0) + (d[k] || 0);
     return a;
   }, {});
-  let html = `<div class="box"><h3>実際の成績</h3>`;
+  let html = todayBox();
+  html += `<div class="box"><h3>実際の成績</h3>`;
   if (t.races) {
     const roi = t.invest ? t.return / t.invest : 0;
     html += `<p>${track.days[0].date} 〜 ${track.days[track.days.length - 1].date}(${track.days.length}日、${t.races}レース)</p>

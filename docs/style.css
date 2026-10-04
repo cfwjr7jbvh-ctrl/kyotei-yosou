@@ -188,6 +188,8 @@ main{max-width:1120px;margin:0 auto;padding:10px 16px 20px}
 .bet.hit{background:color-mix(in srgb,var(--mark) 10%,transparent);border-radius:8px;padding-inline:6px}
 
 .result{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:14px}
+.result .kim{font-size:12px;color:var(--mute);border:1px solid var(--rule);border-radius:4px;padding:1px 6px}
+.box h3 small{font-size:12px;font-weight:400;color:var(--mute);margin-left:6px}
 .result .pay{font-family:var(--num);font-weight:700;font-size:20px}
 
 /* ---- このあと / 終わったレース(たたんだ行) ---- */

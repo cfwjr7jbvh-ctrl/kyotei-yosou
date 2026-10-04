@@ -108,6 +108,30 @@ def parse_beforeinfo(html: str) -> dict:
             "wind_dir_code": w.get("wind_dir_code")}
 
 
+def parse_raceresult(html: str) -> dict | None:
+    """レース結果ページから3連単の組番・払戻金と決まり手。まだ結果が出ていない(中止を含む)ときは None。"""
+    soup = BeautifulSoup(html, "html.parser")
+    out = None
+    for tb in soup.select("tbody"):
+        tds = tb.select("td")
+        if not tds or tds[0].get_text(strip=True) != "3連単":
+            continue
+        nums = [x.get_text(strip=True) for x in tb.select(".numberSet1_number")][:3]
+        pay = tb.select_one(".is-payout1")
+        yen = re.sub(r"[^\d]", "", pay.get_text()) if pay else ""
+        if len(nums) == 3 and all(n.isdigit() for n in nums) and yen:
+            out = {"tri_combo": "-".join(nums), "tri_pay": int(yen)}
+        break
+    if out is None:
+        return None
+    for t in soup.select("table"):
+        txt = t.get_text(" ", strip=True)
+        if txt.startswith("決まり手"):
+            out["kimarite"] = txt.replace("決まり手", "").strip()
+            break
+    return out
+
+
 def race_days(hd: str) -> list[int]:
     """その日に開催している場コード一覧(公式トップから)。"""
     r = _session.get(f"{BASE}/index?hd={hd}", headers=UA, timeout=30)

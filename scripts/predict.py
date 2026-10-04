@@ -26,7 +26,7 @@ from kyotei.betting import COMBOS, blend, entropy, market_probs, model_tri_probs
 from kyotei.data import load_history  # noqa: E402
 from kyotei.parse_lzh import parse_program, parse_result  # noqa: E402
 from kyotei.publish import read_json, write_check, write_json  # noqa: E402
-from kyotei.scrape import fetch, parse_beforeinfo, parse_odds3t  # noqa: E402
+from kyotei.scrape import fetch, parse_beforeinfo, parse_odds3t, parse_raceresult  # noqa: E402
 from kyotei.arashi import IN_LOSE_MIN, arashi  # noqa: E402
 from kyotei.notify import notify_bets  # noqa: E402
 from kyotei.tenkai import tenkai, traits  # noqa: E402
@@ -140,9 +140,12 @@ def score_day(day: dt.date):
             continue
         pay = r.get("tri_pay")
         pay = int(pay) if pay == pay and pay is not None else 0
-        race["result"] = {"tri_combo": r["tri_combo"], "tri_pay": pay}
+        kim = (race.get("result") or {}).get("kimarite")  # 当日に取った決まり手は残す
+        race["result"] = {"tri_combo": r["tri_combo"], "tri_pay": pay, **({"kimarite": kim} if kim else {})}
         tot["races"] += 1
         tot["top1_hit"] += int(race["top"] and race["top"][0]["combo"] == r["tri_combo"])
+        for b in race.get("bets", []) + (race.get("nerai") or []):
+            b.pop("hit", None)  # 当日に付けた的中は、確定した結果で付け直す
         for b in race.get("bets", []):
             tot["bets"] += 1
             tot["invest"] += 100
@@ -200,7 +203,7 @@ def merge_live(day: dt.date, prev_path: str):
     if not jp.exists() or not prev.exists():
         return
     base, old = read_json(jp), read_json(prev)
-    late = {r["race_id"]: r for r in old.get("races", []) if r.get("stage") == "late"}
+    late = {r["race_id"]: r for r in old.get("races", []) if r.get("stage") == "late" or r.get("result")}
     if not late:
         return
     base["races"] = [late.get(r["race_id"], r) for r in base["races"]]
@@ -299,6 +302,34 @@ def backfill_own(day: dt.date):
     print("backfilled previews:", len({r["race_id"] for r in rows}), "races")
 
 
+def attach_results(data: dict, t: dt.datetime, hd: str, limit: int = 40) -> int:
+    """締切から6分〜3時間たったレースの結果(3連単・払戻・決まり手)を公式サイトから取り、的中を付ける。
+    翌朝の答え合わせ(score_day)を待たずに、現地で結果と的中が見られるようにする。1レースにつき結果が出るまで取りに行く。"""
+    n = got = 0
+    for race in data["races"]:
+        if race.get("result") or not race.get("deadline"):
+            continue
+        hh, mm = map(int, race["deadline"].split(":"))
+        dl = t.replace(hour=hh, minute=mm, second=0, microsecond=0)
+        if not (dl + dt.timedelta(minutes=6) <= t <= dl + dt.timedelta(hours=3)):
+            continue
+        if n >= limit:
+            break
+        n += 1
+        html = fetch("raceresult", race["jcd"], race["rno"], hd)
+        res = parse_raceresult(html) if html else None
+        if not res:
+            continue
+        race["result"] = res
+        got += 1
+        for k in ("bets", "nerai"):
+            for b in race.get(k) or []:
+                b["hit"] = b["combo"] == res["tri_combo"]
+    if n:
+        print(f"results: {got}/{n} races")
+    return got
+
+
 def live(day: dt.date, ahead_min: int = 35):
     fp = CACHE / f"features_{day.isoformat()}.pkl"
     jp = DAYS / f"{day.isoformat()}.json"
@@ -361,6 +392,7 @@ def live(day: dt.date, ahead_min: int = 35):
         data["races"][i] = new
         updated.append(new)
         n += 1
+    attach_results(data, now(), hd)  # 終わったレースの結果と的中
     data["updated_at"] = t.strftime("%H:%M")
     write_json(jp, data)
     save_own_previews(own_rows)
