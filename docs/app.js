@@ -131,7 +131,7 @@ function boatsHTML(r) {
       if (Math.abs(d) >= 1) delta = `<span class="delta ${d > 0 ? "up" : "down"}" title="展示前との差">${d > 0 ? "+" : "−"}${Math.abs(d).toFixed(1)}</span>`;
     }
     return `<li class="boat">${tile(b.lane)}<span class="shirushi" aria-label="${mk[b.lane] ? "印 " + mk[b.lane] : ""}">${mk[b.lane] || ""}</span>
-      <div class="who"><b>${esc(b.name)}</b><div class="meta">${meta}</div>${traitChips(r, b)}</div>
+      <div class="who"><button type="button" class="rname" data-rid="${b.racer_id || ""}" data-race="${r.race_id}" data-lane="${b.lane}">${esc(b.name)}<span class="rn-i" aria-hidden="true">カード</span></button><div class="meta">${meta}</div>${traitChips(r, b)}</div>
       <div class="prob"><span class="pct">${pct1(b.p_win)}<small>%</small></span>${delta}</div>
       <div class="meter" aria-hidden="true"><i class="b${b.lane}" style="width:${Math.max(3, (b.p_win / maxP) * 100)}%"></i></div></li>`;
   }).join("") + `</ol>`;
@@ -290,6 +290,105 @@ function scenarioHTML(r) {
   };
   return `<h4>展開シナリオ<small>勝ち筋ごとの2着と本線</small></h4><div class="scns">${sc.map(row).join("")}</div>`;
 }
+
+// ---- 選手カード ----
+// 公式の成績データ(2023-10〜)を自分たちで集計した特性(scripts/racer_cards.py → cards ブランチ)。
+// レーダーチャートとタグの「上位X%」は同じ級別(A1 / A2 / B級)の中での位置。タグは根拠の数字と基準を必ず出す
+const CARDS = { meta: null, buckets: {} };
+async function loadCard(id) {
+  if (!CARDS.meta) CARDS.meta = await getJSON("api/data/cards/meta.json");
+  const b = id % (CARDS.meta.buckets || 50);
+  if (!CARDS.buckets[b]) CARDS.buckets[b] = await getJSON(`api/data/cards/b${String(b).padStart(2, "0")}.json`);
+  return CARDS.buckets[b].cards[String(id)] || null;
+}
+function radarSVG(vals, labels, size = 240) {
+  const c = size / 2, R = size / 2 - 42, n = labels.length;
+  const pt = (i, v) => { const a = -Math.PI / 2 + (2 * Math.PI * i) / n; return [c + R * v * Math.cos(a), c + R * v * Math.sin(a)]; };
+  const ring = (v) => labels.map((_, i) => pt(i, v).map((x) => x.toFixed(1)).join(",")).join(" ");
+  const poly = labels.map((l, i) => pt(i, Math.max(0.03, (vals[l] ?? 0) / 100)).map((x) => x.toFixed(1)).join(",")).join(" ");
+  const lab = labels.map((l, i) => {
+    const [x, y] = pt(i, 1.2);
+    const anchor = Math.abs(x - c) < 4 ? "middle" : x > c ? "start" : "end";
+    return `<text x="${x.toFixed(1)}" y="${(y + 4).toFixed(1)}" text-anchor="${anchor}">${esc(l)}<tspan class="rv" dx="3">${vals[l] == null ? "-" : Math.round(vals[l])}</tspan></text>`;
+  }).join("");
+  return `<svg class="radar" viewBox="0 0 ${size} ${size}" role="img" aria-label="${labels.map((l) => `${l} ${vals[l] == null ? "-" : Math.round(vals[l])}`).join("、")}">
+    ${[0.25, 0.5, 0.75, 1].map((v) => `<polygon class="rg" points="${ring(v)}"/>`).join("")}
+    ${labels.map((_, i) => { const [x, y] = pt(i, 1); return `<line class="rg" x1="${c}" y1="${c}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join("")}
+    <polygon class="rd" points="${poly}"/>${lab}</svg>`;
+}
+const pctTop = (p) => p == null ? "" : `上位${Math.max(1, Math.round(100 - p))}%`;
+const pp = (x) => x == null ? "-" : `${x >= 0 ? "+" : "−"}${Math.abs(Math.round(x * 100))}`;
+function cardHTML(c, race, lane) {
+  const m = CARDS.meta || {};
+  const g = (m.groups || {})[c.grp] || c.grp;
+  const rule = (t) => (m.rules || {})[t] || (t.endsWith("巧者") ? (m.rules || {})["(場名)巧者"] : t === "急成長中" ? (m.rules || {})["上り調子"] : "");
+  const tags = c.tags.map((t) => `<li><span class="tg">${esc(t.t)}</span><span class="why">${esc(t.why)}</span>
+    <details class="rule"><summary>基準</summary>${esc(rule(t.t))}</details></li>`).join("");
+  const k = c.kim;
+  const kimRow = (name, x, unit) => `<tr><th>${name}</th><td>${x.w}<small>勝</small> / ${x.n}<small>走</small></td><td>${unit}</td><td>${pctTop(x.grp)}</td></tr>`;
+  const crs = c.courses.map((x) => `<tr><th>${x.c}</th><td>${x.n}</td><td>${x.win == null ? "-" : Math.round(x.win * 100) + "%"}</td>
+    <td>${x.top3 == null ? "-" : Math.round(x.top3 * 100) + "%"}</td><td>${x.st == null ? "-" : fmtST(x.st)}</td></tr>`).join("");
+  const ven = c.venues.length ? c.venues.map((v) => `<span class="vchip">${esc(v.name)}<b>${pp(v.res)}</b><small>${v.n}走</small></span>`).join("") : "<span class=\"muted\">データ不足</span>";
+  const b = race && race.boats.find((x) => x.lane === lane);
+  const t = (b && b.traits) || {};
+  const word = (v, hi, lo) => v == null ? "-" : v >= hi ? "◎ 良い" : v <= lo ? "△ 弱め" : "○ ふつう";
+  const sr = c.series;
+  const gr = c.growth;
+  return `<div class="cd-h">${lane ? tile(lane) : ""}<div><div class="cd-name">${esc(c.name)}</div>
+      <div class="cd-sub">${esc(c.class || "")} ・ ${esc(c.branch || "")} ・ ${c.age ?? "-"}歳 ・ 登番${c.id}</div></div>
+      <button type="button" class="cd-x" aria-label="閉じる">×</button></div>
+    <div class="cd-top">${radarSVG(c.radar, m.radar || Object.keys(c.radar))}
+      <div class="cd-kv"><div><span>1着率</span><b>${Math.round(c.win * 100)}%</b></div><div><span>3着内率</span><b>${Math.round(c.top3 * 100)}%</b></div>
+        <div><span>勝率(点)</span><b>${c.pts?.toFixed(2) ?? "-"}</b></div><div><span>走数</span><b>${c.n}</b></div>
+        <p class="cd-note">チャートは${esc(g)}の中での位置(100がトップ)。安定感はコースの有利不利を差し引いた3着内率</p></div></div>
+    ${tags ? `<h4>ひと言タグ</h4><ul class="cd-tags">${tags}</ul>` : `<p class="muted">目立つタグはありません(どの項目も同じ級別の中で平均的)</p>`}
+    <h4>スタート</h4><table class="cd-t"><tr><th>平均ST</th><td>${c.st.avg == null ? "-" : fmtST(c.st.avg)}</td><td>${pctTop(c.st.grp)}</td></tr>
+      <tr><th>展示とのずれ</th><td>平均 ${c.ex.mae == null ? "-" : c.ex.mae.toFixed(3)}秒</td><td>${c.ex.grp == null ? "" : pctTop(c.ex.grp) + "の小ささ"}</td></tr>
+      <tr><th>展示→本番</th><td>${c.ex.delta == null ? "-" : (c.ex.delta >= 0 ? "+" : "−") + Math.abs(c.ex.delta).toFixed(2) + "秒"}</td><td><small>全選手の中央値 ${c.ex.pop_delta == null ? "-" : "+" + c.ex.pop_delta.toFixed(2)}秒</small></td></tr>
+      <tr><th>フライング</th><td>${c.st.f}回</td><td><small>集計期間中</small></td></tr></table>
+    <h4>決まり手</h4><table class="cd-t">${kimRow("逃げ(1コース)", k.nige, `逃げ率 ${Math.round(k.nige.w / Math.max(1, k.nige.n) * 100)}%`)}
+      ${kimRow("差し", k.sashi, "2コース以遠")}${kimRow("まくり", k.makuri, "2コース以遠")}${kimRow("まくり差し", k.mz, "3コース以遠")}</table>
+    <h4>コース別</h4><table class="cd-t cd-c"><tr><th>コース</th><th>走数</th><th>1着</th><th>3着内</th><th>平均ST</th></tr>${crs}</table>
+    <h4>得意な場<small>3着内率の普段との差(ポイント)</small></h4><div class="vchips">${ven}</div>
+    <h4>こんなとき</h4><table class="cd-t">
+      <tr><th>前づけ</th><td>${c.front.rate == null ? "-" : Math.round(c.front.rate * 100) + "%"}</td><td><small>2枠以上で枠より内へ(${c.front.n}走)</small></td></tr>
+      <tr><th>荒れ水面</th><td>${pp(c.rough.res)}</td><td><small>波5cm・風5m以上(${c.rough.n}走)</small></td></tr>
+      <tr><th>勝負駆け</th><td>${pp(c.kake.res)}</td><td><small>予選最終日(${c.kake.n}走)</small></td></tr>
+      <tr><th>大一番</th><td>${pp(c.big.res)}</td><td><small>準優・優勝戦(${c.big.n}走、出場選手の平均 ${pp(c.big.pop)})</small></td></tr>
+      <tr><th>展示が下位</th><td>${pp(c.exlate.res)}</td><td><small>展示タイム4位以下(${c.exlate.n}走、全選手の平均 ${pp(c.exlate.pop)})</small></td></tr></table>
+    <p class="cd-note">「こんなとき」の数字は、3着内率が本人の普段と比べて何ポイント上下するか(回数が少ないほど普段の値に寄せて計算)</p>
+    <h4>最近の調子と今節</h4><table class="cd-t">
+      <tr><th>勝率</th><td>${gr.prev ?? "-"} → <b>${gr.pts90 ?? "-"}</b></td><td><small>前の1年 → 直近90日(${gr.n90}走)</small></td></tr>
+      ${b ? `<tr><th>今節の足</th><td>${word(t.series, 0.31, -0.27)}</td><td><small>このレースの時点、同じモーターでの今節の着順から</small></td></tr>
+      <tr><th>モーター</th><td>${word(t.motor, 0.165, -0.15)}</td><td><small>${b.motor_2rate != null ? `2連率${Math.round(b.motor_2rate)}%・` : ""}乗り手の腕を差し引いた力</small></td></tr>` : ""}
+      ${sr ? `<tr><th>直近の節</th><td>${esc(sr.venue)}</td><td><small>${esc(sr.from.slice(5).replace("-", "/"))}〜${esc(sr.to.slice(5).replace("-", "/"))} 着順 ${sr.finishes.map(esc).join(" ")}</small></td></tr>` : ""}</table>
+    <p class="cd-foot">集計期間 ${esc(c.period[0])}〜${esc(c.asof)}。公式の成績データを自分たちで集計した数字です。</p>`;
+}
+async function openCard(btn) {
+  const id = Number(btn.dataset.rid);
+  if (!id) return;
+  let dlg = $("#card-dlg");
+  if (!dlg) {
+    dlg = document.createElement("dialog");
+    dlg.id = "card-dlg";
+    dlg.className = "card-dlg";
+    document.body.appendChild(dlg);
+    dlg.addEventListener("click", (e) => { if (e.target === dlg || e.target.closest(".cd-x")) dlg.close(); });
+  }
+  dlg.innerHTML = `<div class="cd-body"><p class="muted">読み込み中…</p></div>`;
+  if (!dlg.open) dlg.showModal();
+  const race = state.data && state.data.races.find((x) => x.race_id === btn.dataset.race);
+  try {
+    const c = await loadCard(id);
+    dlg.innerHTML = `<div class="cd-body">${c ? cardHTML(c, race, Number(btn.dataset.lane)) : `<button type="button" class="cd-x" aria-label="閉じる">×</button><p>この選手のカードはまだありません(集計期間の出走が少ない)。</p>`}</div>`;
+  } catch (e) {
+    dlg.innerHTML = `<div class="cd-body"><button type="button" class="cd-x" aria-label="閉じる">×</button><p>選手カードを読み込めませんでした(毎朝の更新のあとに作られます)。</p></div>`;
+  }
+}
+document.addEventListener("click", (e) => {
+  const b = e.target.closest && e.target.closest(".rname");
+  if (b) { e.preventDefault(); openCard(b); }
+});
 
 // ---- 1マークの展開アニメ ----
 // 勝ち筋(展開シナリオ)ごとに「スリット隊形 → 1マークの回り方 → 着順」を動かして見せる。
