@@ -340,7 +340,7 @@ TAG_RULES = [
     {"tag": "展示は控えめ、本番で化ける", "cat": "exlate",
      "rule": "展示タイムがレース内4位以下の走でも、3着内の上積みが本人の普段とほぼ変わらない(普段との差が全選手の平均より+6ポイント以上良い、30走以上)",
      "test": lambda c: c["exlate"]["n"] >= 30 and c["exlate"]["res"] is not None and c["exlate"]["res"] - (c["exlate"]["pop"] or 0) >= 0.06,
-     "why": lambda c: f"展示タイム4位以下の{c['exlate']['n']}走でも、3着内率の落ち幅は{c['exlate']['res'] * 100:+.0f}ポイント(全選手の平均は{(c['exlate']['pop'] or 0) * 100:+.0f}ポイント)",
+     "why": lambda c: f"展示タイム4位以下の{c['exlate']['n']}走でも、3着内率は普段から{c['exlate']['res'] * 100:+.0f}ポイント(全選手の平均は{(c['exlate']['pop'] or 0) * 100:+.0f}ポイント)",
      "score": lambda c: 60 + 300 * (c["exlate"]["res"] - (c["exlate"]["pop"] or 0))},
     {"tag": "上り調子", "cat": "growth",
      "rule": "直近90日の勝率(1着10点〜6着1点の平均)が、その前の1年より0.8点以上高い(直近15走以上・前の1年30走以上)。26歳以下は「急成長中」",

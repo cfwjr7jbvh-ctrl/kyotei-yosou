@@ -332,8 +332,8 @@ def main():
         picks.append((c, t, heads, comment(c, t, vf.get(c["id"]))))
     # コーナー
     corners, txt = [], []
-    trust = sorted([c for c in sel if c["ex"]["n"] >= 30 and (c["ex"]["grp"] or 0) >= 85], key=lambda c: c["ex"]["mae"])
-    adjust = sorted([c for c in sel if c["ex"]["n"] >= 30 and (c["ex"]["grp"] or 100) <= 25], key=lambda c: -c["ex"]["mae"])
+    trust = sorted([c for c in sel if c["ex"]["n"] >= 30 and (c["ex"]["grp"] or 0) >= 85], key=lambda c: c["ex"]["mae"])[:5]
+    adjust = sorted([c for c in sel if c["ex"]["n"] >= 30 and (c["ex"]["grp"] or 100) <= 25], key=lambda c: -c["ex"]["mae"])[:3]
     if trust or adjust:
         body = ""
         if trust:
@@ -363,15 +363,20 @@ def main():
         corners.append(("いま勢いがある", "<ul>" + "".join(
             f"<li>{e(c['name'])} 勝率{c['growth']['prev']:.2f}→{c['growth']['pts90']:.2f}</li>" for c in gr[:5]) + "</ul><p>前の1年 → 直近90日</p>"))
         txt += ["■いま勢いがある"] + [f"・{c['name']} 勝率{c['growth']['prev']:.2f}→{c['growth']['pts90']:.2f}" for c in gr[:5]]
-    h2h = rc.head_to_head(d, [c["id"] for c in sel], min_meet=6)
+    # 選手同士の相性: 対戦の多い組(よく当たるライバル)を、両方の先着数で並べる(負けた側だけを強調しない)
+    h2h = rc.head_to_head(d, [c["id"] for c in sel], min_meet=10)
     name = {c["id"]: c["name"] for c in sel}
     if h2h:
-        rows = sorted(h2h, key=lambda x: -abs(x["a_ahead"] / x["n"] - 0.5))[:5]
+        rows = sorted(h2h, key=lambda x: -x["n"])[:5]
+
         def line(x):
             a_, b_ = (x["a"], x["b"]) if x["a_ahead"] >= x["b_ahead"] else (x["b"], x["a"])
-            return f"{name[a_]}は{name[b_]}に{x['n']}回の対戦で{max(x['a_ahead'], x['b_ahead'])}回先着"
-        corners.append(("選手同士の相性", "<ul>" + "".join(f"<li>{e(line(x))}</li>" for x in rows) + "</ul><p>同じレースで両方が着順のついた対戦だけ</p>"))
-        txt += ["■選手同士の相性"] + [f"・{line(x)}" for x in rows]
+            wa, wb = max(x["a_ahead"], x["b_ahead"]), min(x["a_ahead"], x["b_ahead"])
+            return f"{name[a_]}と{name[b_]}は{x['n']}回の対戦で{wa}対{wb}({name[a_]}の先着が多い)" if wa != wb else \
+                f"{name[a_]}と{name[b_]}は{x['n']}回の対戦で{wa}対{wb}の五分"
+        corners.append(("よく当たるライバル", "<ul>" + "".join(f"<li>{e(line(x))}</li>" for x in rows)
+                        + "</ul><p>同じレースで両方に着順がついた対戦の、先着した回数</p>"))
+        txt += ["■よく当たるライバル"] + [f"・{line(x)}" for x in rows]
     out = pathlib.Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(render(a.title, rc.VENUES.get(jcd) if jcd else None, picks, sel, corners, meta, a.note), encoding="utf-8")
