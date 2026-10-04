@@ -39,6 +39,7 @@ VENUES = {1: "桐生", 2: "戸田", 3: "江戸川", 4: "平和島", 5: "多摩�
           15: "丸亀", 16: "児島", 17: "宮島", 18: "徳山", 19: "下関", 20: "若松", 21: "芦屋",
           22: "福岡", 23: "唐津", 24: "大村"}
 EV_MIN, P_MIN, MAX_BETS = 1.0, 0.01, 5  # 期待値(確率×オッズ)が100%以上の組を出す
+PICK_MAX = 3  # AIの狙い目(参考): モデルの確率×オッズが100%以上の組を、期待値の高い順に3点まで
 
 
 def now():
@@ -72,7 +73,7 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
         s2, s3 = np.full(6, 1e-9), np.full(6, 1e-9)
         s2[rdf["lane"].values - 1], s3[rdf["lane"].values - 1] = s23
     pm = model_tri_probs(w, stack.lam2, stack.lam3, s2, s3, getattr(stack, "bonus", None))
-    p_final, bets, market, nerai = pm, [], None, []
+    p_final, bets, market, pick = pm, [], None, []
     if odds is not None and np.isfinite(odds).sum() >= 100:
         pk = market_probs(odds)
         market = pk
@@ -82,10 +83,10 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
         bets = select_bets(p_bet, odds, EV_MIN, P_MIN, MAX_BETS)
         if bet_rule:  # 荒れ狙い(追試に合格したときだけ学習が入れる): 1号艇が負けそうなレースだけ、モデルの確率で買う
             bets = select_bets(pm, odds, EV_MIN, P_MIN, MAX_BETS) if 1 - w[0] >= bet_rule["in_lose_min"] else []
-        elif 1 - w[0] >= IN_LOSE_MIN:
-            # 荒れ狙い(検証中)の別枠: 合成確率では期待値100%超えがほぼ出ないので、追試中の買い方を参考として出す。
-            # 成績は score_day で別に集計し、締切前のオッズでの本当の回収率を確かめる
-            nerai = select_bets(pm, odds, EV_MIN, P_MIN, MAX_BETS)
+        else:
+            # AIの狙い目(参考): 合成確率(オッズ寄り)では期待値100%超えがほぼ出ないので、モデルの確率で計算した組を参考に出す。
+            # 過去の検証では回収率80%前後(100%未満)。成績は score_day で別に集計し、締切前のオッズでの本当の回収率を確かめる
+            pick = select_bets(pm, odds, EV_MIN, P_MIN, PICK_MAX)
     top = np.argsort(-p_final)[:10]
     r0 = rdf.iloc[0]
     boats = []
@@ -106,7 +107,7 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
            "top": [{"combo": COMBOS[i], "prob": round(float(p_final[i]), 4),
                     **({"odds": float(odds[i])} if odds is not None and np.isfinite(odds[i]) else {})}
                    for i in top],
-           "bets": bets, "nerai": nerai, "tenkai": tk,
+           "bets": bets, "pick": pick, "tenkai": tk,
            # 荒れ度: 1号艇が負ける確率(各艇の1着確率と同じモデル)と、万舟になる確率(オッズがあれば100倍以上の組の確率)
            "arashi": arashi(w, p_final, odds if market is not None else None)}
     if market is not None:
@@ -133,7 +134,8 @@ def score_day(day: dt.date):
     _, races = parse_result(k, day.isoformat())
     res = {r["race_id"]: r for r in races}
     tot = {"date": day.isoformat(), "races": 0, "top1_hit": 0, "bets": 0, "bet_hits": 0,
-           "invest": 0, "return": 0, "nerai_races": 0, "nerai_bets": 0, "nerai_hits": 0, "nerai_return": 0}
+           "invest": 0, "return": 0, "nerai_races": 0, "nerai_bets": 0, "nerai_hits": 0, "nerai_return": 0,
+           "pick_races": 0, "pick_bets": 0, "pick_hits": 0, "pick_return": 0}
     for race in data["races"]:
         r = res.get(race["race_id"])
         if not r or not isinstance(r.get("tri_combo"), str):
@@ -144,7 +146,7 @@ def score_day(day: dt.date):
         race["result"] = {"tri_combo": r["tri_combo"], "tri_pay": pay, **({"kimarite": kim} if kim else {})}
         tot["races"] += 1
         tot["top1_hit"] += int(race["top"] and race["top"][0]["combo"] == r["tri_combo"])
-        for b in race.get("bets", []) + (race.get("nerai") or []):
+        for b in race.get("bets", []) + (race.get("nerai") or []) + (race.get("pick") or []):
             b.pop("hit", None)  # 当日に付けた的中は、確定した結果で付け直す
         for b in race.get("bets", []):
             tot["bets"] += 1
@@ -153,13 +155,15 @@ def score_day(day: dt.date):
                 tot["bet_hits"] += 1
                 tot["return"] += pay
                 b["hit"] = True
-        if race.get("nerai"):  # 荒れ狙い(検証中)。1点100円で買ったとして集計
-            tot["nerai_races"] += 1
-            for b in race["nerai"]:
-                tot["nerai_bets"] += 1
+        for key in ("nerai", "pick"):  # 荒れ狙い(10/04 で終了)と AIの狙い目(参考)。1点100円で買ったとして集計
+            if not race.get(key):
+                continue
+            tot[f"{key}_races"] += 1
+            for b in race[key]:
+                tot[f"{key}_bets"] += 1
                 if b["combo"] == r["tri_combo"]:
-                    tot["nerai_hits"] += 1
-                    tot["nerai_return"] += pay
+                    tot[f"{key}_hits"] += 1
+                    tot[f"{key}_return"] += pay
                     b["hit"] = True
     data["summary"] = tot
     write_json(p, data)
@@ -322,7 +326,7 @@ def attach_results(data: dict, t: dt.datetime, hd: str, limit: int = 40) -> int:
             continue
         race["result"] = res
         got += 1
-        for k in ("bets", "nerai"):
+        for k in ("bets", "nerai", "pick"):
             for b in race.get(k) or []:
                 b["hit"] = b["combo"] == res["tri_combo"]
     if n:

@@ -76,7 +76,7 @@ def notify_bets(day: dt.date, races: list[dict], now: dt.datetime, ev_min: float
         hh, mm = map(int, r["deadline"].split(":"))
         if now.replace(hour=hh, minute=mm, second=0, microsecond=0) < now:
             continue  # 締切を過ぎたレースは送らない
-        for kind in ("bets", "nerai"):  # 本番の買い目と、荒れ狙い(検証中)
+        for kind in ("bets",):  # 本物の期待値の買い目だけ(AIの狙い目はほぼ全レースに出るので送らない)
             new = [b for b in r.get(kind) or [] if b.get("ev", 0) >= ev_min
                    and _key(r["race_id"], b["combo"]) not in sent_keys]
             if new:
