@@ -367,24 +367,35 @@ function renderBets() {
 
 function stat(k, v, cls = "") { return `<div class="stat"><div class="k">${k}</div><div class="v ${cls}">${v}</div></div>`; }
 
-// 表示中の日の途中成績(終わったレースの結果は直前予想の更新のたびに付く)
+// 表示中の日の途中成績(終わったレースの結果は直前予想の更新のたびに付く)。1点100円で買ったとして計算
 function todayBox() {
   const races = (state.data && state.data.races || []).filter((r) => r.result);
   if (!races.length) return "";
-  let top = 0, bets = 0, betRet = 0, betHit = 0, nb = 0, nRet = 0, nHit = 0, nRaces = 0;
+  const acc = () => ({ races: 0, bets: 0, hits: 0, ret: 0 });
+  const top = acc(), pick = acc(), ev = acc();
+  const add = (a, list, r) => {
+    if (!list || !list.length) return;
+    a.races++;
+    for (const b of list) { a.bets++; if (b.combo === r.result.tri_combo) { a.hits++; a.ret += r.result.tri_pay; } }
+  };
   for (const r of races) {
-    if (r.top && r.top[0] && r.top[0].combo === r.result.tri_combo) top++;
-    for (const b of r.bets || []) { bets++; if (b.combo === r.result.tri_combo) { betHit++; betRet += r.result.tri_pay; } }
-    if (r.pick && r.pick.length) nRaces++;
-    for (const b of r.pick || []) { nb++; if (b.combo === r.result.tri_combo) { nHit++; nRet += r.result.tri_pay; } }
+    add(top, r.top && r.top[0] ? [r.top[0]] : [], r);
+    add(pick, r.pick, r);
+    add(ev, r.bets, r);
   }
-  const pl = (v) => (v >= 0 ? "+" : "") + v.toLocaleString() + "円";
-  let h = `<div class="box"><h3>${state.data.date === jst().date ? "今日" : esc(state.data.date)}の成績<small>途中経過</small></h3>
-    <p>結果の出た ${races.length} レース(1点100円で買ったとして計算)</p>
-    <div class="stats">${stat("本命3連単の的中", `${top}<small>/${races.length}</small>`)}${stat("本命の的中率", pct1(top / races.length) + "%")}`;
-  if (nb) h += stat("狙い目の収支", pl(nRet - nb * 100), nRet >= nb * 100 ? "good" : "bad") + stat("狙い目の的中", `${nHit}<small>/${nRaces}レース</small>`);
-  if (bets) h += stat("期待値買いの収支", pl(betRet - bets * 100), betRet >= bets * 100 ? "good" : "bad") + stat("期待値買いの的中", `${betHit}<small>/${bets}点</small>`);
-  return h + `</div></div>`;
+  const pl = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toLocaleString() + "円";
+  const block = (title, a, note) => {
+    if (!a.bets) return "";
+    const roi = a.ret / (a.bets * 100), prof = a.ret - a.bets * 100;
+    return `<h4 class="tb">${title}</h4><div class="stats">${stat("回収率", Math.round(roi * 100) + "<small>%</small>", roi >= 1 ? "good" : "bad")}
+      ${stat("収支", pl(prof), prof >= 0 ? "good" : "bad")}</div>
+      <p class="tbn">的中 ${a.hits}本 / ${a.bets}点(${a.races}レース)・払戻 ${a.ret.toLocaleString()}円${note ? "。" + note : ""}</p>`;
+  };
+  return `<div class="box"><h3>${state.data.date === jst().date ? "今日" : esc(state.data.date)}の成績<small>途中経過</small></h3>
+    <p>結果の出た ${races.length} レースを、1点100円で買ったとして計算</p>
+    ${block("本命(3連単1点)", top, "")}
+    ${block("AIの狙い目(参考)", pick, "")}
+    ${block("期待値のある買い目", ev, "")}</div>`;
 }
 
 async function renderTrack() {
