@@ -1,0 +1,25 @@
+name: 各場の公式サイトの調査
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q requests beautifulsoup4
+      - run: python scripts/probe_venues.py
+      # ページそのものは公開リポジトリにコミットせず、成果物として1日だけ残す
+      - uses: actions/upload-artifact@v4
+        with:
+          name: venues
+          path: out/venues
+          retention-days: 1
