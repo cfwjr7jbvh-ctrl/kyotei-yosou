@@ -24,6 +24,9 @@ jobs:
     env:
       SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
       GH_TOKEN: ${{ github.token }}
+      # 期待値100%以上の買い目の LINE 通知(Secrets に入れたときだけ動く)
+      LINE_CHANNEL_TOKEN: ${{ secrets.LINE_CHANNEL_TOKEN }}
+      LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup

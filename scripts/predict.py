@@ -28,6 +28,7 @@ from kyotei.parse_lzh import parse_program, parse_result  # noqa: E402
 from kyotei.publish import read_json, write_check, write_json  # noqa: E402
 from kyotei.scrape import fetch, parse_beforeinfo, parse_odds3t  # noqa: E402
 from kyotei.arashi import arashi  # noqa: E402
+from kyotei.notify import notify_bets  # noqa: E402
 from kyotei.tenkai import tenkai, traits  # noqa: E402
 
 JST = dt.timezone(dt.timedelta(hours=9))
@@ -302,6 +303,7 @@ def live(day: dt.date, ahead_min: int = 35):
     n = 0
     own_rows = []
     odds_rows = []
+    updated = []
     for i, race in enumerate(data["races"]):
         if not race.get("deadline"):
             continue
@@ -345,12 +347,14 @@ def live(day: dt.date, ahead_min: int = 35):
             if before.get(b["lane"]) is not None:
                 b["p_win_early"] = before[b["lane"]]
         data["races"][i] = new
+        updated.append(new)
         n += 1
     data["updated_at"] = t.strftime("%H:%M")
     write_json(jp, data)
     save_own_previews(own_rows)
     save_live_odds(odds_rows)
     print("live updated:", n, "races")
+    notify_bets(day, updated, now(), EV_MIN)  # 新しく出た期待値100%以上の買い目を LINE へ(設定があるときだけ)
 
 
 if __name__ == "__main__":

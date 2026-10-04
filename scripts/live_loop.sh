@@ -19,16 +19,24 @@ LAST_SAVE=$(date +%s)
 
 jst() { TZ=Asia/Tokyo date "$@"; }
 
+# 前のジョブが LINE に送った記録を引き継ぐ(同じ買い目を二重に送らない)
+if git fetch -q origin live 2>/dev/null; then
+  git show "FETCH_HEAD:notify/sent_$(jst +%Y%m%d).txt" > "$KEEP/sent_$(jst +%Y%m%d).txt" 2>/dev/null \
+    || rm -f "$KEEP/sent_$(jst +%Y%m%d).txt"
+fi
+
 keep_files() {   # このジョブが書く日ごとのデータを退避(main に合わせ直しても消えないように)
   local d; d=$(jst +%Y%m%d)
   cp -f "data/previews/own_$d.csv.gz" "$KEEP/" 2>/dev/null || true
   cp -f "data/odds_live/live_$d.csv.gz" "$KEEP/" 2>/dev/null || true
+  cp -f "data/notify/sent_$d.txt" "$KEEP/" 2>/dev/null || true
 }
 restore_files() {
   local d; d=$(jst +%Y%m%d)
-  mkdir -p data/previews data/odds_live
+  mkdir -p data/previews data/odds_live data/notify
   cp -f "$KEEP/own_$d.csv.gz" data/previews/ 2>/dev/null || true
   cp -f "$KEEP/live_$d.csv.gz" data/odds_live/ 2>/dev/null || true
+  cp -f "$KEEP/sent_$d.txt" data/notify/ 2>/dev/null || true
 }
 history_finishing() {  # 過去データ取得の最後の保存(やり直しなし)とぶつからないよう、終わり際は main への保存を控える
   gh run list --workflow history.yml --status in_progress --json createdAt \
@@ -55,6 +63,10 @@ publish_live() {  # 当日(と前日)の予想ファイルだけの1コミット
     GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git rev-parse "origin/live:days/$yday.json"),days/$yday.json"
   fi
   GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w "docs/data/days/$today.json"),days/$today.json"
+  local sent="data/notify/sent_$(jst +%Y%m%d).txt"
+  if [ -f "$sent" ]; then
+    GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w "$sent"),notify/$(basename "$sent")"
+  fi
   tree=$(GIT_INDEX_FILE=$idx git write-tree)
   rm -f "$idx"
   c=$(echo "[CI Skip] live $(jst +%H:%M)" | git commit-tree "$tree")
