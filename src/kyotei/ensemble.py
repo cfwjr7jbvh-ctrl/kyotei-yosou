@@ -3,6 +3,7 @@
 各モデルの log(1着確率) を説明変数にした多項ロジットで、1着の当たり方に合うよう重みを学習し、
 最終的な1着確率を作る。2着・3着は、それぞれ別の重みで「残った艇の中から誰が来るか」を学習する
 (1着は単勝モデル、2・3着は3着内モデルが効くなど、着順で頼りになるモデルが違うため)。
+さらに2・3着には「1着艇(2着艇)の枠×自分の枠」のボーナスを足す(4号艇がまくると5号艇が続く、など)。
 """
 from __future__ import annotations
 
@@ -35,12 +36,30 @@ class Stacker:
         X, mask, fin = X[ok], mask[ok], fin[ok]
         o = np.argsort(np.nan_to_num(fin, nan=99), axis=1)[:, :3]
         r = np.arange(len(X))
+        k = X.shape[2]
+        # 1着艇(2着艇)との位置関係のボーナス: 「1着の枠×自分の枠」ごとの一定値(例: 4号艇がまくると5号艇が続きやすい)
+        lanes = np.arange(6)[None, :]
+        E1 = np.zeros((len(X), 6, 36))
+        E1[r[:, None], lanes, 6 * o[:, [0]] + lanes] = 1.0
+        E2 = np.zeros((len(X), 6, 36))
+        E2[r[:, None], lanes, 6 * o[:, [1]] + lanes] = 1.0
+        pen2 = np.r_[np.full(k, 1e-4), np.full(36, 1e-3)]
+        pen3 = np.r_[np.full(k, 1e-4), np.full(72, 1e-3)]
         avail = mask.copy()
         avail[r, o[:, 0]] = False
-        self.w2 = _fit_conditional(X, avail, o[:, 1])
+        th2 = _fit_conditional(np.concatenate([X, E1], 2), avail, o[:, 1], pen2)
         avail[r, o[:, 1]] = False
-        self.w3 = _fit_conditional(X, avail, o[:, 2])
+        th3 = _fit_conditional(np.concatenate([X, E1, E2], 2), avail, o[:, 2], pen3)
+        self.w2, self.b2 = th2[:k], th2[k:].reshape(6, 6)
+        self.w3, self.b3a, self.b3b = th3[:k], th3[k:k + 36].reshape(6, 6), th3[k + 36:].reshape(6, 6)
         return self
+
+    @property
+    def bonus(self):
+        """3連単確率に渡す (b2, b3a, b3b)。古いモデルでは None。"""
+        if getattr(self, "b2", None) is None:
+            return None
+        return self.b2, self.b3a, self.b3b
 
     def predict(self, df, probs):
         d = df[["race_id", "lane"]].copy()
@@ -71,8 +90,8 @@ class Stacker:
         return out
 
 
-def _fit_conditional(X: np.ndarray, avail: np.ndarray, chosen: np.ndarray, l2: float = 1e-4) -> np.ndarray:
-    """条件付きロジット: 残っている艇(avail)の中から chosen が選ばれる確率を最大にする重み。"""
+def _fit_conditional(X: np.ndarray, avail: np.ndarray, chosen: np.ndarray, l2=1e-4) -> np.ndarray:
+    """条件付きロジット: 残っている艇(avail)の中から chosen が選ばれる確率を最大にする重み。l2 は重みごとに指定可。"""
     n, _, k = X.shape
     r = np.arange(n)
 
@@ -85,7 +104,7 @@ def _fit_conditional(X: np.ndarray, avail: np.ndarray, chosen: np.ndarray, l2: f
         ll = (u[r, chosen] - m[:, 0] - np.log(Z)).sum()
         p = e / Z[:, None]
         g = X[r, chosen].sum(0) - np.einsum("ij,ijk->k", p, X)
-        return -ll / n + l2 * w @ w, -g / n + 2 * l2 * w
+        return -ll / n + (l2 * w * w).sum(), -g / n + 2 * l2 * w
 
     return minimize(f, np.zeros(k), jac=True, method="L-BFGS-B").x
 
@@ -103,7 +122,7 @@ def race_matrix(d: pd.DataFrame, col: str = "p"):
     return P.values[ok], orders[ok]
 
 
-def evaluate(d: pd.DataFrame, races: pd.DataFrame, col: str, lam2=1.0, lam3=1.0, s_cols=None) -> dict:
+def evaluate(d: pd.DataFrame, races: pd.DataFrame, col: str, lam2=1.0, lam3=1.0, s_cols=None, bonus=None) -> dict:
     """的中率・対数損失・回収率(払戻金から計算できる戦略)をまとめて出す。
 
     s_cols=(列名, 列名) を渡すと、その列を2着・3着の強さとして3連単確率を作る(Stacker.strengths)。
@@ -125,10 +144,11 @@ def evaluate(d: pd.DataFrame, races: pd.DataFrame, col: str, lam2=1.0, lam3=1.0,
     res = {"races": int(n)}
     res["win_logloss"] = float(-np.log(Pv[r, orders[:, 0]]).mean())
     res["win_hit"] = float((Pv.argmax(1) == orders[:, 0]).mean())
-    res["tri_logloss"] = float(-trifecta_logprob_batch(Pv, orders, lam2, lam3, S2, S3).mean())
+    res["tri_logloss"] = float(-trifecta_logprob_batch(Pv, orders, lam2, lam3, S2, S3, bonus).mean())
 
     def tri(i):
-        return pl_trifecta_matrix(Pv[i], lam2, lam3, None if S2 is None else S2[i], None if S3 is None else S3[i])
+        return pl_trifecta_matrix(Pv[i], lam2, lam3, None if S2 is None else S2[i], None if S3 is None else S3[i],
+                                  bonus)
 
     rc = races.set_index("race_id").reindex(rid)
     tri_pay = rc["tri_pay"].values.astype(float)

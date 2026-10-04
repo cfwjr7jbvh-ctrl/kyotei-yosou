@@ -67,7 +67,7 @@ def run_stage(stage, df, races, tr, va, te, report, log):
     s23 = stack.strengths(te, pt)  # 2着・3着の強さ(着順ごとの重み)
     ev["p"] = p_ens
     ev["s2"], ev["s3"] = s23
-    res["ensemble"] = evaluate(ev, races, "p", stack.lam2, stack.lam3, s_cols=("s2", "s3"))
+    res["ensemble"] = evaluate(ev, races, "p", stack.lam2, stack.lam3, s_cols=("s2", "s3"), bonus=stack.bonus)
     report["stages"][stage] = {
         "n_features": len(feats), "metrics": res,
         "ensemble_weights": {k: float(v) for k, v in stack.weights().items()},
@@ -137,7 +137,7 @@ def ev_analysis(te, p_ens, stack, races, odds, report, log, s23=None):
     W = win_matrix(te, p_ens, rids)
     if s23 is not None:
         S2, S3 = win_matrix(te, s23[0], rids), win_matrix(te, s23[1], rids)
-        PM = np.array([model_tri_probs(w, stack.lam2, stack.lam3, a, b) for w, a, b in zip(W, S2, S3)])
+        PM = np.array([model_tri_probs(w, stack.lam2, stack.lam3, a, b, stack.bonus) for w, a, b in zip(W, S2, S3)])
     else:
         PM = np.array([model_tri_probs(w, stack.lam2, stack.lam3) for w in W])
     PK = np.array([market_probs(o) for o in O])

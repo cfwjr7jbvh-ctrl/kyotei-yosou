@@ -68,7 +68,7 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
     if s23 is not None:  # 2着・3着の強さ(着順ごとの重み)
         s2, s3 = np.full(6, 1e-9), np.full(6, 1e-9)
         s2[rdf["lane"].values - 1], s3[rdf["lane"].values - 1] = s23
-    pm = model_tri_probs(w, stack.lam2, stack.lam3, s2, s3)
+    pm = model_tri_probs(w, stack.lam2, stack.lam3, s2, s3, getattr(stack, "bonus", None))
     p_final, bets, market = pm, [], None
     if odds is not None and np.isfinite(odds).sum() >= 100:
         pk = market_probs(odds)
