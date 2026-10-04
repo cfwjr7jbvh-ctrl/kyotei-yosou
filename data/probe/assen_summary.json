@@ -1,0 +1,254 @@
+{
+ "202610": {
+  "n_series": 82,
+  "samples": [
+   {
+    "href": "/owpc/pc/race/assen?jcd=01&hd=20261007",
+    "text": "第８回日本一しょうゆ杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=01&hd=20261016",
+    "text": "第１２回太田双葉ＣＣカップ　Ｄ・Ｓ開設１３周年記念",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=01&hd=20261025",
+    "text": "第１９回マクール杯　ヴィーナスシリーズ第１６戦",
+    "classes": [
+     "is-gradeColorVenus",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/raceindex?jcd=02&hd=20261005",
+    "text": "第７回日刊大衆杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=02&hd=20261009",
+    "text": "第１１回加藤峻二杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=02&hd=20261015",
+    "text": "第１５回マスターズＶＳルーキーズ",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=02&hd=20261031",
+    "text": "第５８回報知新聞社杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/raceindex?jcd=03&hd=20261001",
+    "text": "第９回ういちの江戸川ナイスぅ〜っ！カップ",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=03&hd=20261007",
+    "text": "オールレディース　江戸川女王決定戦ＫＩＲＩＮＣＵＰ",
+    "classes": [
+     "is-gradeColorLady",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=03&hd=20261016",
+    "text": "メカニカルシティ稲城・第５０回日刊スポーツ杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=03&hd=20261027",
+    "text": "第５０回報知新聞社杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/raceindex?jcd=04&hd=20261003",
+    "text": "マスターズリーグ第６戦　俺の生きる道杯",
+    "classes": [
+     "is-gradeColorTakumi",
+     "is-fs12"
+    ]
+   }
+  ],
+  "grades": {
+   "null": 75,
+   "SG": 1,
+   "G3": 2,
+   "G1": 4
+  }
+ },
+ "assen": [
+  {
+   "jcd": 1,
+   "hd": "20261007",
+   "n_racers": 44,
+   "title": "第８回日本一しょうゆ杯",
+   "headings": [
+    "",
+    "第８回日本一しょうゆ杯",
+    "出場予定レーサー一覧"
+   ],
+   "grade_tokens": "btn is-type2_3__3rdadd is-human1 btn is-type3_3__3rdadd is-login1 header_language is-type1__3rdadd is-active btn is-type4_1 is-blank1 breadcrumbs is-type1 l-mainWrap is-type3 heading2_title is-ippan heading2_btn is-live heading2_btn is-data is-fColor1 is-fColor1 is-fColor1 is-fColor1 is-fColor1 is-f"
+  },
+  {
+   "jcd": 1,
+   "hd": "20261016",
+   "n_racers": 47,
+   "title": "第１２回太田双葉ＣＣカップ Ｄ・Ｓ開設１３周年記念",
+   "headings": [
+    "",
+    "第１２回太田双葉ＣＣカップ Ｄ・Ｓ開設１３周年記念",
+    "出場予定レーサー一覧"
+   ],
+   "grade_tokens": "btn is-type2_3__3rdadd is-human1 btn is-type3_3__3rdadd is-login1 header_language is-type1__3rdadd is-active btn is-type4_1 is-blank1 breadcrumbs is-type1 l-mainWrap is-type3 heading2_title is-ippan heading2_btn is-live heading2_btn is-data is-fColor1 is-fColor1 is-fColor1 is-fColor1 is-fColor1 is-f"
+  },
+  {
+   "jcd": 1,
+   "hd": "20261025",
+   "n_racers": 45,
+   "title": "第１９回マクール杯 ヴィーナスシリーズ第１６戦",
+   "headings": [
+    "",
+    "第１９回マクール杯 ヴィーナスシリーズ第１６戦",
+    "出場予定レーサー一覧"
+   ],
+   "grade_tokens": "btn is-type2_3__3rdadd is-human1 btn is-type3_3__3rdadd is-login1 header_language is-type1__3rdadd is-active btn is-type4_1 is-blank1 breadcrumbs is-type1 l-mainWrap is-type3 heading2_title is-ippan heading2_btn is-live heading2_btn is-data is-fColor1 is-fColor1 is-fColor1 is-fColor1 is-fColor1 l-fo"
+  }
+ ],
+ "202611": {
+  "n_series": 44,
+  "samples": [
+   {
+    "href": "/owpc/pc/race/assen?jcd=01&hd=20261103",
+    "text": "第３８回日本モーターボート選手会会長杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=02&hd=20261031",
+    "text": "第５８回報知新聞社杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=02&hd=20261106",
+    "text": "マンスリーＢＯＡＴＲＡＣＥ杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=02&hd=20261112",
+    "text": "ＢＡＣＨプラザ杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=03&hd=20261027",
+    "text": "第５０回報知新聞社杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=03&hd=20261105",
+    "text": "第２回Ｓａｍｍｙカップ",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=03&hd=20261113",
+    "text": "第１回ＢＯＡＴＲＡＣＥ振興会会長賞",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=04&hd=20261031",
+    "text": "第１回ＦＣ東京杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=04&hd=20261110",
+    "text": "第２５回府中市長杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=05&hd=20261106",
+    "text": "ヴィーナスＳ第１７戦是政プリンセスカップ",
+    "classes": [
+     "is-gradeColorVenus",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=06&hd=20261030",
+    "text": "中京スポーツもみじ杯",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   },
+   {
+    "href": "/owpc/pc/race/assen?jcd=07&hd=20261027",
+    "text": "日刊スポーツ杯争奪　第５６回蒲郡大賞典",
+    "classes": [
+     "is-gradeColorIppan",
+     "is-fs12"
+    ]
+   }
+  ],
+  "grades": {
+   "null": 38,
+   "SG": 1,
+   "G3": 1,
+   "G1": 4
+  }
+ }
+}
