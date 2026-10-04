@@ -303,7 +303,7 @@ def backfill_own(day: dt.date):
 
 
 def attach_results(data: dict, t: dt.datetime, hd: str, limit: int = 40) -> int:
-    """締切から6分〜3時間たったレースの結果(3連単・払戻・決まり手)を公式サイトから取り、的中を付ける。
+    """締切から6分〜14時間(その日のうち)のレースの結果(3連単・払戻・決まり手)を公式サイトから取り、的中を付ける。
     翌朝の答え合わせ(score_day)を待たずに、現地で結果と的中が見られるようにする。1レースにつき結果が出るまで取りに行く。"""
     n = got = 0
     for race in data["races"]:
@@ -311,7 +311,7 @@ def attach_results(data: dict, t: dt.datetime, hd: str, limit: int = 40) -> int:
             continue
         hh, mm = map(int, race["deadline"].split(":"))
         dl = t.replace(hour=hh, minute=mm, second=0, microsecond=0)
-        if not (dl + dt.timedelta(minutes=6) <= t <= dl + dt.timedelta(hours=3)):
+        if not (dl + dt.timedelta(minutes=6) <= t <= dl + dt.timedelta(hours=14)):
             continue
         if n >= limit:
             break
