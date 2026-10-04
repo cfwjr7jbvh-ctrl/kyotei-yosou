@@ -1,0 +1,31 @@
+name: LINE通知のテスト
+
+# Secrets(LINE_CHANNEL_TOKEN・LINE_USER_ID)を入れたあと、手動で実行してテストのメッセージが届くか確かめる
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      LINE_CHANNEL_TOKEN: ${{ secrets.LINE_CHANNEL_TOKEN }}
+      LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: テストのメッセージを送る
+        run: |
+          python - <<'PY'
+          import os, sys
+          sys.path.insert(0, "src")
+          from kyotei.notify import push, SITE_URL
+          t, u = os.environ.get("LINE_CHANNEL_TOKEN"), os.environ.get("LINE_USER_ID")
+          if not t or not u:
+              sys.exit("Secrets の LINE_CHANNEL_TOKEN と LINE_USER_ID を入れてください")
+          ok, info = push("競艇AI予想: LINE通知のテストです。期待値100%超えの買い目が出たら、ここに届きます。\n" + SITE_URL, t, u)
+          print("送信" if ok else "失敗", info)
+          sys.exit(0 if ok else 1)
+          PY
