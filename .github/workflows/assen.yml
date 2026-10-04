@@ -1,0 +1,35 @@
+name: 大会の出場選手一覧
+
+# 公式の月間スケジュールから節を見つけ、SG・G1 などの斡旋ページから出場選手の登番と名前を取る(裏新聞の下書き用)
+on:
+  workflow_dispatch:
+    inputs:
+      args:
+        description: "fetch_assen.py に渡す引数(例: --probe --grades all)"
+        default: ""
+  schedule:
+    - cron: "20 21 * * *"   # 毎日 6:20 JST
+
+permissions:
+  contents: write
+
+concurrency:
+  group: assen
+  cancel-in-progress: false
+
+jobs:
+  assen:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q requests beautifulsoup4 pandas numpy
+      - run: python scripts/fetch_assen.py ${{ inputs.args }}
+      - name: コミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/commit_files.sh "[CI Skip] data: 大会の出場選手一覧" data/assen/* data/probe/assen_summary.json
