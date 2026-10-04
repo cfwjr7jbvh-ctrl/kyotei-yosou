@@ -1,4 +1,4 @@
-"""期待値100%以上の買い目を LINE に送る(LINE Messaging API のプッシュメッセージ)。
+"""期待値100%以上の買い目(本番と、荒れ狙い・検証中)を LINE に送る(LINE Messaging API のプッシュメッセージ)。
 
 - 環境変数 LINE_CHANNEL_TOKEN(チャネルアクセストークン)と LINE_USER_ID(送り先のユーザーID)が無ければ何もしない
 - 無料のコミュニケーションプランは月200通まで(超えると送られずエラーになるだけで、料金はかからない)。
@@ -31,9 +31,12 @@ def message(races: list[dict], updated_at: str, last: bool = False) -> str:
     lines = [f"【期待値100%超え】{updated_at} 更新"]
     for r in races:
         lines.append("")
-        lines.append(f"{r['venue']} {r['rno']}R(締切 {r.get('deadline') or '?'})")
+        tag = "(荒れ狙い・検証中)" if r.get("kind") == "nerai" else ""
+        lines.append(f"{r['venue']} {r['rno']}R(締切 {r.get('deadline') or '?'}){tag}")
         for b in r["bets"]:
             lines.append(f"{b['combo']}  期待値{round(b['ev'] * 100)}%(確率{b['prob'] * 100:.1f}%×{b['odds']:.1f}倍)")
+    if any(r.get("kind") == "nerai" for r in races):
+        lines += ["", "荒れ狙い = 1号艇が負けそうなレースで、モデルの確率×オッズが100%以上の組。過去12日の検証で回収率125%(偶然の可能性あり、追試中)"]
     lines += ["", SITE_URL]
     if last:
         lines.append("(今日の通知はこれで最後です)")
@@ -73,10 +76,12 @@ def notify_bets(day: dt.date, races: list[dict], now: dt.datetime, ev_min: float
         hh, mm = map(int, r["deadline"].split(":"))
         if now.replace(hour=hh, minute=mm, second=0, microsecond=0) < now:
             continue  # 締切を過ぎたレースは送らない
-        new = [b for b in r.get("bets", []) if b.get("ev", 0) >= ev_min and _key(r["race_id"], b["combo"]) not in sent_keys]
-        if new:
-            picks.append({**r, "bets": new})
-            keys += [_key(r["race_id"], b["combo"]) for b in new]
+        for kind in ("bets", "nerai"):  # 本番の買い目と、荒れ狙い(検証中)
+            new = [b for b in r.get(kind) or [] if b.get("ev", 0) >= ev_min
+                   and _key(r["race_id"], b["combo"]) not in sent_keys]
+            if new:
+                picks.append({**r, "bets": new, "kind": kind})
+                keys += [_key(r["race_id"], b["combo"]) for b in new]
     if not picks:
         return 0
     picks.sort(key=lambda r: r.get("deadline") or "")

@@ -157,12 +157,20 @@ function combosHTML(r) {
       <span class="p">${pct1(t.prob)}%${t.odds ? `<small>${t.odds}倍</small>` : ""}</span></div>`).join("") + `</div></div>`;
 }
 
-function evHTML(r) {
-  if (!r.bets || !r.bets.length) return "";
-  return `<div class="ev"><h3>期待値のある買い目</h3>` + r.bets.map((b) => `
+const betRows = (list) => list.map((b) => `
     <div class="bet${b.hit ? " hit" : ""}">${tri(b.combo)}
       <div class="m">確率 <b>${pct1(b.prob)}%</b> オッズ <b>${b.odds}</b>倍${b.hit ? " 的中" : ""}</div>
-      <div class="e${b.ev >= 1.2 ? " strong" : ""}">${Math.round(b.ev * 100)}<small>%</small><span>期待値</span></div></div>`).join("") + `</div>`;
+      <div class="e${b.ev >= 1.2 ? " strong" : ""}">${Math.round(b.ev * 100)}<small>%</small><span>期待値</span></div></div>`).join("");
+function evHTML(r) {
+  if (!r.bets || !r.bets.length) return "";
+  return `<div class="ev"><h3>期待値のある買い目</h3>${betRows(r.bets)}</div>`;
+}
+// 荒れ狙い(検証中): 1号艇が負けそうなレースで、モデルの確率×オッズが100%以上の組
+function neraiHTML(r) {
+  if (!r.nerai || !r.nerai.length) return "";
+  return `<div class="ev nerai"><h3>荒れ狙い<em>検証中</em></h3>
+    <p class="cap">1号艇が負けそうなレースで、モデルの確率×オッズが100%以上の組。過去12日の検証では回収率125%でしたが、偶然の可能性があり追試中です。</p>
+    ${betRows(r.nerai)}</div>`;
 }
 
 // ---- 荒れ度 ----
@@ -181,7 +189,7 @@ function arashiHTML(r) {
   const dots = [1, 2, 3, 4, 5].map((i) => `<i${i <= lv ? ' class="on"' : ""}></i>`).join("");
   return `<div class="arashi lv${lv}"><span class="k">荒れ度</span><span class="dots" role="img" aria-label="5段階中${lv}">${dots}</span>
     <b class="w">${ARASHI_WORD[lv]}</b><span class="nums"><span>1号艇が負ける<b>${Math.round(a.in_lose * 100)}%</b></span>
-    <span>万舟<b>${Math.round(a.manshu * 100)}%</b></span></span>${a.in_lose >= IN_LOSE_MIN
+    <span>万舟<b>${Math.round(a.manshu * 100)}%</b></span></span>${a.in_lose >= IN_LOSE_MIN && !(r.nerai && r.nerai.length)
       ? `<p class="nerai">1号艇が負けそうなレース。過去の検証では、この条件で期待値の買い目の回収率が高め(新しいデータで追試中)</p>` : ""}</div>`;
 }
 
@@ -251,8 +259,8 @@ function stageHTML(r) {
     : `<div class="stage">朝の予想(展示前)</div>`;
 }
 
-// 見る順: AIのひと言 → 荒れ度 → 結果 → 本命 → 期待値の買い目 → 展開予測 → 各艇 → ほかの候補
-const bodyHTML = (r) => stageHTML(r) + aiLine(r) + arashiHTML(r) + resultHTML(r) + honmeiHTML(r) + evHTML(r) + tenkaiHTML(r) + boatsHTML(r) + combosHTML(r);
+// 見る順: AIのひと言 → 荒れ度 → 結果 → 本命 → 期待値の買い目 → 荒れ狙い → 展開予測 → 各艇 → ほかの候補
+const bodyHTML = (r) => stageHTML(r) + aiLine(r) + arashiHTML(r) + resultHTML(r) + honmeiHTML(r) + evHTML(r) + neraiHTML(r) + tenkaiHTML(r) + boatsHTML(r) + combosHTML(r);
 
 function clockHTML(r) {
   const left = minsLeft(r);
@@ -274,6 +282,7 @@ function hitBadge(r) {
   const b = [];
   if (r.top && r.top[0] && r.top[0].combo === r.result.tri_combo) b.push("本命的中");
   if (r.bets && r.bets.some((x) => x.hit)) b.push("買い目的中");
+  if (r.nerai && r.nerai.some((x) => x.hit)) b.push("荒れ狙い的中");
   return b.map((x) => `<span class="badge">${x}</span>`).join("");
 }
 
@@ -286,7 +295,7 @@ function rowHTML(r) {
   const right = r.result ? tri(r.result.tri_combo) : (r.top && r.top[0] ? tri(r.top[0].combo) : "");
   return `<details class="row" data-id="${r.race_id}"${state.open.has(r.race_id) ? " open" : ""}>
     <summary><span class="t">${esc(r.deadline || "")}<span class="subw" data-id="${r.race_id}">${subHTML(r)}</span></span>
-      <span class="vr"><b>${esc(r.venue)}</b><span class="n">${r.rno}R</span>${r.stage === "late" ? `<span class="late" title="直前予想"></span>` : ""}${!r.result && arashiLevel(r) >= 5 ? `<span class="are">荒れ</span>` : ""}</span>
+      <span class="vr"><b>${esc(r.venue)}</b><span class="n">${r.rno}R</span>${r.stage === "late" ? `<span class="late" title="直前予想"></span>` : ""}${r.result ? "" : r.nerai && r.nerai.length ? `<span class="are">荒れ狙い</span>` : arashiLevel(r) >= 5 ? `<span class="are">荒れ</span>` : ""}</span>
       <span class="hits">${hitBadge(r)}</span>${right}</summary>
     <div class="body">${bodyHTML(r)}</div></details>`;
 }
@@ -315,9 +324,10 @@ function renderNow() {
 
 function renderBets() {
   const box = $("#tab-bets");
-  const races = visibleRaces().filter((r) => r.bets && r.bets.length);
+  const races = visibleRaces().filter((r) => (r.bets && r.bets.length) || (r.nerai && r.nerai.length));
   const late = state.data.races.filter((r) => r.stage === "late").length;
-  let html = `<p class="note">締切の約30分前から、展示とオッズを取り込んで5分ごとに更新します。確率×オッズ(期待値)が100%以上の組を出します。120%以上は赤で強調。直前予想 ${late} / ${state.data.races.length} レース</p>`;
+  let html = `<p class="note">締切の約30分前から、展示とオッズを取り込んで5分ごとに更新します。確率×オッズ(期待値)が100%以上の組を出します。120%以上は赤で強調。直前予想 ${late} / ${state.data.races.length} レース</p>
+    <p class="note">「期待値のある買い目」はモデルとオッズを合わせた確率で計算するので、めったに出ません。「荒れ狙い(検証中)」は1号艇が負けそうなレースだけ、モデルの確率で計算した参考の買い目です。</p>`;
   if (!races.length) {
     box.innerHTML = html + `<div class="empty">今のところ期待値の高い買い目はありません。締切が近づくと出てきます。</div>`;
     return;
@@ -337,7 +347,7 @@ async function renderTrack() {
   try { track = await getJSON("api/data/track.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
   try { rep = await getJSON("api/data/report.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
   const t = track.days.reduce((a, d) => {
-    for (const k of ["races", "top1_hit", "bets", "bet_hits", "invest", "return"]) a[k] = (a[k] || 0) + d[k];
+    for (const k of ["races", "top1_hit", "bets", "bet_hits", "invest", "return", "nerai_races", "nerai_bets", "nerai_hits", "nerai_return"]) a[k] = (a[k] || 0) + (d[k] || 0);
     return a;
   }, {});
   let html = `<div class="box"><h3>実際の成績</h3>`;
@@ -348,6 +358,13 @@ async function renderTrack() {
       ${stat("収支(1点100円)", (t.return - t.invest >= 0 ? "+" : "") + (t.return - t.invest).toLocaleString() + "円")}
       ${stat("買い目の的中率", t.bets ? pct1(t.bet_hits / t.bets) + "%" : "-")}
       ${stat("本命3連単の的中率", pct1(t.top1_hit / t.races) + "%")}</div>`;
+    if (t.nerai_bets) {
+      const nr = t.nerai_return / (t.nerai_bets * 100), np = t.nerai_return - t.nerai_bets * 100;
+      html += `<h3 class="sub">荒れ狙い(検証中)</h3><p>締切前のオッズで判断した本番と同じ条件の成績。${t.nerai_races}レース・${t.nerai_bets}点</p>
+        <div class="stats">${stat("回収率", (nr * 100).toFixed(0) + "%", nr >= 1 ? "good" : "bad")}
+        ${stat("収支(1点100円)", (np >= 0 ? "+" : "") + np.toLocaleString() + "円")}
+        ${stat("的中", `${t.nerai_hits}<small>本</small>`)}${stat("的中率", pct1(t.nerai_hits / t.nerai_bets) + "%")}</div>`;
+    }
   } else html += `<p>予想を始めた翌朝から集計します。</p>`;
   html += `</div>`;
   if (rep) {

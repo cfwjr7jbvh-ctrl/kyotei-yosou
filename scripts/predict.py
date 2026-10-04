@@ -27,7 +27,7 @@ from kyotei.data import load_history  # noqa: E402
 from kyotei.parse_lzh import parse_program, parse_result  # noqa: E402
 from kyotei.publish import read_json, write_check, write_json  # noqa: E402
 from kyotei.scrape import fetch, parse_beforeinfo, parse_odds3t  # noqa: E402
-from kyotei.arashi import arashi  # noqa: E402
+from kyotei.arashi import IN_LOSE_MIN, arashi  # noqa: E402
 from kyotei.notify import notify_bets  # noqa: E402
 from kyotei.tenkai import tenkai, traits  # noqa: E402
 
@@ -72,7 +72,7 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
         s2, s3 = np.full(6, 1e-9), np.full(6, 1e-9)
         s2[rdf["lane"].values - 1], s3[rdf["lane"].values - 1] = s23
     pm = model_tri_probs(w, stack.lam2, stack.lam3, s2, s3, getattr(stack, "bonus", None))
-    p_final, bets, market = pm, [], None
+    p_final, bets, market, nerai = pm, [], None, []
     if odds is not None and np.isfinite(odds).sum() >= 100:
         pk = market_probs(odds)
         market = pk
@@ -82,6 +82,10 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
         bets = select_bets(p_bet, odds, EV_MIN, P_MIN, MAX_BETS)
         if bet_rule:  # 荒れ狙い(追試に合格したときだけ学習が入れる): 1号艇が負けそうなレースだけ、モデルの確率で買う
             bets = select_bets(pm, odds, EV_MIN, P_MIN, MAX_BETS) if 1 - w[0] >= bet_rule["in_lose_min"] else []
+        elif 1 - w[0] >= IN_LOSE_MIN:
+            # 荒れ狙い(検証中)の別枠: 合成確率では期待値100%超えがほぼ出ないので、追試中の買い方を参考として出す。
+            # 成績は score_day で別に集計し、締切前のオッズでの本当の回収率を確かめる
+            nerai = select_bets(pm, odds, EV_MIN, P_MIN, MAX_BETS)
     top = np.argsort(-p_final)[:10]
     r0 = rdf.iloc[0]
     boats = []
@@ -102,7 +106,7 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
            "top": [{"combo": COMBOS[i], "prob": round(float(p_final[i]), 4),
                     **({"odds": float(odds[i])} if odds is not None and np.isfinite(odds[i]) else {})}
                    for i in top],
-           "bets": bets, "tenkai": tk,
+           "bets": bets, "nerai": nerai, "tenkai": tk,
            # 荒れ度: 1号艇が負ける確率(各艇の1着確率と同じモデル)と、万舟になる確率(オッズがあれば100倍以上の組の確率)
            "arashi": arashi(w, p_final, odds if market is not None else None)}
     if market is not None:
@@ -129,7 +133,7 @@ def score_day(day: dt.date):
     _, races = parse_result(k, day.isoformat())
     res = {r["race_id"]: r for r in races}
     tot = {"date": day.isoformat(), "races": 0, "top1_hit": 0, "bets": 0, "bet_hits": 0,
-           "invest": 0, "return": 0}
+           "invest": 0, "return": 0, "nerai_races": 0, "nerai_bets": 0, "nerai_hits": 0, "nerai_return": 0}
     for race in data["races"]:
         r = res.get(race["race_id"])
         if not r or not isinstance(r.get("tri_combo"), str):
@@ -146,6 +150,14 @@ def score_day(day: dt.date):
                 tot["bet_hits"] += 1
                 tot["return"] += pay
                 b["hit"] = True
+        if race.get("nerai"):  # 荒れ狙い(検証中)。1点100円で買ったとして集計
+            tot["nerai_races"] += 1
+            for b in race["nerai"]:
+                tot["nerai_bets"] += 1
+                if b["combo"] == r["tri_combo"]:
+                    tot["nerai_hits"] += 1
+                    tot["nerai_return"] += pay
+                    b["hit"] = True
     data["summary"] = tot
     write_json(p, data)
     tp = ROOT / "docs/data/track.json"
