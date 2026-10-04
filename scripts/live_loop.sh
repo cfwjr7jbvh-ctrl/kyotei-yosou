@@ -37,7 +37,10 @@ history_finishing() {  # 過去データ取得の最後の保存(やり直しな
 save_data() {
   local d; d=$(jst +%Y%m%d)
   if history_finishing; then echo "過去データ取得の終わり際なので保存は次回"; return; fi
-  git add "data/previews/own_$d.csv.gz" "data/odds_live/live_$d.csv.gz" 2>/dev/null || true
+  local f
+  for f in "data/previews/own_$d.csv.gz" "data/odds_live/live_$d.csv.gz"; do
+    [ -f "$f" ] && git add "$f"
+  done
   if git commit -qm "[CI Skip] data: 直前情報・締切前オッズ $(jst +%H:%M)"; then
     bash scripts/push.sh && LAST_SAVE=$(date +%s)
   else

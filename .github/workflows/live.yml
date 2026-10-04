@@ -34,7 +34,8 @@ jobs:
           path: data/cache
           key: features-${{ steps.d.outputs.today }}
       - name: 5分ごとに直前情報とオッズで更新
-        run: bash scripts/live_loop.sh 340 300
+        # ループ中に main に合わせ直すので、実行中のスクリプト自体が書き換わらないよう写しを動かす
+        run: cp scripts/live_loop.sh "$RUNNER_TEMP/live_loop.sh" && bash "$RUNNER_TEMP/live_loop.sh" 340 300
       - name: 続きを起動(6〜22時台)
         if: always()
         run: |
