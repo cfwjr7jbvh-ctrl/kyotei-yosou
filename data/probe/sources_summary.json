@@ -1,0 +1,1946 @@
+{
+ "targets": {
+  "karatsu_comment": {
+   "url": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_racers_comment",
+   "final": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_racers_comment",
+   "status": 200,
+   "len": 66757,
+   "title": "ボートレースからつ Official Site - 全選手コメント",
+   "tables": [
+    {
+     "class": "com-table01.normal",
+     "id": null,
+     "n_rows": 47,
+     "parent": "div.racers_comment",
+     "rows": [
+      [
+       "TH:登番 / 級別 選手名 [col1]",
+       "TH:モーター評価 [col2]",
+       "TH:選手コメント（前日 / 直前 ） [col3]",
+       "TH:履歴 [col4]"
+      ],
+      [
+       "3175 / B1 渡辺…(15) [col1]",
+       "出足 ： 伸び足： 素性…(15) [col2]",
+       "本番では回り過ぎで乗れな…(22) [col3]",
+       "渡辺 千草選手のコメント…(59) [col4]"
+      ],
+      [
+       "3212 / B1 亀本…(15) [col1]",
+       "出足 ： 伸び足： 素性…(15) [col2]",
+       "ターン回りは良く悪くない…(27) [col3]",
+       "亀本 勇樹選手のコメント…(59) [col4]"
+      ],
+      [
+       "3319 / A2 山崎…(15) [col1]",
+       "出足 ： 伸び足： 素性…(15) [col2]",
+       "バックももったし直線も上…(37) [col3]",
+       "山崎 義明選手のコメント…(59) [col4]"
+      ],
+      [
+       "3541 / A2 三嶌…(15) [col1]",
+       "出足 ： 伸び足： 素性…(15) [col2]",
+       "こぢんまりまとまっていま…(30) [col3]",
+       "三嶌 誠司選手のコメント…(59) [col4]"
+      ]
+     ]
+    },
+    {
+     "class": "com-table01.normal",
+     "id": null,
+     "n_rows": 0,
+     "parent": "div.popup-yosou-content",
+     "rows": []
+    },
+    {
+     "class": "com-table01.normal",
+     "id": null,
+     "n_rows": 0,
+     "parent": "div.popup-yosou-content",
+     "rows": []
+    },
+    {
+     "class": "com-table01.normal",
+     "id": null,
+     "n_rows": 0,
+     "parent": "div.popup-yosou-content",
+     "rows": []
+    },
+    {
+     "class": "com-table01.normal",
+     "id": null,
+     "n_rows": 0,
+     "parent": "div.popup-yosou-content",
+     "rows": []
+    },
+    {
+     "class": "com-table01.normal",
+     "id": null,
+     "n_rows": 0,
+     "parent": "div.popup-yosou-content",
+     "rows": []
+    },
+    {
+     "class": "com-table01.normal",
+     "id": null,
+     "n_rows": 0,
+     "parent": "div.popup-yosou-content",
+     "rows": []
+    },
+    {
+     "class": "com-table01.normal",
+     "id": null,
+     "n_rows": 0,
+     "parent": "div.popup-yosou-content",
+     "rows": []
+    }
+   ],
+   "forms": [],
+   "links": [],
+   "headings": [
+    "",
+    "全選手コメント",
+    "日刊スポーツ杯",
+    "渡辺 千草選手のコメント履歴 （前日/ 直前 ）",
+    "亀本 勇樹選手のコメント履歴 （前日/ 直前 ）",
+    "山崎 義明選手のコメント履歴 （前日/ 直前 ）",
+    "三嶌 誠司選手のコメント履歴 （前日/ 直前 ）",
+    "折下 寛法選手のコメント履歴 （前日/ 直前 ）",
+    "岩崎 正哉選手のコメント履歴 （前日/ 直前 ）",
+    "深井 利寿選手のコメント履歴 （前日/ 直前 ）",
+    "須藤 博倫選手のコメント履歴 （前日/ 直前 ）",
+    "松本 博昭選手のコメント履歴 （前日/ 直前 ）",
+    "堀之内紀代子選手のコメント履歴 （前日/ 直前 ）",
+    "森永 淳選手のコメント履歴 （前日/ 直前 ）",
+    "吉村 正明選手のコメント履歴 （前日/ 直前 ）",
+    "大久保信一郎選手のコメント履歴 （前日/ 直前 ）",
+    "泥谷 一毅選手のコメント履歴 （前日/ 直前 ）",
+    "富永 修一選手のコメント履歴 （前日/ 直前 ）",
+    "森安 弘雅選手のコメント履歴 （前日/ 直前 ）",
+    "森定 晃史選手のコメント履歴 （前日/ 直前 ）"
+   ]
+  },
+  "karatsu_timerank": {
+   "url": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_timerank",
+   "final": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_timerank",
+   "status": 200,
+   "len": 38569,
+   "title": "ボートレースからつ Official Site - モーター抽選結果・前検タイムランキング",
+   "tables": [
+    {
+     "class": "com-table01.normal",
+     "id": null,
+     "n_rows": 48,
+     "parent": "div.tableBlock",
+     "rows": [
+      [
+       "TH:順位 [col1]",
+       "TH:登番 [col2]",
+       "TH:選手名 [col3]",
+       "TH:級別 [col4]",
+       "TH:モーター [col5-5]",
+       "TH:ボート [col6-6]",
+       "TH:前検タイム [col7]"
+      ],
+      [
+       "TH:番号 [col4]",
+       "TH:２連対率 [col5]",
+       "TH:素性 [col6]",
+       "TH:番号 [col7]",
+       "TH:２連対率 [col8]"
+      ],
+      [
+       "1 [col1]",
+       "4112 [col2]",
+       "大久保信一郎 [col3]",
+       "A2 [col2]",
+       "18 [col4]",
+       "88.8% [col5]",
+       "Ａ [col5]",
+       "11 [col6]",
+       "32.2% [col7]",
+       "6.87 [col8]"
+      ],
+      [
+       "2 [col1]",
+       "4575 [col2]",
+       "戸塚 邦好 [col3]",
+       "A2 [col2]",
+       "10 [col4]",
+       "55.5% [col5]",
+       "Ａ [col5]",
+       "2 [col6]",
+       "42.9% [col7]",
+       "6.78 [col8]"
+      ],
+      [
+       "2 [col1]",
+       "5014 [col2]",
+       "梶山 涼斗 [col3]",
+       "B1 [col2]",
+       "24 [col4]",
+       "55.5% [col5]",
+       "Ｂ [col5]",
+       "21 [col6]",
+       "41.2% [col7]",
+       "6.73 [col8]"
+      ]
+     ]
+    }
+   ],
+   "forms": [],
+   "links": [],
+   "headings": [
+    "",
+    "モーター抽選結果・前検タイムランキング",
+    "日刊スポーツ杯",
+    "レース情報",
+    "データファイル",
+    "開催日程",
+    "インフォメーション・ イベント情報",
+    "アクセス・施設案内",
+    "各種サービス"
+   ]
+  },
+  "karatsu_top": {
+   "url": "https://www.boatrace-karatsu.jp/modules/raceinfo/",
+   "final": "https://www.boatrace-karatsu.jp/modules/raceinfo/",
+   "status": 200,
+   "len": 24759,
+   "title": "ボートレースからつ Official Site - シリーズインデックス",
+   "tables": [
+    {
+     "class": "com-table01.u-mb_20",
+     "id": null,
+     "n_rows": 1,
+     "parent": "div.seriesIndex",
+     "rows": [
+      [
+       "2026年 10月 [col1]",
+       "トータリゼータエンジニア…(157) [col2]"
+      ]
+     ]
+    },
+    {
+     "class": "com-table01.u-mb_20",
+     "id": null,
+     "n_rows": 1,
+     "parent": "div.seriesIndex",
+     "rows": [
+      [
+       "2026年 9月 [col1]",
+       "日刊スポーツ杯 2026…(93) [col2]"
+      ]
+     ]
+    },
+    {
+     "class": "com-table01.u-mb_20",
+     "id": null,
+     "n_rows": 1,
+     "parent": "div.seriesIndex",
+     "rows": [
+      [
+       "2026年 8月 [col1]",
+       "サマーモーニングバトル …(160) [col2]"
+      ]
+     ]
+    },
+    {
+     "class": "com-table01.u-mb_20",
+     "id": null,
+     "n_rows": 1,
+     "parent": "div.seriesIndex",
+     "rows": [
+      [
+       "2026年 7月 [col1]",
+       "中日スポーツ杯 2026…(102) [col2]"
+      ]
+     ]
+    }
+   ],
+   "forms": [],
+   "links": [
+    {
+     "text": "トータリゼータエンジ…(16)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/assen?jcd=23&hd=20261027"
+    },
+    {
+     "text": "GⅠ全日本王者決定戦…(20)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/assen?jcd=23&hd=20261018"
+    },
+    {
+     "text": "第17回虹の松原カッ…(11)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/assen?jcd=23&hd=20261008"
+    },
+    {
+     "text": "日刊スポーツ杯",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=23&hd=20261004"
+    },
+    {
+     "text": "レース結果一覧",
+     "href": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_resultlist&resultday=20261004"
+    },
+    {
+     "text": "唐津うまかもんカップ",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=23&hd=20260920"
+    },
+    {
+     "text": "レース結果一覧",
+     "href": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_resultlist&resultday=20260920"
+    },
+    {
+     "text": "優勝者 古結 宏",
+     "href": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_winner&target_day=20260920&race=12"
+    },
+    {
+     "text": "サマーモーニングバト…(11)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=23&hd=20260831"
+    },
+    {
+     "text": "レース結果一覧",
+     "href": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_resultlist&resultday=20260831"
+    },
+    {
+     "text": "優勝者 常住 蓮",
+     "href": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_winner&target_day=20260831&race=12"
+    },
+    {
+     "text": "BTS三日月開設30…(14)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=23&hd=20260823"
+    },
+    {
+     "text": "レース結果一覧",
+     "href": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_resultlist&resultday=20260823"
+    },
+    {
+     "text": "優勝者 西野 雄貴",
+     "href": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_winner&target_day=20260823&race=12"
+    },
+    {
+     "text": "お盆特選～がばい王者…(14)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=23&hd=20260814"
+    },
+    {
+     "text": "レース結果一覧",
+     "href": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_resultlist&resultday=20260814"
+    },
+    {
+     "text": "優勝者 安河内 健",
+     "href": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_winner&target_day=20260814&race=12"
+    },
+    {
+     "text": "中日スポーツ杯",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=23&hd=20260803"
+    },
+    {
+     "text": "レース結果一覧",
+     "href": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_resultlist&resultday=20260803"
+    },
+    {
+     "text": "優勝者 小坂 尚哉",
+     "href": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_winner&target_day=20260803&race=12"
+    },
+    {
+     "text": "第14回サッポロビー…(14)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=23&hd=20260726"
+    },
+    {
+     "text": "レース結果一覧",
+     "href": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_resultlist&resultday=20260726"
+    },
+    {
+     "text": "優勝者 松下 哲也",
+     "href": "https://www.boatrace-karatsu.jp/modules/raceinfo/?page=index_winner&target_day=20260726&race=12"
+    }
+   ],
+   "headings": [
+    "",
+    "シリーズインデックス",
+    "レース情報",
+    "データファイル",
+    "開催日程",
+    "インフォメーション・ イベント情報",
+    "アクセス・施設案内",
+    "各種サービス"
+   ]
+  },
+  "omura_comment": {
+   "url": "https://omurakyotei.jp/yosou/comment.php",
+   "final": "https://omurakyotei.jp/yosou/comment.php",
+   "status": 200,
+   "len": 80994,
+   "title": "ボートレース大村 > 予想サイト > 全選手コメント・モーター評価一覧",
+   "tables": [
+    {
+     "class": "",
+     "id": null,
+     "n_rows": 2,
+     "parent": "div.",
+     "rows": [
+      [
+       "本場開門 [honjyo_title]",
+       "閉館 [time]"
+      ],
+      [
+       "外向発売所 [jyogai_title]",
+       "7:30 [time]"
+      ]
+     ]
+    },
+    {
+     "class": "data.tblcolor.tblcenter",
+     "id": "tblcomment",
+     "n_rows": 42,
+     "parent": "div.contents",
+     "rows": [
+      [
+       "TH:選手名",
+       "TH:コメント",
+       "TH:モーター",
+       "TH:過去コメント"
+      ],
+      [
+       "池 千 夏",
+       "初動を切って行きすぎてい…(75)",
+       "4点 36号機",
+       "過去の コメント"
+      ],
+      [
+       "笠 野 友紀恵",
+       "展示でタイムが出ても、乗…(95)",
+       "4点 63号機",
+       "過去の コメント"
+      ],
+      [
+       "荒 井 輝 年",
+       "仕上がりは大したことはな…(61)",
+       "3点 60号機",
+       "過去の コメント"
+      ],
+      [
+       "大 西 隆 洋",
+       "乗りやすくなっていた伸び…(30)",
+       "4点 49号機",
+       "過去の コメント"
+      ]
+     ]
+    }
+   ],
+   "forms": [
+    {
+     "action": "",
+     "method": "post",
+     "fields": [
+      {
+       "name": "h_target_ym",
+       "type": "hidden",
+       "values": []
+      },
+      {
+       "name": "h_space_id",
+       "type": "hidden",
+       "values": []
+      }
+     ]
+    },
+    {
+     "action": "//www.google.com/cse",
+     "method": null,
+     "fields": [
+      {
+       "name": "cx",
+       "type": "hidden",
+       "values": []
+      },
+      {
+       "name": "ie",
+       "type": "hidden",
+       "values": []
+      },
+      {
+       "name": "q",
+       "type": "text",
+       "values": []
+      },
+      {
+       "name": "sa",
+       "type": "submit",
+       "values": []
+      }
+     ]
+    }
+   ],
+   "links": [
+    {
+     "text": "得点率ランキング",
+     "href": "https://omurakyotei.jp/yosou/point.php?day=20261002"
+    },
+    {
+     "text": "イン逃げ率・ 進入枠…(13)",
+     "href": "https://omurakyotei.jp/yosou/race_per.php?day=20261002"
+    },
+    {
+     "text": "レース展望",
+     "href": "https://omurakyotei.jp/view/pdf/20260928.pdf"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=3509"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=3528"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=3685"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=3701"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=3827"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=3842"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=3930"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4004"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4057"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4068"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4171"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4204"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4248"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4264"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4302"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4339"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4384"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4408"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4421"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4431"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4442"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4452"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4470"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4520"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4555"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4601"
+    },
+    {
+     "text": "過去の コメント",
+     "href": "https://omurakyotei.jp/yosou/comment_past.php?day=20261002&num=4666"
+    }
+   ],
+   "headings": [
+    "全選手コメント・モーター評価一覧"
+   ]
+  },
+  "omura_yosou": {
+   "url": "https://omurakyotei.jp/yosou/",
+   "final": "https://omurakyotei.jp/yosou/",
+   "status": 200,
+   "len": 70742,
+   "title": "ボートレース大村> 予想サイト",
+   "tables": [
+    {
+     "class": "",
+     "id": null,
+     "n_rows": 2,
+     "parent": "div.",
+     "rows": [
+      [
+       "本場開門 [honjyo_title]",
+       "閉館 [time]"
+      ],
+      [
+       "外向発売所 [jyogai_title]",
+       "7:30 [time]"
+      ]
+     ]
+    },
+    {
+     "class": "data.tblteicolor.tblcenter",
+     "id": "tblseries",
+     "n_rows": 13,
+     "parent": "div.contents_box_bottom",
+     "rows": [
+      [
+       "TH:R",
+       "TH:1 [tei1]",
+       "TH:2 [tei2]",
+       "TH:3 [tei3]",
+       "TH:4 [tei4]",
+       "TH:5 [tei5]",
+       "TH:6 [tei6]"
+      ],
+      [
+       "TH:1R 17:41",
+       "八戸 琉楓 [tei1.icon_B2]",
+       "今泉 徹 [tei2.icon_B1]",
+       "笠野 友紀恵 [tei3.icon_B1]",
+       "山下 拓巳 [tei4.icon_B1]",
+       "岡本 大 [tei5.icon_B1]",
+       "小宮 涼雅 [tei6.icon_B1]"
+      ],
+      [
+       "TH:2R 18:08",
+       "仁科 さやか [tei1.icon_B1]",
+       "星野 太郎 [tei2.icon_B1]",
+       "半田 尚也 [tei3.icon_B1]",
+       "岸本 隆 [tei4.icon_A2]",
+       "大西 隆洋 [tei5.icon_B1]",
+       "吉原 快誓 [tei6.icon_B2]"
+      ],
+      [
+       "TH:3R 18:34",
+       "伊久間 陽優 [tei1.icon_A2]",
+       "平瀬 城啓 [tei2.icon_B1]",
+       "幸田 智裕 [tei3.icon_B1]",
+       "柴田 大輔 [tei4.icon_B1]",
+       "荒井 輝年 [tei5.icon_A2]",
+       "長嶺 真李愛 [tei6.icon_B2]"
+      ],
+      [
+       "TH:4R 19:03",
+       "山本 浩輔 [tei1.icon_B1]",
+       "富永 大一 [tei2.icon_B1]",
+       "石塚 裕介 [tei3.icon_B1]",
+       "高倉 孝太 [tei4.icon_A2]",
+       "後藤 美翼 [tei5.icon_A2]",
+       "田頭 虎親 [tei6.icon_B1]"
+      ]
+     ]
+    }
+   ],
+   "forms": [
+    {
+     "action": "",
+     "method": "post",
+     "fields": [
+      {
+       "name": "h_target_ym",
+       "type": "hidden",
+       "values": []
+      },
+      {
+       "name": "h_space_id",
+       "type": "hidden",
+       "values": []
+      }
+     ]
+    },
+    {
+     "action": "//www.google.com/cse",
+     "method": null,
+     "fields": [
+      {
+       "name": "cx",
+       "type": "hidden",
+       "values": []
+      },
+      {
+       "name": "ie",
+       "type": "hidden",
+       "values": []
+      },
+      {
+       "name": "q",
+       "type": "text",
+       "values": []
+      },
+      {
+       "name": "sa",
+       "type": "submit",
+       "values": []
+      }
+     ]
+    }
+   ],
+   "links": [
+    {
+     "text": "得点率ランキング",
+     "href": "https://omurakyotei.jp/yosou/point.php?day=20261002"
+    },
+    {
+     "text": "イン逃げ率・ 進入枠…(13)",
+     "href": "https://omurakyotei.jp/yosou/race_per.php?day=20261002"
+    },
+    {
+     "text": "レース展望",
+     "href": "https://omurakyotei.jp/view/pdf/20260928.pdf"
+    },
+    {
+     "text": "1R 17:41",
+     "href": "https://omurakyotei.jp/yosou/syussou.php?day=20261002&race=01"
+    },
+    {
+     "text": "2R 18:08",
+     "href": "https://omurakyotei.jp/yosou/syussou.php?day=20261002&race=02"
+    },
+    {
+     "text": "3R 18:34",
+     "href": "https://omurakyotei.jp/yosou/syussou.php?day=20261002&race=03"
+    },
+    {
+     "text": "4R 19:03",
+     "href": "https://omurakyotei.jp/yosou/syussou.php?day=20261002&race=04"
+    },
+    {
+     "text": "5R 19:30",
+     "href": "https://omurakyotei.jp/yosou/syussou.php?day=20261002&race=05"
+    },
+    {
+     "text": "6R 19:56",
+     "href": "https://omurakyotei.jp/yosou/syussou.php?day=20261002&race=06"
+    },
+    {
+     "text": "7R 20:25",
+     "href": "https://omurakyotei.jp/yosou/syussou.php?day=20261002&race=07"
+    },
+    {
+     "text": "8R 20:59",
+     "href": "https://omurakyotei.jp/yosou/syussou.php?day=20261002&race=08"
+    },
+    {
+     "text": "9R 21:25",
+     "href": "https://omurakyotei.jp/yosou/syussou.php?day=20261002&race=09"
+    },
+    {
+     "text": "10R 21:51",
+     "href": "https://omurakyotei.jp/yosou/syussou.php?day=20261002&race=10"
+    },
+    {
+     "text": "11R 22:20",
+     "href": "https://omurakyotei.jp/yosou/syussou.php?day=20261002&race=11"
+    },
+    {
+     "text": "12R 22:45",
+     "href": "https://omurakyotei.jp/yosou/syussou.php?day=20261002&race=12"
+    },
+    {
+     "text": "全選手コメント",
+     "href": "https://omurakyotei.jp/yosou/comment.php?day=20261002"
+    },
+    {
+     "text": "エンジン通信簿",
+     "href": "https://omurakyotei.jp/yosou/motor.php?day=20261002"
+    },
+    {
+     "text": "番記者のピットレポー…(11)",
+     "href": "https://omurakyotei.jp/yosou/pitreport.php?day=20261002"
+    },
+    {
+     "text": "印賀勝男の今日のねら…(13)",
+     "href": "https://omurakyotei.jp/yosou/mimiyori.php?day=20261002"
+    },
+    {
+     "text": "オッズ",
+     "href": "https://omurakyotei.jp/yosou/odds.php?day=20261002"
+    }
+   ],
+   "headings": [
+    "2026年10月02日の展望",
+    "金子萌が今年２度目のＶへ",
+    "レース一覧 レース予想サイトにつきましては、日刊スポーツが運…(38)"
+   ]
+  },
+  "ashiya_comment": {
+   "url": "https://www.boatrace-ashiya.com/modules/raceinfo/?page=index_racers_comment",
+   "final": "https://www.boatrace-ashiya.com/modules/raceinfo/?page=index_racers_comment",
+   "status": 200,
+   "len": 18107,
+   "title": "ボートレース芦屋 Official Site - 選手コメント",
+   "tables": [],
+   "forms": [],
+   "links": [],
+   "headings": [
+    "選手コメント",
+    "Information"
+   ]
+  },
+  "mikuni_kisha": {
+   "url": "http://www.mikuniks-web.jp/races/",
+   "final": "http://www.mikuniks-web.jp/races/",
+   "status": 200,
+   "len": 70503,
+   "title": "BOAT RACE 三国 #10 専属記者の直前予想",
+   "tables": [
+    {
+     "class": "table",
+     "id": null,
+     "n_rows": 14,
+     "parent": "div.wide-device-only",
+     "rows": [
+      [
+       "TH:前日 予想 [forecast]",
+       "TH:枠 番 [frame-no]",
+       "TH:選手名 支部/年齢 級別 [racer]",
+       "TH:半周ﾗｯﾌﾟ (秒) [half-rap-time]",
+       "TH:まわり足 (秒) [curve-time]",
+       "TH:直線 (秒) [extension-time]",
+       "TH:体重 [racer-weight]",
+       "TH:登番 [racer-no]",
+       "TH:F [flying-start.th-top]",
+       "TH:期 別 [racer-class]",
+       "TH:勝率 [winning-percentage]",
+       "TH:機番 ※1 [motor-no.th-top]",
+       "TH:節間成績 ※2 [th-top]",
+       "TH:選手コメント [racer-memo]"
+      ],
+      [
+       "TH:L [late-start.th-bottom]",
+       "TH:2連率 [motor-winning-percentage.th-bottom]",
+       "TH:1日 [race-result.th-bottom]",
+       "TH:2日 [race-result.th-bottom]",
+       "TH:3日 [race-result.th-bottom]",
+       "TH:4日 [race-result.th-bottom]",
+       "TH:5日 [race-result.th-bottom]",
+       "TH:6日 [race-result.th-bottom]",
+       "TH:7日 [race-result.th-bottom]"
+      ],
+      [
+       " [forecast]",
+       "1 [frame-no]",
+       "末永 和也 佐賀/27 …(14) [racer]",
+       " [half-rap-time]",
+       " [curve-time]",
+       " [extension-time]",
+       "52 [racer-weight]",
+       "5084 [racer-no]",
+       " [flying-start.td-top]",
+       "124 期 [racer-class.td-top]",
+       "7.07 [winning-percentage]",
+       "14 [motor-no.td-top]",
+       " [race-result.td-top]",
+       " [race-result.td-top]"
+      ],
+      [
+       " [late-start.td-bottom]",
+       "34.3 [motor-winning-percentage.td-bottom]",
+       "4 [race-result.td-bottom]",
+       " [race-result.td-bottom]",
+       " [race-result.td-bottom]",
+       " [race-result.td-bottom]",
+       " [race-result.td-bottom]",
+       " [race-result.td-bottom]",
+       " [race-result.td-bottom]"
+      ],
+      [
+       " [forecast]",
+       "2 [frame-no]",
+       "松田 祐季 福井/40 …(14) [racer]",
+       " [half-rap-time]",
+       " [curve-time]",
+       " [extension-time]",
+       "52 [racer-weight]",
+       "4391 [racer-no]",
+       " [flying-start.td-top]",
+       "98 期 [racer-class.td-top]",
+       "6.31 [winning-percentage]",
+       "30 [motor-no.td-top]",
+       " [race-result.td-top]",
+       " [race-result.td-top]"
+      ]
+     ]
+    },
+    {
+     "class": "table",
+     "id": null,
+     "n_rows": 7,
+     "parent": "div.tab-content.active",
+     "rows": [
+      [
+       "TH:前日 予想 [forecast]",
+       "TH:枠 番 [frame-no]",
+       "TH:選手名 支部/年齢 級別 [racer]",
+       "TH:半周ﾗｯﾌﾟ (秒) [half-rap-time]",
+       "TH:まわり足 (秒) [curve-time]",
+       "TH:直線 (秒) [extension-time]"
+      ],
+      [
+       " [forecast]",
+       "1 [frame-no]",
+       "末永 和也 佐賀/27 …(14) [racer]",
+       " [half-rap-time]",
+       " [curve-time]",
+       " [extension-time]"
+      ],
+      [
+       " [forecast]",
+       "2 [frame-no]",
+       "松田 祐季 福井/40 …(14) [racer]",
+       " [half-rap-time]",
+       " [curve-time]",
+       " [extension-time]"
+      ],
+      [
+       " [forecast]",
+       "3 [frame-no]",
+       "前田 将太 福岡/38 …(14) [racer]",
+       " [half-rap-time]",
+       " [curve-time]",
+       " [extension-time]"
+      ],
+      [
+       " [forecast]",
+       "4 [frame-no]",
+       "岩瀬 裕亮 愛知/38 …(14) [racer]",
+       " [half-rap-time]",
+       " [curve-time]",
+       " [extension-time]"
+      ]
+     ]
+    },
+    {
+     "class": "table",
+     "id": null,
+     "n_rows": 14,
+     "parent": "div.tab-content",
+     "rows": [
+      [
+       "TH:枠 番 [frame-no]",
+       "TH:選手名 支部/年齢 級別 [racer]",
+       "TH:体重 [racer-weight]",
+       "TH:登番 [racer-no]",
+       "TH:F [flying-start.th-top]",
+       "TH:期 別 [racer-class]",
+       "TH:勝率 [winning-percentage]",
+       "TH:機番 ※1 [motor-no.th-top]"
+      ],
+      [
+       "TH:L [late-start.th-bottom]",
+       "TH:2連率 [motor-winning-percentage.th-bottom]"
+      ],
+      [
+       "1 [frame-no]",
+       "末永 和也 佐賀/27 …(14) [racer]",
+       "52 [racer-weight]",
+       "5084 [racer-no]",
+       " [flying-start.td-top]",
+       "124 期 [racer-class.td-top]",
+       "7.07 [winning-percentage]",
+       "14 [motor-no.td-top]"
+      ],
+      [
+       " [late-start.td-bottom]",
+       "34.3 [motor-winning-percentage.td-bottom]"
+      ],
+      [
+       "2 [frame-no]",
+       "松田 祐季 福井/40 …(14) [racer]",
+       "52 [racer-weight]",
+       "4391 [racer-no]",
+       " [flying-start.td-top]",
+       "98 期 [racer-class.td-top]",
+       "6.31 [winning-percentage]",
+       "30 [motor-no.td-top]"
+      ]
+     ]
+    },
+    {
+     "class": "table",
+     "id": null,
+     "n_rows": 14,
+     "parent": "div.tab-content",
+     "rows": [
+      [
+       "TH:枠 番 [frame-no]",
+       "TH:選手名 支部/年齢 級別 [racer]",
+       "TH:節間成績 ※2 [th-top]"
+      ],
+      [
+       "TH:1日 [race-result.th-bottom]",
+       "TH:2日 [race-result.th-bottom]",
+       "TH:3日 [race-result.th-bottom]",
+       "TH:4日 [race-result.th-bottom]",
+       "TH:5日 [race-result.th-bottom]",
+       "TH:6日 [race-result.th-bottom]",
+       "TH:7日 [race-result.th-bottom]"
+      ],
+      [
+       "1 [frame-no]",
+       "末永 和也 佐賀/27 …(14) [racer]",
+       " [race-result.td-top]",
+       " [race-result.td-top]",
+       " [race-result.td-top]",
+       " [race-result.td-top]",
+       " [race-result.td-top]",
+       " [race-result.td-top]",
+       " [race-result.td-top]"
+      ],
+      [
+       "4 [race-result.td-bottom]",
+       " [race-result.td-bottom]",
+       " [race-result.td-bottom]",
+       " [race-result.td-bottom]",
+       " [race-result.td-bottom]",
+       " [race-result.td-bottom]",
+       " [race-result.td-bottom]"
+      ],
+      [
+       "2 [frame-no]",
+       "松田 祐季 福井/40 …(14) [racer]",
+       " [race-result.td-top]",
+       " [race-result.td-top]",
+       " [race-result.td-top]",
+       " [race-result.td-top]",
+       " [race-result.td-top]",
+       " [race-result.td-top]",
+       " [race-result.td-top]"
+      ]
+     ]
+    },
+    {
+     "class": "table",
+     "id": null,
+     "n_rows": 7,
+     "parent": "div.tab-content",
+     "rows": [
+      [
+       "TH:枠 番 [frame-no]",
+       "TH:選手名 支部/年齢 級別 [racer]",
+       "TH:選手コメント [racer-memo]"
+      ],
+      [
+       "1 [frame-no]",
+       "末永 和也 佐賀/27 …(14) [racer]",
+       "Ｍ良いと思うし出足結構良…(15) [racer-memo]"
+      ],
+      [
+       "2 [frame-no]",
+       "松田 祐季 福井/40 …(14) [racer]",
+       "エンジン良くてレース足良…(15) [racer-memo]"
+      ],
+      [
+       "3 [frame-no]",
+       "前田 将太 福岡/38 …(14) [racer]",
+       "普通くらいですね。悪くは…(14) [racer-memo]"
+      ],
+      [
+       "4 [frame-no]",
+       "岩瀬 裕亮 愛知/38 …(14) [racer]",
+       "下がってたし道中の感じ良…(15) [racer-memo]"
+      ]
+     ]
+    }
+   ],
+   "forms": [],
+   "links": [
+    {
+     "text": "",
+     "href": "https://www2.mikuniks-web.jp/races/1"
+    },
+    {
+     "text": "予想紙PDF ダウン…(13)",
+     "href": "https://www.mikuniks.co.jp/download.cgi?name=10yosou.pdf&t=1791114349200"
+    },
+    {
+     "text": "",
+     "href": "https://www2.mikuniks-web.jp/races/1"
+    },
+    {
+     "text": "予想紙PDF ダウン…(13)",
+     "href": "https://www.mikuniks.co.jp/download.cgi?name=10yosou.pdf&t=1791114349201"
+    },
+    {
+     "text": "",
+     "href": "https://www2.mikuniks-web.jp/races/1"
+    },
+    {
+     "text": "予想紙PDF ダウン…(13)",
+     "href": "https://www.mikuniks.co.jp/download.cgi?name=10yosou.pdf&t=1791114349202"
+    },
+    {
+     "text": "",
+     "href": "https://www2.mikuniks-web.jp/races/1"
+    },
+    {
+     "text": "予想紙PDF ダウン…(13)",
+     "href": "https://www.mikuniks.co.jp/download.cgi?name=10yosou.pdf&t=1791114349202"
+    },
+    {
+     "text": "",
+     "href": "https://www2.mikuniks-web.jp/races/1"
+    },
+    {
+     "text": "予想紙PDF ダウン…(13)",
+     "href": "https://www.mikuniks.co.jp/download.cgi?name=10yosou.pdf&t=1791114349203"
+    },
+    {
+     "text": "",
+     "href": "https://itunes.apple.com/jp/app/id1211915934"
+    }
+   ],
+   "headings": [
+    "",
+    "10/5(月) 開設７３周年記念 北陸艇王決戦 2日目",
+    "1R ▼ 1R 2R 3R 4R 5R 6R 7R 8R 9…(46)",
+    "前日予想フォーカス",
+    "半周ラップ",
+    "まわり足",
+    "直線",
+    "前日予想フォーカス",
+    "前日予想フォーカス",
+    "前日予想フォーカス",
+    "前日予想フォーカス",
+    "半周ラップ",
+    "まわり足",
+    "直線",
+    "デイレース開門時間のお知らせ",
+    "開催案内のお知らせ",
+    "三国オリジナルデータについて",
+    "利用規約"
+   ]
+  },
+  "mikuni_kisha_1": {
+   "url": "https://www2.mikuniks-web.jp/races/1",
+   "final": "https://www2.mikuniks-web.jp/races/1",
+   "status": 200,
+   "len": 12260,
+   "title": "BOAT RACE 三国 AI予想特設サイト",
+   "tables": [
+    {
+     "class": "race-table.mt-2",
+     "id": null,
+     "n_rows": 14,
+     "parent": "article.memo.pl-0.pr-0",
+     "rows": [
+      [
+       "TH:AI 予想 [forecast]",
+       "TH:枠 番 [frame-no]",
+       "TH:選手名 [racer]",
+       "TH:AI評価(10段階) [ai-evaluation]"
+      ],
+      [
+       "TH:支部/年齢 [racer-info-branch]",
+       "TH:級別 [racer-info]"
+      ],
+      [
+       " [forecast]",
+       "1 [frame-no]",
+       "末永 和也 [racer]",
+       " [ai-evaluation]"
+      ],
+      [
+       "佐賀/27 [racer-info-branch]",
+       "A1 [racer-info]"
+      ],
+      [
+       " [forecast]",
+       "2 [frame-no]",
+       "松田 祐季 [racer]",
+       " [ai-evaluation]"
+      ]
+     ]
+    }
+   ],
+   "forms": [],
+   "links": [
+    {
+     "text": "1R",
+     "href": "https://www2.mikuniks-web.jp/races/1"
+    },
+    {
+     "text": "2R",
+     "href": "https://www2.mikuniks-web.jp/races/2"
+    },
+    {
+     "text": "3R",
+     "href": "https://www2.mikuniks-web.jp/races/3"
+    },
+    {
+     "text": "4R",
+     "href": "https://www2.mikuniks-web.jp/races/4"
+    },
+    {
+     "text": "5R",
+     "href": "https://www2.mikuniks-web.jp/races/5"
+    },
+    {
+     "text": "6R",
+     "href": "https://www2.mikuniks-web.jp/races/6"
+    },
+    {
+     "text": "7R",
+     "href": "https://www2.mikuniks-web.jp/races/7"
+    },
+    {
+     "text": "8R",
+     "href": "https://www2.mikuniks-web.jp/races/8"
+    },
+    {
+     "text": "9R",
+     "href": "https://www2.mikuniks-web.jp/races/9"
+    },
+    {
+     "text": "10R",
+     "href": "https://www2.mikuniks-web.jp/races/10"
+    },
+    {
+     "text": "11R",
+     "href": "https://www2.mikuniks-web.jp/races/11"
+    },
+    {
+     "text": "12R",
+     "href": "https://www2.mikuniks-web.jp/races/12"
+    },
+    {
+     "text": "オッズ",
+     "href": "https://www.boatrace.jp/owpc/pc/race/odds3t?rno=1&jcd=10&hd=20261005"
+    }
+   ],
+   "headings": [
+    "AI直前予想",
+    "10/5(月) 開設７３周年記念 北陸艇王決戦 2日目",
+    "AIの総合評価",
+    "利用規約"
+   ]
+  },
+  "nikkan_tokuyama": {
+   "url": "http://nikkansports.raceyosou.jp/boatrace/tokuyama/",
+   "final": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20261005",
+   "status": 200,
+   "len": 45749,
+   "title": "ボートレース徳山 日刊スポーツ直前予想",
+   "tables": [
+    {
+     "class": "writer_win",
+     "id": null,
+     "n_rows": 2,
+     "parent": "div.writer_info",
+     "rows": [
+      [
+       "TH:的中率",
+       "今節 50.0%",
+       "年間 52.0%"
+      ],
+      [
+       "TH:回収率",
+       "今節 71.2%",
+       "年間 78.4%"
+      ]
+     ]
+    },
+    {
+     "class": "sign_head",
+     "id": null,
+     "n_rows": 7,
+     "parent": "div.sign_wrap",
+     "rows": [
+      [
+       "TH:枠",
+       "TH:登録番号/級別 氏名"
+      ],
+      [
+       "TH:1",
+       "5136 / A1 濱野…(15)"
+      ],
+      [
+       "TH:2",
+       "5336 / B1 瀬川…(15)"
+      ],
+      [
+       "TH:3",
+       "5178 / B1 成貞…(15)"
+      ],
+      [
+       "TH:4",
+       "5183 / B1 中野…(15)"
+      ]
+     ]
+    },
+    {
+     "class": "sign_table",
+     "id": null,
+     "n_rows": 27,
+     "parent": "div.sign_in",
+     "rows": [
+      [
+       "TH:写真",
+       "TH:支部/出身地 年齢/体重",
+       "TH:直前気配 [title]",
+       "TH:コンピ 指数",
+       "TH:F数 L数 平均ST",
+       "TH:全国",
+       "TH:当地",
+       "TH:モーター",
+       "TH:ボート",
+       "TH: [under]",
+       "TH:レースNo（艇番色） 進入コース STタ…(27)",
+       "TH:早見"
+      ],
+      [
+       "TH:行き足",
+       "TH:回り足",
+       "TH:ピット 離れ",
+       "TH:モーター 評価",
+       "TH:勝率 2連率 3連率",
+       "TH:勝率 2連率 3連率",
+       "TH:No 2連率",
+       "TH:No 2連率"
+      ],
+      [
+       "TH:初日",
+       "TH:2日目",
+       "TH:3日目",
+       "TH:4日目",
+       "TH:5日目",
+       "TH:最終日",
+       "TH:"
+      ],
+      [
+       " [thumb]",
+       "香川/香川 26歳/-",
+       "",
+       "",
+       "",
+       "",
+       "60 [compi.m-red]",
+       "F0 L0 0.14",
+       "6.16 47.9 57…(14)",
+       "5.93 41.3 55…(14)",
+       "60 32.7",
+       "11 28.7",
+       "今 節 成 績 [sign_table_conh]",
+       "4 [waku1]"
+      ],
+      [
+       "1",
+       "4",
+       "3",
+       "5",
+       "6",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       ""
+      ]
+     ]
+    },
+    {
+     "class": "comment_table",
+     "id": null,
+     "n_rows": 6,
+     "parent": "section.m-section.comment",
+     "rows": [
+      [
+       "TH:濱野 斗馬",
+       "【 前日 】レースができ…(33)"
+      ],
+      [
+       "TH:瀬川 大地",
+       "【 前日 】エンジンは普…(33)"
+      ],
+      [
+       "TH:成貞 琳平",
+       "【 前日 】足はいたって…(35)"
+      ],
+      [
+       "TH:中野 孝二",
+       "【 前日 】スリット手前…(34)"
+      ],
+      [
+       "TH:尾道 佳諭",
+       "【 前日 】マシにはなっ…(37)"
+      ]
+     ]
+    },
+    {
+     "class": "start_table",
+     "id": null,
+     "n_rows": 7,
+     "parent": "section.start",
+     "rows": [
+      [
+       "TH:コース",
+       "TH:並び",
+       "TH:ST",
+       "TH:展示 タイム",
+       "TH:一周 タイム",
+       "TH:回り足 タイム"
+      ],
+      [
+       "",
+       "",
+       "",
+       "",
+       "",
+       ""
+      ],
+      [
+       "",
+       "",
+       "",
+       "",
+       "",
+       ""
+      ],
+      [
+       "",
+       "",
+       "",
+       "",
+       "",
+       ""
+      ],
+      [
+       "",
+       "",
+       "",
+       "",
+       "",
+       ""
+      ]
+     ]
+    },
+    {
+     "class": "exp_table",
+     "id": null,
+     "n_rows": 9,
+     "parent": "div.exp_compi",
+     "rows": [
+      [
+       "TH:推奨順",
+       "TH:買い目",
+       "TH:結果"
+      ],
+      [
+       "1",
+       "",
+       ""
+      ],
+      [
+       "2",
+       "",
+       ""
+      ],
+      [
+       "3",
+       "",
+       ""
+      ],
+      [
+       "4",
+       "",
+       ""
+      ]
+     ]
+    }
+   ],
+   "forms": [],
+   "links": [
+    {
+     "text": "コンピ指数",
+     "href": "https://nikkansports.raceyosou.jp/data/boatrace/tokuyama/compi_20261005.pdf"
+    },
+    {
+     "text": "オッズ/結果",
+     "href": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/result/pc/20261005/18/1"
+    },
+    {
+     "text": "10R",
+     "href": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20261005/10"
+    },
+    {
+     "text": "４",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261002&jcd=18&rno=04"
+    },
+    {
+     "text": "３",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261002&jcd=18&rno=11"
+    },
+    {
+     "text": "２",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261003&jcd=18&rno=07"
+    },
+    {
+     "text": "４",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261003&jcd=18&rno=12"
+    },
+    {
+     "text": "３",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261004&jcd=18&rno=02"
+    },
+    {
+     "text": "6R",
+     "href": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20261005/6"
+    },
+    {
+     "text": "４",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261002&jcd=18&rno=03"
+    },
+    {
+     "text": "３",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261003&jcd=18&rno=05"
+    },
+    {
+     "text": "４",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261003&jcd=18&rno=11"
+    },
+    {
+     "text": "５",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261004&jcd=18&rno=02"
+    },
+    {
+     "text": "５",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261004&jcd=18&rno=11"
+    },
+    {
+     "text": "8R",
+     "href": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20261005/8"
+    },
+    {
+     "text": "４",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261002&jcd=18&rno=08"
+    },
+    {
+     "text": "５",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261003&jcd=18&rno=02"
+    },
+    {
+     "text": "２",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261003&jcd=18&rno=11"
+    },
+    {
+     "text": "３",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261004&jcd=18&rno=05"
+    },
+    {
+     "text": "５",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261004&jcd=18&rno=09"
+    },
+    {
+     "text": "9R",
+     "href": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20261005/9"
+    },
+    {
+     "text": "３",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261002&jcd=18&rno=01"
+    },
+    {
+     "text": "４",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261002&jcd=18&rno=07"
+    },
+    {
+     "text": "５",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261003&jcd=18&rno=05"
+    },
+    {
+     "text": "２",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261004&jcd=18&rno=04"
+    },
+    {
+     "text": "３",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261004&jcd=18&rno=08"
+    },
+    {
+     "text": "7R",
+     "href": "https://nikkansports.raceyosou.jp/boatrace/tokuyama/20261005/7"
+    },
+    {
+     "text": "５",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261002&jcd=18&rno=02"
+    },
+    {
+     "text": "２",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261002&jcd=18&rno=11"
+    },
+    {
+     "text": "３",
+     "href": "https://boatrace.jp/owpc/pc/race/raceresult?hd=20261003&jcd=18&rno=10"
+    }
+   ],
+   "headings": [
+    "",
+    "10/5 スカパー！・ＪＬＣ杯徳山ルーキーシリーズ第１８戦（…(34)",
+    "渕上記者 密着予想 1R",
+    "渕上記者 直前気配 1R",
+    "選手コメント 1R",
+    "オリジナル展示情報 1R",
+    "ＡＩ予想 1R",
+    "コンピ予想 1R",
+    "1マーク予想 1R",
+    "ボートＡＩ予想",
+    "ボートＡＩ予想自信度",
+    "コンピ指数",
+    "過去の直前予想",
+    "スカパー！・ＪＬＣ杯徳山ルーキーシリーズ第１８戦",
+    "マンスリーＢＯＡＴＲＡＣＥ杯争奪戦",
+    "ダイヤモンドカップ",
+    "にっぽん未来プロジェクト競走ｉｎ徳山",
+    "ｔｙｓテレビ山口杯争奪戦",
+    "黒神杯争奪戦",
+    "第４０回レディースチャンピオン"
+   ]
+  },
+  "nikkan_root": {
+   "url": "http://nikkansports.raceyosou.jp/boatrace/",
+   "final": "https://nikkansports.raceyosou.jp/boatrace/portal/",
+   "status": 200,
+   "len": 38125,
+   "title": "日刊スポーツボートレース予想情報",
+   "tables": [
+    {
+     "class": "",
+     "id": "cal_table",
+     "n_rows": 17,
+     "parent": "div.",
+     "rows": [
+      [
+       "TH:9月",
+       "TH:10月",
+       "TH:11月",
+       "TH:12月"
+      ],
+      [
+       "TH:27 日 [sun]",
+       "TH:28 月",
+       "TH:29 火",
+       "TH:30 水",
+       "TH:1 木",
+       "TH:2 金",
+       "TH:3 土 [sat]",
+       "TH:4 日 [sun]",
+       "TH:5 月",
+       "TH:6 火",
+       "TH:7 水",
+       "TH:8 木",
+       "TH:9 金",
+       "TH:10 土 [sat]"
+      ],
+      [
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "第７回日刊大衆杯 [s_grade4]",
+       "",
+       "",
+       "第１１回加藤峻二杯 [s_grade4]",
+       "",
+       "",
+       "第１５回マスターズＶＳル…(16) [s_grade4]",
+       ""
+      ],
+      [
+       "",
+       "",
+       "",
+       "中日スポーツシルバーカッ…(13) [s_grade4]",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "ＢＴＳ玉川２８周年記念Ｗ…(18) [s_grade4]",
+       "",
+       "",
+       "",
+       ""
+      ],
+      [
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "",
+       "生誕２５周年記念トコタン…(15) [s_grade4]",
+       "",
+       "",
+       "",
+       ""
+      ]
+     ]
+    }
+   ],
+   "forms": [],
+   "links": [],
+   "headings": [
+    "ボートレース予想情報 戸田・浜名湖・常滑・津・びわこ・住之江…(58)",
+    "2026年10月4日",
+    "2026年10月5日",
+    "戸田 2日目",
+    "浜名湖 最終日",
+    "常滑 非開催",
+    "津 5日目",
+    "びわこ 2日目",
+    "住之江 4日目",
+    "尼崎 4日目",
+    "児島 非開催",
+    "徳山 3日目",
+    "下関 4日目",
+    "若松 非開催",
+    "芦屋 非開催",
+    "福岡 4日目",
+    "からつ 5日目",
+    "大村 非開催",
+    "戸田 3日目",
+    "浜名湖 －"
+   ]
+  },
+  "nikkan_top": {
+   "url": "http://nikkansports.raceyosou.jp/",
+   "status": 404,
+   "err": null
+  },
+  "kiryu_timedata": {
+   "url": "https://www.kiryu-kyotei.com/modules/raceinfo/?page=index_timedata",
+   "final": "https://www.kiryu-kyotei.com/modules/raceinfo/?page=index_timedata",
+   "status": 200,
+   "len": 12848,
+   "title": "BOAT RACE 桐生 Official Site - レース情報",
+   "tables": [],
+   "forms": [],
+   "links": [],
+   "headings": [
+    "選手・タイムデータ"
+   ]
+  },
+  "amagasaki_raceinfo": {
+   "url": "https://www.boatrace-amagasaki.jp/modules/raceinfo/",
+   "final": "https://www.boatrace-amagasaki.jp/modules/raceinfo/",
+   "status": 200,
+   "len": 47915,
+   "title": "ボートレース尼崎 Official Site - シリーズインデックス",
+   "tables": [],
+   "forms": [],
+   "links": [
+    {
+     "text": "SG第73回ボートレ…(16)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/assen?jcd=13&hd=20261027"
+    },
+    {
+     "text": "レース展望",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_tenbo&target_day=20261027"
+    },
+    {
+     "text": "にっぽん未来プロジェ…(18)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/assen?jcd=13&hd=20261020"
+    },
+    {
+     "text": "レース展望",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_tenbo&target_day=20261020"
+    },
+    {
+     "text": "楽天銀行賞",
+     "href": "https://www.boatrace.jp/owpc/pc/race/assen?jcd=13&hd=20261013"
+    },
+    {
+     "text": "レース展望",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_tenbo&target_day=20261013"
+    },
+    {
+     "text": "BTS京丹後開設11…(16)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=13&hd=20261004"
+    },
+    {
+     "text": "レース展望",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_tenbo&target_day=20261001"
+    },
+    {
+     "text": "レース結果一覧",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_resultlist&resultday=20261004"
+    },
+    {
+     "text": "にっぽん未来プロジェ…(18)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=13&hd=20260929"
+    },
+    {
+     "text": "レース展望",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_tenbo&target_day=20260924"
+    },
+    {
+     "text": "レース結果一覧",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_resultlist&resultday=20260929"
+    },
+    {
+     "text": "優勝者 馬場 貴也",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_winner&target_day=20260929&race=12"
+    },
+    {
+     "text": "BTS鳥取開設15周…(19)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=13&hd=20260921"
+    },
+    {
+     "text": "レース展望",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_tenbo&target_day=20260916"
+    },
+    {
+     "text": "レース結果一覧",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_resultlist&resultday=20260921"
+    },
+    {
+     "text": "優勝者 萩原 秀人",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_winner&target_day=20260921&race=12"
+    },
+    {
+     "text": "第25回報知ローズカ…(15)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=13&hd=20260911"
+    },
+    {
+     "text": "レース展望",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_tenbo&target_day=20260907"
+    },
+    {
+     "text": "レース結果一覧",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_resultlist&resultday=20260911"
+    },
+    {
+     "text": "優勝者 古結 宏",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_winner&target_day=20260911&race=12"
+    },
+    {
+     "text": "尼崎あきんど倶楽部3…(16)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=13&hd=20260905"
+    },
+    {
+     "text": "レース展望",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_tenbo&target_day=20260901"
+    },
+    {
+     "text": "レース結果一覧",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_resultlist&resultday=20260905"
+    },
+    {
+     "text": "優勝者 平田 忠則",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_winner&target_day=20260905&race=12"
+    },
+    {
+     "text": "スポーツニッポン杯争…(48)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=13&hd=20260829"
+    },
+    {
+     "text": "レース展望",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_tenbo&target_day=20260824"
+    },
+    {
+     "text": "レース結果一覧",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_resultlist&resultday=20260829"
+    },
+    {
+     "text": "優勝者 山崎 郡",
+     "href": "https://www.boatrace-amagasaki.jp/modules/raceinfo/?page=index_winner&target_day=20260829&race=12"
+    },
+    {
+     "text": "JANBARI.TV…(19)",
+     "href": "https://www.boatrace.jp/owpc/pc/race/raceindex?jcd=13&hd=20260821"
+    }
+   ],
+   "headings": [
+    "シリーズインデックス",
+    "SG第73回ボートレースダービー",
+    "にっぽん未来プロジェクト競走in尼崎",
+    "楽天銀行賞",
+    "BTS京丹後開設11周年記念競走",
+    "にっぽん未来プロジェクト競走in尼崎",
+    "BTS鳥取開設15周年記念 鳥取市長杯",
+    "第25回報知ローズカップ争奪戦",
+    "尼崎あきんど倶楽部30周年記念杯",
+    "スポーツニッポン杯争奪 第36回しらなみ賞競走～インプールを…(48)",
+    "JANBARI.TV ういちの放浪記杯"
+   ]
+  },
+  "boatrace_sp_suminoe": {
+   "url": "https://boatrace-sp.jp/suminoe_yosou_comment/",
+   "final": "https://boatrace-sp.jp/suminoe_yosou_comment/",
+   "status": 200,
+   "len": 2938,
+   "title": "選手コメントを公開！関西スポーツ新聞5社 in ボートレース住之江",
+   "tables": [],
+   "forms": [],
+   "links": [],
+   "headings": []
+  }
+ },
+ "robots": {
+  "https://boatrace-sp.jp/robots.txt": "none (404)",
+  "http://nikkansports.raceyosou.jp/robots.txt": "none (404)",
+  "http://www.mikuniks-web.jp/robots.txt": "none (404)",
+  "https://www2.mikuniks-web.jp/robots.txt": "none (404)"
+ },
+ "terms": {
+  "www.nikkansports.com": {
+   "url": "https://www.nikkansports.com/policy/copyright.html",
+   "clauses": [
+    "著作権について : 日刊スポーツ 日刊スポーツのニュースサイト、ニッカンスポーツ・コムです。",
+    "サイトのナビゲーションへ移動 このページの本文へ移動 トピックスナビゲーションへ移動 フッターナビゲーションへ移動 サイトナビ ログイン 会員登録 マイアカウント ログアウト ここからこのサイトのナビゲーションです このページの先頭へ戻る このページの本文へ移動 トピックスナビゲーションへ移動 フッターナビゲーションへ移動 グローバルナビ ホーム 会員限定 野球 ＭＬＢ サッカー スポーツ ゴルフ 大相撲 バトル 競馬 公営競技 芸能 ",
+    "私的使用のための複製、引用を除き、著作権者の許諾なしに無断で複製、翻訳、有線送信、放送、出版、販売、貸与、改変などの行為はできません。",
+    "違反者は、著作権法によって罰せられます。",
+    "また強くな… 9 高市首相も避けられなかった政権の「鬼門」簗和生農… 10 【阪神】広島駅長が粋な計らい リーグV祝福ホワイ… もっと見る 24時間 1 【阪神】佐藤輝明「放送事故!」森下翔太ビールかけ… 2 【阪神】新幹線には猛虎ファン多数、歴史が変わる瞬… 3 【阪神】藤川球児監督が男泣き 優勝決定直後の問い… 4 【阪神】広島駅長が粋な計らい リーグV祝福ホワイ… 5 【阪神】球団初の連覇!岡田顧問「誰もやってない」… 6 U-2",
+    "すべての 著作権 は日刊スポーツNEWSに帰属します。"
+   ]
+  }
+ }
+}
