@@ -1,0 +1,64 @@
+{
+ "tsu": {
+  "ok": false,
+  "checked": "2026-10-04"
+ },
+ "tokuyama": {
+  "ok": true,
+  "ever": true,
+  "checked": "2026-10-04"
+ },
+ "toda": {
+  "ok": false,
+  "checked": "2026-10-04"
+ },
+ "suminoe": {
+  "ok": false,
+  "checked": "2026-10-04"
+ },
+ "shimonoseki": {
+  "ok": false,
+  "checked": "2026-10-04"
+ },
+ "kojima": {
+  "ok": false,
+  "checked": "2026-10-04"
+ },
+ "karatsu": {
+  "ok": false,
+  "checked": "2026-10-04"
+ },
+ "hamanako": {
+  "ok": false,
+  "checked": "2026-10-04"
+ },
+ "fukuoka": {
+  "ok": false,
+  "checked": "2026-10-04"
+ },
+ "biwako": {
+  "ok": true,
+  "ever": true,
+  "checked": "2026-10-04"
+ },
+ "amagasaki": {
+  "ok": false,
+  "checked": "2026-10-04"
+ },
+ "omura": {
+  "ok": false,
+  "checked": "2026-10-04"
+ },
+ "ashiya": {
+  "ok": false,
+  "checked": "2026-10-04"
+ },
+ "wakamatsu": {
+  "ok": false,
+  "checked": "2026-10-04"
+ },
+ "tokoname": {
+  "ok": false,
+  "checked": "2026-10-04"
+ }
+}
