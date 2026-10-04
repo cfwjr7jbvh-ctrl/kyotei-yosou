@@ -174,12 +174,13 @@ function pickHTML(r) {
 }
 
 // ---- 荒れ度 ----
-// 万舟(3連単1万円以上)になる確率で5段階。区切りは検証期間の全レースの分布の20/40/60/80%点
-const ARASHI_CUTS = [0.14, 0.165, 0.19, 0.22];
+// 1号艇が負ける確率で5段階(区切りは過去約1.7万レースの20/40/60/80%点)。万舟の確率より当たる(AUC 0.72 対 0.60)。
+// 過去の実際: 1号艇が負けた割合 20% / 32% / 43% / 55% / 74%、3連単の払戻の中央値 1,490 / 2,030 / 2,620 / 3,160 / 3,505円
+const ARASHI_CUTS = [0.28, 0.37, 0.48, 0.63];
 const ARASHI_WORD = ["", "堅い", "やや堅い", "ふつう", "荒れ気味", "大荒れ注意"];
 function arashiLevel(r) {
   const a = r.arashi;
-  return a && a.manshu != null ? 1 + ARASHI_CUTS.filter((c) => a.manshu >= c).length : 0;
+  return a && a.in_lose != null ? 1 + ARASHI_CUTS.filter((c) => a.in_lose >= c).length : 0;
 }
 function arashiHTML(r) {
   const a = r.arashi;
