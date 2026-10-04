@@ -6,7 +6,9 @@ from __future__ import annotations
 
 import itertools
 import re
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 import requests
@@ -33,6 +35,40 @@ def fetch(page: str, jcd: int, rno: int, hd: str, wait: float = 1.0) -> str | No
             pass
         time.sleep(3 * (attempt + 1))
     return None
+
+
+_lock = threading.Lock()
+_tls = threading.local()
+
+
+def fetch_many(reqs: list[tuple], workers: int = 4, gap: float = 0.5) -> list[str | None]:
+    """reqs: [(ページ, 場, R, 日付), ...] を同時に数本ずつ取る。
+    公式サイトは1ページの応答に約10秒かかるので、順番に取ると直前予想の1周が長くなる。
+    同時に待つ本数を増やすだけで、リクエストを始める間隔は gap 秒以上あける(サイトへの負荷は小さいまま)。"""
+    def one(r):
+        page, jcd, rno, hd = r
+        url = f"{BASE}/{page}?rno={rno}&jcd={int(jcd):02d}&hd={hd}"
+        sess = getattr(_tls, "s", None)
+        if sess is None:
+            sess = _tls.s = requests.Session()
+        for attempt in range(3):
+            with _lock:
+                d = time.time() - _last[0]
+                if d < gap:
+                    time.sleep(gap - d)
+                _last[0] = time.time()
+            try:
+                res = sess.get(url, headers=UA, timeout=30)
+                if res.status_code == 200:
+                    return res.text
+            except requests.RequestException:
+                pass
+            time.sleep(3 * (attempt + 1))
+        return None
+    if not reqs:
+        return []
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        return list(ex.map(one, reqs))
 
 
 def _num(s: str):

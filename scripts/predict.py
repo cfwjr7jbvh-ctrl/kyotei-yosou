@@ -26,7 +26,7 @@ from kyotei.betting import COMBOS, blend, entropy, market_probs, model_tri_probs
 from kyotei.data import load_history  # noqa: E402
 from kyotei.parse_lzh import parse_program, parse_result  # noqa: E402
 from kyotei.publish import read_json, write_check, write_json  # noqa: E402
-from kyotei.scrape import fetch, parse_beforeinfo, parse_odds3t, parse_raceresult  # noqa: E402
+from kyotei.scrape import fetch, fetch_many, parse_beforeinfo, parse_odds3t, parse_raceresult  # noqa: E402
 from kyotei.arashi import IN_LOSE_MIN, arashi  # noqa: E402
 from kyotei.notify import notify_bets  # noqa: E402
 from kyotei.tenkai import tenkai, traits  # noqa: E402
@@ -306,18 +306,17 @@ def backfill_own(day: dt.date):
 def attach_results(data: dict, t: dt.datetime, hd: str, limit: int = 40) -> int:
     """締切から6分〜14時間(その日のうち)のレースの結果(3連単・払戻・決まり手)を公式サイトから取り、的中を付ける。
     翌朝の答え合わせ(score_day)を待たずに、現地で結果と的中が見られるようにする。1レースにつき結果が出るまで取りに行く。"""
-    n = got = 0
+    cand = []
     for race in data["races"]:
         if race.get("result") or not race.get("deadline"):
             continue
         hh, mm = map(int, race["deadline"].split(":"))
         dl = t.replace(hour=hh, minute=mm, second=0, microsecond=0)
-        if not (dl + dt.timedelta(minutes=6) <= t <= dl + dt.timedelta(hours=14)):
-            continue
-        if n >= limit:
-            break
-        n += 1
-        html = fetch("raceresult", race["jcd"], race["rno"], hd)
+        if dl + dt.timedelta(minutes=6) <= t <= dl + dt.timedelta(hours=14):
+            cand.append(race)
+    cand = cand[:limit]
+    n, got = len(cand), 0
+    for race, html in zip(cand, fetch_many([("raceresult", r["jcd"], r["rno"], hd) for r in cand])):
         res = parse_raceresult(html) if html else None
         if not res:
             continue
@@ -357,28 +356,35 @@ def live(day: dt.date, ahead_min: int = 35):
         bi_cache = {}
     perf = {"started": t.strftime("%H:%M:%S"), "window": 0, "beforeinfo": 0, "beforeinfo_cached": 0, "odds": 0,
             "sec_fetch": 0.0, "sec_predict": 0.0}
+    has_ex = lambda info: any(np.isfinite(b.get("exhibit_time", np.nan)) for b in info.get("boats", {}).values())  # noqa: E731
+    # 締切前のレースを選び、必要なページを先にまとめて並行で取る(公式サイトは1ページ約10秒かかる)
+    win = []
     for i, race in enumerate(data["races"]):
         if not race.get("deadline"):
             continue
         hh, mm = map(int, race["deadline"].split(":"))
         dl = t.replace(hour=hh, minute=mm, second=0, microsecond=0)
-        if not (t - dt.timedelta(minutes=1) <= dl <= t + dt.timedelta(minutes=ahead_min)):
-            continue
+        if t - dt.timedelta(minutes=1) <= dl <= t + dt.timedelta(minutes=ahead_min):
+            win.append((i, race, dl))
+    perf["window"] = len(win)
+    need = [race for _, race, _ in win if not ((c := bi_cache.get(race["race_id"])) and c["complete"]
+                                               and (now() - c["at"]).total_seconds() < 12 * 60)]
+    perf["beforeinfo"], perf["beforeinfo_cached"] = len(need), len(win) - len(need)
+    t1 = time.time()
+    for race, html in zip(need, fetch_many([("beforeinfo", r["jcd"], r["rno"], hd) for r in need])):
+        info = parse_beforeinfo(html) if html else {"boats": {}}
+        bx = info.get("boats", {})
+        done = len(bx) >= 5 and all(np.isfinite(b.get("exhibit_time", np.nan)) for b in bx.values())
+        bi_cache[race["race_id"]] = {"at": now(), "info": info, "complete": done}
+    ready = [race for _, race, _ in win if race["race_id"] in bi_cache and has_ex(bi_cache[race["race_id"]]["info"])]
+    odds_html = dict(zip([r["race_id"] for r in ready],
+                         fetch_many([("odds3t", r["jcd"], r["rno"], hd) for r in ready])))
+    perf["odds"] = len(ready)
+    perf["sec_fetch"] = time.time() - t1
+    for i, race, dl in win:
         rdf = df[df["race_id"] == race["race_id"]].copy()
-        perf["window"] += 1
         c = bi_cache.get(race["race_id"])
-        if c and c["complete"] and (now() - c["at"]).total_seconds() < 12 * 60:
-            info = c["info"]
-            perf["beforeinfo_cached"] += 1
-        else:
-            t1 = time.time()
-            html = fetch("beforeinfo", race["jcd"], race["rno"], hd)
-            perf["sec_fetch"] += time.time() - t1
-            perf["beforeinfo"] += 1
-            info = parse_beforeinfo(html) if html else {"boats": {}}
-            bx = info.get("boats", {})
-            done = len(bx) >= 5 and all(np.isfinite(b.get("exhibit_time", np.nan)) for b in bx.values())
-            bi_cache[race["race_id"]] = {"at": now(), "info": info, "complete": done}
+        info = c["info"] if c else {"boats": {}}
         boats = info.get("boats", {})
         if not boats or all(not np.isfinite(b.get("exhibit_time", np.nan)) for b in boats.values()):
             continue  # 展示前
@@ -396,10 +402,7 @@ def live(day: dt.date, ahead_min: int = 35):
         if wind_tab is not None:
             rdf = features.apply_wind(rdf, wind_tab)
         rdf = features.add_late(rdf)
-        t1 = time.time()
-        oh = fetch("odds3t", race["jcd"], race["rno"], hd)
-        perf["sec_fetch"] += time.time() - t1
-        perf["odds"] += 1
+        oh = odds_html.get(race["race_id"])
         od = parse_odds3t(oh) if oh else {}
         mins = round((dl - now()).total_seconds() / 60, 1)  # 締切まで何分の時点のオッズか
         odds_rows += [{"race_id": race["race_id"], "min_before": mins, "combo": c, "odds": v}
