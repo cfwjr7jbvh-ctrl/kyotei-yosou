@@ -23,6 +23,7 @@ from kyotei.notify import SITE_URL, push  # noqa: E402
 
 REPORT = ROOT / "reports/model_report.json"
 STATUS = ROOT / "reports/edge_status.json"
+UPSET = ROOT / "reports/upset_eval.json"
 MIN_BETS = 300
 
 
@@ -47,6 +48,11 @@ def main():
         print("レポートがありません")
         return
     rep = json.loads(REPORT.read_text(encoding="utf-8"))
+    # 荒れ狙いの追試は全期間の検証(upset_eval.py --walk-forward)の結果を正とする
+    if UPSET.exists():
+        up = json.loads(UPSET.read_text(encoding="utf-8"))
+        if up.get("mode") == "walk_forward" and up.get("confirm"):
+            rep["arashi_confirm"] = up["confirm"]
     now = judge(rep)
     before = json.loads(STATUS.read_text(encoding="utf-8")) if STATUS.exists() else {"edge": False, "arashi_passed": False}
     msgs = []

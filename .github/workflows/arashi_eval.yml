@@ -1,0 +1,43 @@
+name: 荒れ狙いの検証(全期間)
+
+# 集めた過去オッズの全期間で、その時点より前のデータだけで学習したモデルの予想を使い、
+# 「荒れ狙い」の回収率を検証する(scripts/upset_eval.py --walk-forward)。
+# 合格(追試)したら次の学習で本番の買い目が切り替わり、勝てる根拠が出たら LINE で知らせる。
+on:
+  workflow_run:
+    workflows: ["過去オッズ取得(検証用)"]
+    types: [completed]
+  workflow_dispatch:
+  schedule:
+    - cron: "37 19 * * 3"   # 毎週木曜 4:37 JST(保険)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: arashi
+  cancel-in-progress: false
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    env:
+      SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+      LINE_CHANNEL_TOKEN: ${{ secrets.LINE_CHANNEL_TOKEN }}
+      LINE_USER_ID: ${{ secrets.LINE_USER_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - name: 全期間で検証
+        run: python scripts/upset_eval.py --walk-forward --cache "$RUNNER_TEMP/wf.pkl"
+      - name: 勝てる根拠が出たか判定(変わったら LINE で知らせる)
+        run: python scripts/edge_check.py || true
+      - name: 結果をコミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add reports/upset_eval.json reports/edge_status.json
+          if git commit -q -m "[CI Skip] report: 荒れ狙いの検証(全期間)"; then bash scripts/push.sh; else echo "no changes"; fi
