@@ -27,6 +27,7 @@ from kyotei.data import load_history  # noqa: E402
 from kyotei.parse_lzh import parse_program, parse_result  # noqa: E402
 from kyotei.publish import read_json, write_check, write_json  # noqa: E402
 from kyotei.scrape import fetch, parse_beforeinfo, parse_odds3t  # noqa: E402
+from kyotei.tenkai import tenkai, traits  # noqa: E402
 
 JST = dt.timezone(dt.timedelta(hours=9))
 DAYS = ROOT / "docs/data/days"
@@ -88,13 +89,16 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
             "motor_2rate": b.get("motor_2rate"), "exhibit_time": b.get("exhibit_time"),
             "course": b.get("course"), "ex_st": b.get("ex_st"),
             "p_win": round(float(w[int(b["lane"]) - 1]), 4)}.items()})
+        boats[-1]["traits"] = traits(b)  # 選手の特性(決まり手の得意度・ST・前づけ・当地・モーターなど)
+    # 展開予測: 決まり手の確率と、勝ち筋(誰がどの決まり手で勝つか)
+    tk = tenkai([b for _, b in rdf.iterrows()], {int(l): float(w[int(l) - 1]) for l in rdf["lane"]}, stage == "late")
     out = {"race_id": r0["race_id"], "jcd": int(r0["jcd"]), "venue": VENUES.get(int(r0["jcd"]), ""),
            "rno": int(r0["rno"]), "deadline": r0.get("deadline"), "race_type": r0.get("race_type"),
            "stage": stage, "updated_at": now().strftime("%H:%M"), "boats": boats,
            "top": [{"combo": COMBOS[i], "prob": round(float(p_final[i]), 4),
                     **({"odds": float(odds[i])} if odds is not None and np.isfinite(odds[i]) else {})}
                    for i in top],
-           "bets": bets}
+           "bets": bets, "tenkai": tk}
     if market is not None:
         out["market_top"] = [{"combo": COMBOS[i], "prob": round(float(market[i]), 4)}
                              for i in np.argsort(-market)[:3]]

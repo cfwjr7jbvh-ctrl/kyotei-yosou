@@ -82,6 +82,37 @@ function marksOf(r) {
   return Object.fromEntries(order.slice(0, 4).map((lane, i) => [lane, MARKS[i]]));
 }
 
+// ---- 選手の特性(目立つものを最大3つ) ----
+// ST の表示(.12、フライングは F.01)
+const fmtST = (v) => (v < 0 ? "F" : "") + Math.abs(v).toFixed(2).slice(1);
+function courseOf(r, b) { return r.stage === "late" && b.course ? b.course : b.lane; }
+function traitChips(r, b) {
+  const t = b.traits || {};
+  const c = courseOf(r, b);
+  const chips = [];
+  const add = (text, tone = "") => chips.push(`<span class="chip ${tone}">${text}</span>`);
+  if (c === 1 && t.nige != null && (t.nige >= 0.63 || t.nige < 0.39)) add(`逃げ率${Math.round(t.nige * 100)}%`, t.nige >= 0.63 ? "plus" : "minus");
+  if (c > 1) {
+    const types = [["まくり", t.makuri, 0.048], ["差し", t.sashi, 0.042], ["まくり差し", t.mz, 0.040]]
+      .filter(([, v, th]) => v != null && v >= th).sort((a, b) => b[1] / b[2] - a[1] / a[2]);
+    if (types.length) add(`${types[0][0]}型`, "plus");
+  }
+  const st = t.st_pred != null && r.stage === "late" ? t.st_pred : t.st;
+  if (st != null && st <= 0.144) add(`ST速い ${fmtST(st)}`, "plus");
+  else if (st != null && st >= 0.19) add(`ST遅め ${fmtST(st)}`, "minus");
+  else if (t.st_sd != null && t.st_sd <= 0.056) add("ST安定", "plus");
+  if (t.series != null && t.series >= 0.31) add("今節の足◎", "plus");
+  else if (t.motor != null && t.motor >= 0.165) add("モーター◎", "plus");
+  else if (t.series != null && t.series <= -0.27) add("今節の足△", "minus");
+  else if (t.motor != null && t.motor <= -0.15) add("モーター△", "minus");
+  if (c > 1 && r.stage !== "late" && t.front != null && t.front >= 0.054) add("前づけあり");
+  if (t.local != null && t.top3 != null && t.local - t.top3 >= 0.072) add("当地◎", "plus");
+  if (t.f != null && t.f >= 1) add("F持ち", "minus");
+  if (t.rough != null && t.top3 != null && t.rough - t.top3 >= 0.056) add("荒れ水面◎", "plus");
+  if (t.growth != null && t.growth >= 0.3) add("上り調子", "plus");
+  return chips.length ? `<div class="chips">${chips.slice(0, 3).join("")}</div>` : "";
+}
+
 function boatsHTML(r) {
   const mk = marksOf(r);
   const maxP = Math.max(...r.boats.map((b) => b.p_win));
@@ -100,7 +131,7 @@ function boatsHTML(r) {
       if (Math.abs(d) >= 1) delta = `<span class="delta ${d > 0 ? "up" : "down"}" title="展示前との差">${d > 0 ? "+" : "−"}${Math.abs(d).toFixed(1)}</span>`;
     }
     return `<li class="boat">${tile(b.lane)}<span class="shirushi" aria-label="${mk[b.lane] ? "印 " + mk[b.lane] : ""}">${mk[b.lane] || ""}</span>
-      <div class="who"><b>${esc(b.name)}</b><div class="meta">${meta}</div></div>
+      <div class="who"><b>${esc(b.name)}</b><div class="meta">${meta}</div>${traitChips(r, b)}</div>
       <div class="prob"><span class="pct">${pct1(b.p_win)}<small>%</small></span>${delta}</div>
       <div class="meter" aria-hidden="true"><i class="b${b.lane}" style="width:${Math.max(3, (b.p_win / maxP) * 100)}%"></i></div></li>`;
   }).join("") + `</ol>`;
@@ -134,6 +165,61 @@ function evHTML(r) {
       <div class="e${b.ev >= 1.2 ? " strong" : ""}">${Math.round(b.ev * 100)}<small>%</small><span>期待値</span></div></div>`).join("") + `</div>`;
 }
 
+// ---- 展開予測 ----
+const KIM = ["逃げ", "差し", "まくり", "まくり差し", "その他"];
+function aiLine(r) {
+  const tk = r.tenkai;
+  if (!tk || !tk.kimarite) return "";
+  const k = tk.kimarite;
+  const inBoat = r.boats.find((b) => courseOf(r, b) === 1) || r.boats[0];
+  const parts = [];
+  if (k["逃げ"] >= 0.6) parts.push(`${inBoat.lane}号艇の逃げが本線`);
+  else if (k["逃げ"] >= 0.45) parts.push(`${inBoat.lane}号艇の逃げが優勢、ただし波乱含み`);
+  else parts.push(`インが不安で混戦模様`);
+  const atk = (tk.paths || []).find((p) => p.type !== "逃げ" && p.p >= 0.07);
+  if (atk) parts.push(`${atk.lane}号艇の${atk.type}に注意`);
+  if (r.stage === "late") {
+    const up = r.boats.filter((b) => b.p_win_early != null).map((b) => [b, b.p_win - b.p_win_early]).sort((a, b) => b[1] - a[1])[0];
+    if (up && up[1] >= 0.05) parts.push(`展示で${up[0].lane}号艇の評価が上昇`);
+  } else {
+    const fr = r.boats.find((b) => b.lane > 1 && b.traits && b.traits.front >= 0.076);
+    if (fr) parts.push(`${fr.lane}号艇の前づけで進入が動くかも`);
+  }
+  return `<p class="ai">${parts.slice(0, 3).join("。")}。</p>`;
+}
+
+function slitHTML(r) {
+  const rows = r.boats.map((b) => {
+    const t = b.traits || {};
+    const st = r.stage === "late" && t.st_pred != null ? t.st_pred : t.st;
+    return { b, c: courseOf(r, b), st };
+  }).filter((x) => x.st != null).sort((a, b) => a.c - b.c);
+  if (rows.length < 4) return "";
+  // 内の艇より0.03以上速ければ「攻め」、両隣より0.04以上遅ければ「凹み」
+  const note = (i) => {
+    const me = rows[i].st, inn = rows[i - 1] && rows[i - 1].st, out = rows[i + 1] && rows[i + 1].st;
+    if (inn != null && inn - me >= 0.03 && rows[i].c >= 3) return `<em class="atk">攻め</em>`;
+    if ((inn == null || me - inn >= 0.04) && (out == null || me - out >= 0.04) && i > 0) return `<em class="dent">凹み</em>`;
+    return "";
+  };
+  return `<div class="slit" aria-label="スリット予想(予想ST)">` + rows.map((x, i) => {
+    const pos = Math.min(1, Math.max(0, (0.30 - x.st) / 0.27)) * 100;
+    return `<div class="sl"><span class="sc">${x.c}</span><span class="track"><span class="mk" style="left:calc(${pos}% - 13px)">${tile(x.b.lane)}</span></span>
+      <span class="sv">${fmtST(x.st)}${note(i)}</span></div>`;
+  }).join("") + `</div>`;
+}
+
+function tenkaiHTML(r) {
+  const tk = r.tenkai;
+  if (!tk || !tk.kimarite) return "";
+  const k = tk.kimarite;
+  const seg = KIM.map((n, i) => k[n] > 0.005 ? `<i class="k${i}" style="flex:${k[n]}"></i>` : "").join("");
+  const legend = KIM.filter((n) => k[n] >= 0.01).map((n) => `<span><i class="k${KIM.indexOf(n)}"></i>${n} <b>${Math.round(k[n] * 100)}%</b></span>`).join("");
+  return `<div class="tenkai"><h3>展開予測</h3>
+    <div class="kbar" aria-hidden="true">${seg}</div><div class="klegend">${legend}</div>
+    <h4>スリット予想<small>${r.stage === "late" ? "展示STから" : "平均STから"}・右ほど早い</small></h4>${slitHTML(r)}</div>`;
+}
+
 function resultHTML(r) {
   if (!r.result) return "";
   return `<div class="result">結果 ${tri(r.result.tri_combo)}<span class="pay">${r.result.tri_pay.toLocaleString()}円</span></div>`;
@@ -145,8 +231,8 @@ function stageHTML(r) {
     : `<div class="stage">朝の予想(展示前)</div>`;
 }
 
-// 見る順: 結果 → 本命 → 期待値の買い目 → 各艇 → ほかの候補
-const bodyHTML = (r) => stageHTML(r) + resultHTML(r) + honmeiHTML(r) + evHTML(r) + boatsHTML(r) + combosHTML(r);
+// 見る順: AIのひと言 → 結果 → 本命 → 期待値の買い目 → 展開予測 → 各艇 → ほかの候補
+const bodyHTML = (r) => stageHTML(r) + aiLine(r) + resultHTML(r) + honmeiHTML(r) + evHTML(r) + tenkaiHTML(r) + boatsHTML(r) + combosHTML(r);
 
 function clockHTML(r) {
   const left = minsLeft(r);

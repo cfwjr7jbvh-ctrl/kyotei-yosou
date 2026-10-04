@@ -9,6 +9,7 @@
   --l1:#ffffff; --l1i:#102230; --l2:#17191c; --l2i:#ffffff; --l3:#e3141b; --l3i:#ffffff;
   --l4:#0b5fb4; --l4i:#ffffff; --l5:#f5d00a; --l5i:#102230; --l6:#12904a; --l6i:#ffffff;
   --l1edge:#102230; --l2edge:transparent; --bar1:#8798a7;
+  --k0:#102230; --k1:#3f5d77; --k2:#7b93a8; --k3:#b4c3cf; --k4:#dde4ea;
   --num:"Barlow Condensed","BIZ UDPGothic",sans-serif;
   color-scheme:light;
 }
@@ -18,6 +19,7 @@
     --head:#070d13; --head-mute:#8193a3;
     --mark:#ff4a4f; --live:#2ec4b6; --down:#7d8e9d;
     --l1edge:transparent; --l2edge:#5d6b78; --bar1:#c9d4dc;
+    --k0:#e6edf3; --k1:#9fb3c5; --k2:#6e869b; --k3:#4a6074; --k4:#2c3d4d;
     color-scheme:dark;
   }
 }
@@ -105,6 +107,36 @@ main{max-width:1120px;margin:0 auto;padding:10px 16px 20px}
 .meter i{display:block;height:100%;border-radius:3px}
 .meter .b1{background:var(--bar1)} .meter .b2{background:var(--l2);box-shadow:inset 0 0 0 1px var(--l2edge)}
 .meter .b3{background:var(--l3)} .meter .b4{background:var(--l4)} .meter .b5{background:var(--l5)} .meter .b6{background:var(--l6)}
+
+/* ---- AIのひと言・選手の特性 ---- */
+.ai{margin:8px 0 4px;font-size:16px;font-weight:700;line-height:1.5}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.chip{font-size:11.5px;line-height:1;padding:4px 6px;border-radius:4px;background:var(--soft);color:var(--mute)}
+.chip.plus{background:transparent;box-shadow:inset 0 0 0 1px var(--ink);color:var(--ink);font-weight:700}
+.chip.minus{background:transparent;box-shadow:inset 0 0 0 1px var(--rule);color:var(--down)}
+
+/* ---- 展開予測 ---- */
+.tenkai{margin-top:12px}
+.tenkai h3{margin:0 0 6px;font-size:13px;color:var(--mute);font-weight:700}
+.tenkai h4{margin:12px 0 4px;font-size:13px;color:var(--mute);font-weight:700}
+.tenkai h4 small{font-weight:400;margin-left:8px;font-size:11.5px}
+.kbar{display:flex;height:14px;border-radius:4px;overflow:hidden;gap:2px}
+.kbar i,.klegend i{display:block}
+.k0{background:var(--k0)} .k1{background:var(--k1)} .k2{background:var(--k2)} .k3{background:var(--k3)} .k4{background:var(--k4)}
+.klegend{display:flex;flex-wrap:wrap;column-gap:12px;row-gap:2px;margin-top:6px;font-size:12.5px;color:var(--mute)}
+.klegend span{display:inline-flex;align-items:center;gap:5px}
+.klegend i{width:10px;height:10px;border-radius:2px}
+.klegend b{font-family:var(--num);font-size:15px;color:var(--ink)}
+.slit{display:grid;gap:3px;padding:4px 0}
+.sl{display:grid;grid-template-columns:16px 1fr 70px;align-items:center;gap:8px;height:30px}
+.sc{font-family:var(--num);font-size:13px;color:var(--mute);text-align:center}
+.track{position:relative;height:100%;border-right:2px solid var(--ink);background:linear-gradient(var(--rule),var(--rule)) 0 50%/100% 1px no-repeat}
+.mk{position:absolute;top:1px;transition:left .4s}
+.mk .lane{width:26px;height:26px;font-size:17px}
+.sv{font-family:var(--num);font-size:16px;font-weight:600;white-space:nowrap}
+.sv em{font-style:normal;font-family:"BIZ UDPGothic",sans-serif;font-size:11px;font-weight:700;margin-left:6px;padding:2px 4px;border-radius:3px}
+.sv .atk{color:var(--mark);box-shadow:inset 0 0 0 1px var(--mark)}
+.sv .dent{color:var(--down);box-shadow:inset 0 0 0 1px var(--rule)}
 
 /* ---- 3連単 ---- */
 .picks{margin-top:12px}
@@ -202,6 +234,7 @@ details.row[open]>summary{border-bottom:1px solid var(--rule)}
   .now-grid .sect:first-child{margin-top:4px}
   .cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 }
+@media (prefers-reduced-motion:reduce){.mk{transition:none}}
 @media (prefers-reduced-motion:no-preference){
   .upd .dot{animation:pulse 2s ease-in-out infinite}
   @keyframes pulse{50%{opacity:.35}}
