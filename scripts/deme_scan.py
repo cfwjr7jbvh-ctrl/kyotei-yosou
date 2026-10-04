@@ -7,8 +7,11 @@
   発見期間(前半2年)で良かったものが、確認期間(後半1年、発見に使っていない)でも良いか
 を見る。確認期間でも100%を超え、日ごとに引き直した90%区間の下限も100%を超えたら「根拠あり」。
 
-python scripts/deme_scan.py [--split 2025-10-01] [--min-hits 20]
+python scripts/deme_scan.py [--split 2025-10-01] [--min-hits 20] [--app]
 → reports/deme_scan.json
+--app: アプリの「出目の期待値」用の集計 docs/data/deme.json と、ウォッチリストの追跡 reports/deme_watch.json も作る。
+  deme.json は公開済みの結果から作る過去の集計だけ(モデルの予想は入らない)なので暗号化しない。
+  ウォッチリスト = 2026-10-04 の検証で前半・後半とも回収率100%を超えた買い方。翌日以降のレースだけで成績を数える。
 """
 from __future__ import annotations
 
@@ -24,6 +27,9 @@ import pandas as pd
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 OUT = ROOT / "reports/deme_scan.json"
+APP = ROOT / "docs/data/deme.json"
+WATCH = ROOT / "reports/deme_watch.json"
+CATS = ["優勝戦", "準優勝戦", "選抜・特選", "予選", "一般", "企画レースなど"]
 
 COMBOS = ["-".join(map(str, p)) for p in itertools.permutations(range(1, 7), 3)]
 CIDX = {c: i for i, c in enumerate(COMBOS)}
@@ -144,6 +150,7 @@ def main():
     ap.add_argument("--split", default="2025-10-01")
     ap.add_argument("--min-hits", type=int, default=20, help="発見期間でこの本数以上当たっている買い方だけ見る")
     ap.add_argument("--boot", type=int, default=1000)
+    ap.add_argument("--app", action="store_true")
     a = ap.parse_args()
     r = load()
     strat = strategies()
@@ -212,6 +219,8 @@ def main():
            "corr_disc_conf": corr, "bands": bands, "top_disc": clean(top), "over100_both": clean(both),
            "passed": passed, "checks": clean(picks.sort_values(["strat", "cond"]))}
     OUT.write_text(json.dumps(res, ensure_ascii=False, indent=1), encoding="utf-8")
+    if a.app:
+        app_export(r, res, strat, M, conds)
     print(f"{len(r)}レース {res['period']} / 条件{len(conds)} × 買い方{len(strat)} → 検定{n_tests}件")
     print(f"発見期間で100%超え {len(over_d)}件 → 確認期間でも100%超え {len(both)}件 → 90%区間の下限も100%超え {len(passed)}件")
     print(f"発見と確認の回収率の相関 {corr}")
@@ -223,6 +232,61 @@ def main():
     print("両方100%超え:")
     for x in clean(both):
         print(f"  {x['cond']:22s} {x['strat']:10s} {x['points']:2d}点 発見 {x['roi_disc']:.0%}({x['hits_disc']}本) → 確認 {x['roi_conf']:.0%}({x['hits_conf']}本) 区間 {x['conf_ci90']}")
+
+
+def app_export(r: pd.DataFrame, res: dict, strat, M, conds):
+    """アプリ用: 場×種別、R×種別 ごとに、出目120通りの的中本数と払戻合計(全期間・直近1年)。"""
+    last = (pd.Timestamp(r["date"].max()) - pd.Timedelta(days=365)).strftime("%Y-%m-%d")
+    recent = (r["date"] > last).values
+    ci = r["ci"].values
+    pay = r["tri_pay"].values
+
+    def cell(mask):
+        out = {"n": int(mask.sum()), "n1": int((mask & recent).sum())}
+        for key, m in (("", mask), ("1", mask & recent)):
+            out["h" + key] = np.bincount(ci[m], minlength=120).astype(int).tolist()
+            out["p" + key] = (np.bincount(ci[m], weights=pay[m], minlength=120) / 10).round().astype(int).tolist()  # 10円単位
+        return out
+    cells = {}
+    venues = ["all"] + [JCD[j] for j in sorted(JCD)]
+    for v in venues:
+        mv = np.ones(len(r), bool) if v == "all" else (r["venue"] == v).values
+        for c in ["all"] + CATS:
+            m = mv if c == "all" else mv & (r["cat"] == c).values
+            if m.sum() >= 30:
+                cells[f"{v}|{c}|all"] = cell(m)
+    for rno in range(1, 13):
+        mr = (r["rno"] == rno).values
+        for c in ["all"] + CATS:
+            m = mr if c == "all" else mr & (r["cat"] == c).values
+            if m.sum() >= 30:
+                cells[f"all|{c}|{rno}"] = cell(m)
+    # ウォッチリスト(初回に固定し、以後は翌日からの成績だけ数え直す)
+    if WATCH.exists():
+        watch = json.loads(WATCH.read_text(encoding="utf-8"))
+    else:
+        since = str(r["date"].max())
+        watch = {"since": since, "note": "この日までの検証で前半・後半とも回収率100%超え。この日より後のレースだけで数える",
+                 "items": [{"cond": x["cond"], "strat": x["strat"], "points": x["points"], "roi_disc": x["roi_disc"],
+                            "roi_conf": x["roi_conf"]} for x in res["over100_both"]]}
+    cmask = dict(conds)
+    sidx = {name: j for j, (name, _) in enumerate(strat)}
+    fwd = (r["date"] > watch["since"]).values
+    for it in watch["items"]:
+        j = sidx[it["strat"]]
+        cols = np.where(M[:, j] > 0)[0]
+        m = cmask[it["cond"]] & fwd
+        hit = np.isin(ci[m], cols) if it["strat"][:2] != "人気" else np.isin(r["pi"].values[m], cols)
+        ret = float(pay[m][hit].sum())
+        it["fwd"] = {"races": int(m.sum()), "hits": int(hit.sum()), "ret": ret,
+                     "roi": ret / (m.sum() * it["points"] * 100) if m.sum() else None}
+    WATCH.write_text(json.dumps(watch, ensure_ascii=False, indent=1), encoding="utf-8")
+    from kyotei.publish import write_json
+    write_json(APP, {"updated": str(r["date"].max()), "period": res["period"], "last_from": last, "cats": CATS,
+                     "venues": venues[1:], "cells": cells, "watch": watch,
+                     "scan": {k: res[k] for k in ("races", "n_tests", "n_over100_disc", "n_over100_both", "bands")}
+                     | {"passed": len(res["passed"])}}, encrypt=False)
+    print("app:", len(cells), "cells", f"{APP.stat().st_size / 1e3:.0f}KB", "watch", len(watch["items"]))
 
 
 if __name__ == "__main__":

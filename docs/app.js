@@ -616,6 +616,112 @@ function todayBox() {
     ${block("期待値のある買い目", ev, "")}</div>`;
 }
 
+// ---- 出目の期待値(過去の回収率) ----
+// 公式の結果(2023-10〜)から、条件ごとに「その出目を買い続けたら」の的中と回収率。総当たりの検証(scripts/deme_scan.py)の結果も添える
+const DEME = { data: null, v: "all", c: "all", r: "all", q: "3-256-256" };
+const ALL120 = [];
+for (let a = 1; a <= 6; a++) for (let b = 1; b <= 6; b++) for (let c = 1; c <= 6; c++) if (a !== b && b !== c && a !== c) ALL120.push(`${a}-${b}-${c}`);
+// 「3-256-256」「1-2-全」「BOX135」などを3連単の組に展開する
+function expandDeme(q) {
+  q = String(q || "").replace(/\s/g, "").replace(/[ー－―]/g, "-").replace(/[０-９]/g, (d) => String.fromCharCode(d.charCodeAt(0) - 65248)).toUpperCase();
+  const box = q.match(/^BOX([1-6]{3,6})$/);
+  if (box) { const s = new Set(box[1]); return ALL120.filter((c) => c.split("-").every((x) => s.has(x))); }
+  const parts = q.split("-");
+  if (parts.length !== 3) return [];
+  const sets = parts.map((p) => p === "全" ? new Set("123456") : /^[1-6]+$/.test(p) ? new Set(p) : null);
+  if (sets.some((x) => !x)) return [];
+  return ALL120.filter((c) => c.split("-").every((x, i) => sets[i].has(x)));
+}
+const yen = (v) => Math.round(v).toLocaleString();
+function demeHTML() {
+  const d = DEME.data;
+  if (!d) return `<h3>出目の期待値<small>過去の回収率</small></h3><p>読み込み中…</p>`;
+  const key = `${DEME.r === "all" ? DEME.v : "all"}|${DEME.c}|${DEME.r}`;
+  const cell = d.cells[key];
+  const opt = (vals, cur, lab) => vals.map((v) => `<option value="${esc(v)}"${v === cur ? " selected" : ""}>${esc(lab ? lab(v) : v)}</option>`).join("");
+  const sel = `<div class="dm-sel">
+    <label>場<select data-k="v"${DEME.r !== "all" ? " disabled" : ""}>${opt(["all", ...d.venues], DEME.r === "all" ? DEME.v : "all", (v) => v === "all" ? "全場" : v)}</select></label>
+    <label>種別<select data-k="c">${opt(["all", ...d.cats], DEME.c, (v) => v === "all" ? "すべて" : v)}</select></label>
+    <label>R<select data-k="r">${opt(["all", ...Array.from({ length: 12 }, (_, i) => String(i + 1))], DEME.r, (v) => v === "all" ? "すべて" : v + "R")}</select></label></div>`;
+  let body = "";
+  if (!cell) body = `<p>この条件はレースが少ないので出していません。</p>`;
+  else {
+    const roi = (h, p, n, k = 1) => n ? (p * 10) / (n * k * 100) : null;
+    const pc = (x) => x == null ? "-" : `${Math.round(x * 100)}%`;
+    const cls = (x) => x != null && x >= 1 ? "good" : "";
+    // 入力した出目・フォーメーション
+    const cs = expandDeme(DEME.q);
+    let qrow = "";
+    if (DEME.q) {
+      if (!cs.length) qrow = `<p class="dm-q-err">「3-256-256」「1-2-全」「BOX135」の形で入力してください</p>`;
+      else {
+        const idx = cs.map((c) => ALL120.indexOf(c));
+        const sum = (arr) => idx.reduce((a, i) => a + arr[i], 0);
+        const h = sum(cell.h), p = sum(cell.p), h1 = sum(cell.h1), p1 = sum(cell.p1);
+        const r3 = roi(h, p, cell.n, cs.length), r1 = roi(h1, p1, cell.n1, cs.length);
+        qrow = `<div class="dm-q-res"><div><b>${esc(DEME.q)}</b>(${cs.length}点)</div>
+          <div class="stats">${stat("回収率(全期間)", pc(r3), r3 >= 1 ? "good" : "bad")}${stat("直近1年", pc(r1), r1 != null && r1 >= 1 ? "good" : "bad")}
+          ${stat("的中", `${h}<small>本</small>`)}${stat("的中率", pct1(h / cell.n) + "%")}</div>
+          <p class="tbn">${cell.n.toLocaleString()}レースで毎回${cs.length * 100}円 → 払戻 ${yen(p * 10)}円${h ? `(平均 ${yen((p * 10) / h)}円)` : ""}</p></div>`;
+      }
+    }
+    const rows = ALL120.map((c, i) => ({ c, h: cell.h[i], r: roi(cell.h[i], cell.p[i], cell.n), r1: roi(cell.h1[i], cell.p1[i], cell.n1), avg: cell.h[i] ? cell.p[i] * 10 / cell.h[i] : 0 }))
+      .filter((x) => x.h >= 10).sort((a, b) => b.r - a.r).slice(0, 12);
+    const all = cell.p.reduce((a, b) => a + b, 0) * 10 / (cell.n * 120 * 100);
+    body = `${qrow}<h4 class="tb">回収率の高い出目(10本以上当たったもの)</h4>
+      <p class="tbn">${cell.n.toLocaleString()}レース(直近1年 ${cell.n1.toLocaleString()})。120通りを全部買うと回収率 ${pc(all)}</p>
+      <div class="scroll"><table class="tbl dm"><thead><tr><th>出目</th><th>的中</th><th>平均配当</th><th>回収率</th><th>直近1年</th></tr></thead><tbody>
+      ${rows.map((x) => `<tr><td>${tri(x.c)}</td><td>${x.h}<small>本</small></td><td>${yen(x.avg)}</td><td class="${cls(x.r)}">${pc(x.r)}</td><td class="${cls(x.r1)}">${pc(x.r1)}</td></tr>`).join("")}
+      </tbody></table></div>`;
+  }
+  const sc = d.scan || {};
+  const band = (sc.bands || []).find((b) => b.disc[0] === 1);
+  const w = d.watch;
+  const wrows = (w && w.items || []).map((x) => {
+    const f = x.fwd || {};
+    const cond = x.cond.replace(/^(場|種別):/, "").replace("準優勝戦", "準優").replace("×1号艇:", "×1号艇");
+    return `<tr><td class="l">${esc(cond)}<br><b>${esc(x.strat)}</b></td><td>${Math.round(x.roi_disc * 100)}→${Math.round(x.roi_conf * 100)}%</td>
+      <td class="${f.roi >= 1 ? "good" : ""}">${f.races ? `${Math.round(f.roi * 100)}%<br><small>${f.hits}本/${f.races}R</small>` : "まだなし"}</td></tr>`;
+  }).join("");
+  return `<h3>出目の期待値<small>過去の回収率</small></h3>
+    <p>${esc(d.period[0])} 〜 ${esc(d.period[1])} の公式の結果から、その出目を毎回100円ずつ買い続けた場合の成績。</p>
+    ${sel}<div class="dm-q"><input type="text" inputmode="text" value="${esc(DEME.q)}" placeholder="例 3-256-256 / 1-2-全 / BOX135" aria-label="出目・フォーメーション"></div>
+    ${body}
+    <p class="note dm-note">注意: 回収率100%超えの出目があっても、たまたまの可能性が高いです。約${(sc.n_tests || 0).toLocaleString()}通り(出目×条件)を総当たりした検証では、前半2年で100〜120%だった買い方の後半1年の平均は${band ? Math.round(band.conf_mean * 100) : "-"}%、信頼区間の下限まで100%を超えたものは${sc.passed ?? 0}件でした。</p>
+    ${wrows ? `<h4 class="tb">出目ウォッチ<small>${esc(w.since)} の検証で前半・後半とも100%超え → その後のレースで追跡</small></h4>
+      <div class="scroll"><table class="tbl dm"><thead><tr><th class="l">条件・出目</th><th>検証時(前半→後半)</th><th>その後の回収率</th></tr></thead><tbody>${wrows}</tbody></table></div>` : ""}`;
+}
+async function renderDeme() {
+  const el = $("#deme-box");
+  if (!el) return;
+  if (!DEME.data) {
+    el.innerHTML = demeHTML();
+    try { DEME.data = await getJSON("api/data/deme.json"); } catch (e) { el.innerHTML = `<h3>出目の期待値</h3><p>集計を準備中です。</p>`; return; }
+  }
+  const box = $("#deme-box");
+  if (!box) return;
+  box.innerHTML = demeHTML();
+  if (!box._wired) {
+    box._wired = true;
+    box.addEventListener("change", (e) => {
+      const k = e.target.dataset && e.target.dataset.k;
+      if (k) { DEME[k] = e.target.value; renderDeme(); }
+    });
+    let tm = 0;
+    box.addEventListener("input", (e) => {
+      if (!e.target.matches(".dm-q input")) return;
+      clearTimeout(tm);
+      tm = setTimeout(() => {
+        DEME.q = e.target.value.trim();
+        const pos = e.target.selectionStart;
+        renderDeme();
+        const inp = $("#deme-box .dm-q input");
+        if (inp) { inp.focus(); try { inp.setSelectionRange(pos, pos); } catch (_) { } }
+      }, 350);
+    });
+  }
+}
+
 async function renderTrack() {
   const box = $("#tab-track");
   let track = { days: [] }, rep = null;
@@ -645,6 +751,7 @@ async function renderTrack() {
     }
   } else html += `<p>予想を始めた翌朝から集計します。</p>`;
   html += `</div>`;
+  html += `<div class="box deme" id="deme-box"></div>`;
   if (!rep && repNote) html += `<div class="box"><p>${repNote}</p></div>`;
   if (rep) {
     const st = rep.stages.late || rep.stages.early;
@@ -672,6 +779,7 @@ async function renderTrack() {
     }
   }
   box.innerHTML = html;
+  renderDeme();
 }
 
 function renderVenues() {

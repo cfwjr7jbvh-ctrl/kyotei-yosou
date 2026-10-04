@@ -1,0 +1,201 @@
+{
+ "since": "2026-10-03",
+ "note": "この日までの検証で前半・後半とも回収率100%超え。この日より後のレースだけで数える",
+ "items": [
+  {
+   "cond": "場:びわこ",
+   "strat": "5-1-2",
+   "points": 1,
+   "roi_disc": 1.0037,
+   "roi_conf": 1.3022,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "場:びわこ",
+   "strat": "5-1-6",
+   "points": 1,
+   "roi_disc": 1.0033,
+   "roi_conf": 1.2213,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "場:三国",
+   "strat": "2-3-4",
+   "points": 1,
+   "roi_disc": 1.0128,
+   "roi_conf": 1.5373,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "場:多摩川",
+   "strat": "3-4-2",
+   "points": 1,
+   "roi_disc": 1.0094,
+   "roi_conf": 1.1548,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "場:徳山",
+   "strat": "3-4-2",
+   "points": 1,
+   "roi_disc": 1.0837,
+   "roi_conf": 1.2209,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "場:戸田",
+   "strat": "2-5-4",
+   "points": 1,
+   "roi_disc": 1.0235,
+   "roi_conf": 1.3509,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "場:桐生",
+   "strat": "4-6-5",
+   "points": 1,
+   "roi_disc": 1.0285,
+   "roi_conf": 1.3552,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "場:桐生",
+   "strat": "6-12-12",
+   "points": 2,
+   "roi_disc": 1.0323,
+   "roi_conf": 1.3738,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "場:津",
+   "strat": "6-1-2",
+   "points": 1,
+   "roi_disc": 1.0289,
+   "roi_conf": 1.0966,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "場:鳴門",
+   "strat": "2-3-6",
+   "points": 1,
+   "roi_disc": 1.127,
+   "roi_conf": 1.1717,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "場:鳴門",
+   "strat": "4-3-6",
+   "points": 1,
+   "roi_disc": 1.0514,
+   "roi_conf": 1.0977,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "3R",
+   "strat": "3-2-4",
+   "points": 1,
+   "roi_disc": 1.0367,
+   "roi_conf": 1.1205,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "9R",
+   "strat": "5-2-1",
+   "points": 1,
+   "roi_disc": 1.0465,
+   "roi_conf": 1.1691,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "種別:準優勝戦×1号艇:A1",
+   "strat": "3-16-16",
+   "points": 2,
+   "roi_disc": 1.0711,
+   "roi_conf": 1.0482,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  },
+  {
+   "cond": "種別:準優勝戦×1号艇:A2",
+   "strat": "2-146-146",
+   "points": 6,
+   "roi_disc": 1.0353,
+   "roi_conf": 1.3661,
+   "fwd": {
+    "races": 0,
+    "hits": 0,
+    "ret": 0.0,
+    "roi": null
+   }
+  }
+ ]
+}
