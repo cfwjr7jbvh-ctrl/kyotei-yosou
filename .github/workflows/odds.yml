@@ -27,19 +27,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2]   # 3つのジョブで分担(それぞれ1秒に1回以下のアクセス)
+        shard: [0, 1, 2, 3, 4]   # 5つのジョブで分担(公式サイトの応答待ちが長く、1本あたり約0.1回/秒)
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
           model: "false"
       - name: オッズ取得
-        run: python scripts/fetch_odds.py --days "${{ github.event.inputs.days || '1200' }}" --time-limit 3 --shard "${{ matrix.shard }}/3"
+        run: python scripts/fetch_odds.py --days "${{ github.event.inputs.days || '1200' }}" --time-limit 3 --shard "${{ matrix.shard }}/5"
       - name: コミット(ほかのジョブとぶつかっても消えないよう、最新の main に足し合わせる)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          bash scripts/commit_odds.sh "過去オッズ(${{ matrix.shard }}/3)"
+          bash scripts/commit_odds.sh "過去オッズ(${{ matrix.shard }}/5)"
 
   next:
     needs: odds

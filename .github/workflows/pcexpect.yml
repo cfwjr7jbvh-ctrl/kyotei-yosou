@@ -1,0 +1,57 @@
+name: 公式コンピュータ予想の取得(検証用)
+
+# 過去レースの公式「コンピュータ予想」(印・自信度・予想フォーカス)を新しい日から順に集める(改良案 E1 の検証用)。
+# 2つのジョブで分担し、残りがあれば自分で続きを起動する。
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 18 * * *"   # 毎日 3:23 JST(保険)
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: pcexpect
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - name: コンピュータ予想を取得
+        run: python scripts/fetch_pcexpect.py --time-limit 3 --shard "${{ matrix.shard }}/2"
+      - name: コミット(最新の main に足し合わせる)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/commit_merge.sh "コンピュータ予想(${{ matrix.shard }}/2)" data/pcexpect "python scripts/fetch_pcexpect.py --merge-from"
+
+  next:
+    needs: fetch
+    if: success() || failure()
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - name: 残りがあれば続きを起動
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          LEFT=$(python scripts/fetch_pcexpect.py --left)
+          echo "残り ${LEFT} レース"
+          if [ "$LEFT" -gt 50 ]; then gh workflow run pcexpect.yml --ref main; fi

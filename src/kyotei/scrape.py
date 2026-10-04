@@ -135,6 +135,56 @@ def parse_raceresult(html: str) -> dict | None:
     return out
 
 
+def _expand(row: list[str]) -> list[str]:
+    """「2 = 1 - 4」→ 2-1-4 と 1-2-4(= は前後どちらの順でも)。「2 - 6 - 1」はそのまま。"""
+    out = [[]]
+    i = 0
+    while i < len(row):
+        tok = row[i]
+        if tok.isdigit():
+            if i + 1 < len(row) and row[i + 1] == "=" and i + 2 < len(row):
+                a, b = tok, row[i + 2]
+                out = [o + [a, b] for o in out] + [o + [b, a] for o in out]
+                i += 3
+                continue
+            out = [o + [tok] for o in out]
+        i += 1
+    return ["-".join(o) for o in out]
+
+
+def parse_pcexpect(html: str) -> dict | None:
+    """公式のコンピュータ予想: 各艇の印(1=◎ 2=○ 3=▲ 4=△)、自信度(1〜5)、予想フォーカス(2連単・3連単に展開)。"""
+    soup = BeautifulSoup(html, "html.parser")
+    marks = {}
+    for t in soup.select("div.table1 table"):
+        if "印" not in t.get_text():
+            continue
+        for tb in t.select("tbody"):
+            tds = tb.select("td")
+            if len(tds) < 2:
+                continue
+            lane = _num(tds[1].get_text())
+            img = tds[0].select_one("img")
+            m = re.search(r"icon_mark1_(\d)", img.get("src", "")) if img else None
+            if np.isfinite(lane) and m:
+                marks[int(lane)] = int(m.group(1))
+        break
+    lv = soup.select_one(".state2_lv")
+    conf = None
+    if lv:
+        m = re.search(r"is-lv(\d)", " ".join(lv.get("class", [])))
+        conf = int(m.group(1)) if m else None
+    f2, f3 = [], []
+    for row in soup.select(".numberSet2_row"):
+        toks = re.findall(r"\d|=|-", row.get_text(" ", strip=True))
+        combos = _expand(toks)
+        for c in combos:
+            (f3 if c.count("-") == 2 else f2).append(c)
+    if not marks and not f3:
+        return None
+    return {"marks": marks, "conf": conf, "focus2": list(dict.fromkeys(f2)), "focus3": list(dict.fromkeys(f3))}
+
+
 def race_days(hd: str) -> list[int]:
     """その日に開催している場コード一覧(公式トップから)。"""
     r = _session.get(f"{BASE}/index?hd={hd}", headers=UA, timeout=30)
