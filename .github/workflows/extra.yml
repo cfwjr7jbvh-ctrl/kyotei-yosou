@@ -1,0 +1,37 @@
+name: 足の評価の収集(記者の気配・選手コメント・オリジナル展示・前検)
+
+on:
+  workflow_dispatch:
+    inputs:
+      time_limit:
+        description: "最大の実行時間(分)"
+        default: "40"
+  schedule:
+    - cron: "10 1 * * *"    # 毎日 10:10 JST(前日までのコメント・前検タイム、日刊の前日分)
+    - cron: "40 12 * * *"   # 毎日 21:40 JST(その日のレース後のコメント)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: extra
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - name: 集める(文章と記者の評価は暗号化して保存)
+        run: python scripts/fetch_extra.py all --time-limit "${{ inputs.time_limit || '40' }}"
+      - name: コミット(このジョブだけが書くファイルを最新の main に上書き)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/commit_files.sh "[CI Skip] data: 足の評価の収集 $(TZ=Asia/Tokyo date +%m/%d_%H:%M)" data/extra/*
