@@ -148,6 +148,8 @@ main{max-width:1120px;margin:0 auto;padding:10px 16px 20px}
 .sv{font-family:var(--num);font-size:16px;font-weight:600;white-space:nowrap}
 .sv em{font-style:normal;font-family:"BIZ UDPGothic",sans-serif;font-size:11px;font-weight:700;margin-left:6px;padding:2px 4px;border-radius:3px}
 .sv .atk{color:var(--mark);box-shadow:inset 0 0 0 1px var(--mark)}
+.sv .atk.strong{background:var(--mark);color:#fff;box-shadow:none}
+.slitnote{margin:4px 0 0;font-size:11.5px;line-height:1.55;color:var(--mute)}
 .sv .dent{color:var(--down);box-shadow:inset 0 0 0 1px var(--rule)}
 
 /* ---- 3連単 ---- */

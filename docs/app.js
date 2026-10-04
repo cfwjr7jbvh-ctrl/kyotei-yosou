@@ -205,7 +205,12 @@ function aiLine(r) {
   else if (k["逃げ"] >= 0.45) parts.push(`${inBoat.lane}号艇の逃げが優勢${arashiLevel(r) >= 4 ? "、ただし波乱含み" : ""}`);
   else parts.push(`インが不安で混戦模様`);
   const atk = (tk.paths || []).find((p) => p.type !== "逃げ" && p.p >= 0.07);
-  if (atk) parts.push(`${atk.lane}号艇の${atk.type}に注意`);
+  const sa = slitAlert(r);
+  if (atk && sa && sa.short && atk.lane === sa.lane) parts.push(`${atk.lane}号艇の${atk.type}に注意(${sa.short})`);
+  else {
+    if (atk) parts.push(`${atk.lane}号艇の${atk.type}に注意`);
+    if (sa) parts.push(sa.text);
+  }
   if (r.stage === "late") {
     const up = r.boats.filter((b) => b.p_win_early != null).map((b) => [b, b.p_win - b.p_win_early]).sort((a, b) => b[1] - a[1])[0];
     if (up && up[1] >= 0.05) parts.push(`展示で${up[0].lane}号艇の評価が上昇`);
@@ -216,25 +221,47 @@ function aiLine(r) {
   return `<p class="ai">${parts.slice(0, 3).join("。")}。</p>`;
 }
 
-function slitHTML(r) {
+// スリットの目印(2026-10-04 の検証、直前予想・約15万レース):
+//   攻め = 3コース以遠で、内の艇より予想STが0.03以上速い → 1着率が1.6〜2.5倍(まくり・まくり差しが中心)。0.05以上は「強攻め」
+//   凹み = 両隣より0.04以上遅い → その艇の3着内率が13〜16ポイント下がり、外の艇の1着率が1.3〜1.7倍
+//   どちらも AI の確率とオッズにはすでに織り込まれている(買い方の上積みにはならない)。見どころの表示用
+const ATK_TH = 0.03, ATK_STRONG = 0.05, DENT_TH = 0.04;
+function slitRows(r) {
   const rows = r.boats.map((b) => {
     const t = b.traits || {};
     const st = r.stage === "late" && t.st_pred != null ? t.st_pred : t.st;
     return { b, c: courseOf(r, b), st };
   }).filter((x) => x.st != null).sort((a, b) => a.c - b.c);
+  rows.forEach((x, i) => {
+    const inn = rows[i - 1] && rows[i - 1].st, out = rows[i + 1] && rows[i + 1].st;
+    x.adv = inn != null ? inn - x.st : null;
+    x.atk = x.adv != null && x.adv >= ATK_TH && x.c >= 3;
+    x.dent = i > 0 && !x.atk && (inn == null || x.st - inn >= DENT_TH) && (out == null || x.st - out >= DENT_TH);
+    x.outer = rows[i + 1] ? rows[i + 1].b : null;
+  });
+  return rows;
+}
+// AIのひと言に入れるスリットの注意(強攻めを優先、なければ凹み)
+function slitAlert(r) {
+  const rows = slitRows(r);
+  if (rows.length < 4) return null;
+  const a = rows.filter((x) => x.atk && x.adv >= ATK_STRONG).sort((p, q) => q.adv - p.adv)[0];
+  if (a) return { lane: a.b.lane, text: `スリットで${a.b.lane}号艇が内より${fmtST(a.adv)}速い予想、まくり注意`, short: `スリットで内より${fmtST(a.adv)}速い予想` };
+  const d = rows.find((x) => x.dent && x.outer);
+  if (d) return { lane: d.outer.lane, text: `${d.b.lane}号艇のスリットが凹みそう、外の${d.outer.lane}号艇に展開` };
+  return null;
+}
+function slitHTML(r) {
+  const rows = slitRows(r);
   if (rows.length < 4) return "";
-  // 内の艇より0.03以上速ければ「攻め」、両隣より0.04以上遅ければ「凹み」
-  const note = (i) => {
-    const me = rows[i].st, inn = rows[i - 1] && rows[i - 1].st, out = rows[i + 1] && rows[i + 1].st;
-    if (inn != null && inn - me >= 0.03 && rows[i].c >= 3) return `<em class="atk">攻め</em>`;
-    if ((inn == null || me - inn >= 0.04) && (out == null || me - out >= 0.04) && i > 0) return `<em class="dent">凹み</em>`;
-    return "";
-  };
-  return `<div class="slit" aria-label="スリット予想(予想ST)">` + rows.map((x, i) => {
+  const note = (x) => x.atk ? `<em class="atk${x.adv >= ATK_STRONG ? " strong" : ""}">${x.adv >= ATK_STRONG ? "強攻め" : "攻め"}</em>`
+    : x.dent ? `<em class="dent">凹み</em>` : "";
+  return `<div class="slit" aria-label="スリット予想(予想ST)">` + rows.map((x) => {
     const pos = Math.min(1, Math.max(0, (0.30 - x.st) / 0.27)) * 100;
     return `<div class="sl"><span class="sc">${x.c}</span><span class="track"><span class="mk" style="left:calc(${pos}% - 13px)">${tile(x.b.lane)}</span></span>
-      <span class="sv">${fmtST(x.st)}${note(i)}</span></div>`;
-  }).join("") + `</div>`;
+      <span class="sv">${fmtST(x.st)}${note(x)}</span></div>`;
+  }).join("") + `</div>` + (rows.some((x) => x.atk || x.dent)
+    ? `<p class="slitnote">攻め: 内の艇より0.03以上速い予想。過去約15万レースで1着率が1.6〜2.5倍(まくりが中心)。凹み: 両隣より0.04以上遅い予想。その艇の3着内率は13〜16ポイント下がり、外の艇の1着が増える。どちらもAIの確率には織り込み済み。</p>` : "");
 }
 
 function tenkaiHTML(r) {
