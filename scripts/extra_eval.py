@@ -60,14 +60,18 @@ def market_win(odds: pd.DataFrame, race_ids) -> pd.DataFrame:
 
 
 def ratio_table(df: pd.DataFrame, col: str) -> list[dict]:
+    """値ごとの1着率・3着内率。市場との比較は、確定オッズのあるレースだけで(同じレースの組で比べる)。"""
     out = []
     for v, g in df.dropna(subset=[col]).groupby(col):
         if len(g) < 20:
             continue
-        out.append({"value": v if not isinstance(v, (np.floating, float)) else round(float(v), 3), "n": int(len(g)),
-                    "win": round(float(g["win"].mean()), 4), "top3": round(float(g["top3"].mean()), 4),
-                    "p_mkt": round(float(g["p_mkt"].mean()), 4) if g["p_mkt"].notna().any() else None,
-                    "win_over_mkt": round(float(g["win"].sum() / g["p_mkt"].sum()), 3) if g["p_mkt"].notna().all() and g["p_mkt"].sum() > 0 else None})
+        m = g.dropna(subset=["p_mkt"])
+        row = {"value": v if not isinstance(v, (np.floating, float)) else round(float(v), 3), "n": int(len(g)),
+               "win": round(float(g["win"].mean()), 4), "top3": round(float(g["top3"].mean()), 4), "n_mkt": int(len(m))}
+        if len(m) >= 20 and m["p_mkt"].sum() > 0:
+            row.update({"win_m": round(float(m["win"].mean()), 4), "p_mkt": round(float(m["p_mkt"].mean()), 4),
+                        "win_over_mkt": round(float(m["win"].sum() / m["p_mkt"].sum()), 3)})
+        out.append(row)
     return out
 
 
