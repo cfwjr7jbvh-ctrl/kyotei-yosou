@@ -148,15 +148,11 @@ def score_day(day: dt.date):
     rp.write_text(json.dumps(track, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
-def morning(day: dt.date):
-    write_check()
-    score_day(day - dt.timedelta(days=1))
-    backfill_own(day - dt.timedelta(days=1))
+def build_today(day: dt.date):
+    """当日の番組表と過去成績から特徴量を作り、直前予想用に data/cache に保存する。番組表が無ければ None。"""
     b = download_text("B", day)
     if not b:
-        print("番組表がまだありません:", day)
-        update_index()
-        return
+        return None
     today = pd.DataFrame(parse_program(b, day.isoformat()))
     since = (day - dt.timedelta(days=760)).strftime("%Y%m")
     ent, races, _ = load_history(since)
@@ -168,6 +164,38 @@ def morning(day: dt.date):
     if wt is not None:
         wt.to_pickle(CACHE / f"wind_{day.isoformat()}.pkl")
     df.to_pickle(CACHE / f"features_{day.isoformat()}.pkl")
+    return df
+
+
+def merge_live(day: dt.date, prev_path: str):
+    """前回までの直前予想(stage=late のレース)を、当日の予想ファイルに重ねる。
+
+    直前予想のファイルは履歴を積み上げないよう live ブランチに上書きで置くので、
+    main の朝の予想(作り直されることもある)に、live ブランチの直前予想を重ねてから更新する。
+    """
+    jp = DAYS / f"{day.isoformat()}.json"
+    prev = pathlib.Path(prev_path)
+    if not jp.exists() or not prev.exists():
+        return
+    base, old = read_json(jp), read_json(prev)
+    late = {r["race_id"]: r for r in old.get("races", []) if r.get("stage") == "late"}
+    if not late:
+        return
+    base["races"] = [late.get(r["race_id"], r) for r in base["races"]]
+    base["updated_at"] = old.get("updated_at", base.get("updated_at"))
+    write_json(jp, base)
+    print("merged late races:", len(late))
+
+
+def morning(day: dt.date):
+    write_check()
+    score_day(day - dt.timedelta(days=1))
+    backfill_own(day - dt.timedelta(days=1))
+    df = build_today(day)
+    if df is None:
+        print("番組表がまだありません:", day)
+        update_index()
+        return
     bundle = load_bundle()
     p, stack, (s2, s3) = predict_win(bundle, "early", df)
     df["p"], df["s2"], df["s3"] = p, s2, s3
@@ -195,8 +223,8 @@ def save_live_odds(rows: list[dict]):
         return
     df = pd.DataFrame(rows)
     LIVE_ODDS.mkdir(parents=True, exist_ok=True)
-    for ym, g in df.groupby(df["race_id"].str[:6]):
-        p = LIVE_ODDS / f"live_{ym}.csv.gz"
+    for ymd, g in df.groupby(df["race_id"].str[:8]):
+        p = LIVE_ODDS / f"live_{ymd}.csv.gz"
         if p.exists():
             g = pd.concat([pd.read_csv(p, dtype={"race_id": str}), g])
         mb = g.groupby("race_id")["min_before"]
@@ -210,8 +238,8 @@ def save_own_previews(rows: list[dict]):
     if not rows:
         return
     df = pd.DataFrame(rows)
-    for ym, g in df.groupby(df["race_id"].str[:6]):
-        p = OWN / f"own_{ym}.csv.gz"
+    for ymd, g in df.groupby(df["race_id"].str[:8]):  # 日ごとのファイル(直前予想のループと翌朝の補完がぶつからない)
+        p = OWN / f"own_{ymd}.csv.gz"
         if p.exists():
             old = pd.read_csv(p, dtype={"race_id": str})
             g = pd.concat([old[~old["race_id"].isin(g["race_id"])], g])
@@ -235,7 +263,7 @@ def backfill_own(day: dt.date):
     if not p.exists():
         return
     data = read_json(p)
-    own = OWN / f"own_{day:%Y%m}.csv.gz"
+    own = OWN / f"own_{day:%Y%m%d}.csv.gz"
     have = set(pd.read_csv(own, dtype={"race_id": str})["race_id"]) if own.exists() else set()
     rows = []
     for race in data["races"]:
@@ -311,7 +339,10 @@ def live(day: dt.date, ahead_min: int = 35):
 
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "morning"
-    day = dt.date.fromisoformat(sys.argv[2]) if len(sys.argv) > 2 else now().date()
     t0 = time.time()
-    {"morning": morning, "live": live}[mode](day)
+    if mode == "merge-live":  # python scripts/predict.py merge-live 前回の予想ファイル [日付]
+        merge_live(dt.date.fromisoformat(sys.argv[3]) if len(sys.argv) > 3 else now().date(), sys.argv[2])
+    else:
+        day = dt.date.fromisoformat(sys.argv[2]) if len(sys.argv) > 2 else now().date()
+        {"morning": morning, "live": live, "features": build_today}[mode](day)
     print(f"{time.time()-t0:.0f}s")

@@ -24,7 +24,9 @@ def load_history(since: str | None = None):
     ent = _read("history/entries_*.csv.gz", since)
     races = _read("history/races_*.csv.gz", since)
     pv = _read("previews/previews_*.csv.gz", since)       # Open API(過去分)
-    own = _read("previews/own_*.csv.gz", since)           # 自分たちで取得(2026-10-03 以降)
+    own = _read("previews/own_*.csv.gz", since)           # 自分たちで取得(2026-10-03 以降、月または日ごとのファイル)
+    if own is not None:
+        own = own.drop_duplicates(["race_id", "lane"], keep="last")
     if own is not None:
         pv = own if pv is None else pd.concat([pv[~pv["race_id"].isin(own["race_id"])], own])
     if pv is not None and ent is not None:

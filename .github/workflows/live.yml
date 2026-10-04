@@ -1,42 +1,44 @@
-name: 直前予想(10分ごと)
+name: 直前予想(5分ごと・常駐)
 
+# GitHub の定期実行は遅れたり飛んだりするので、1回の起動で最長5時間40分動き続け、5分ごとに直前予想を更新する。
+# 終わったら自分で次を起動する(6〜22時台)。朝は「朝の予想」の後にも起動される。下の定期実行は保険。
 on:
   workflow_dispatch:
   schedule:
-    - cron: "*/10 23 * * *"    # 8:00-8:59 JST
-    - cron: "*/10 0-14 * * *"  # 9:00-23:59 JST
+    - cron: "45 22 * * *"   # 7:45 JST
+    - cron: "15 4 * * *"    # 13:15 JST
+    - cron: "45 9 * * *"    # 18:45 JST
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
-  group: site
+  group: live
   cancel-in-progress: false
 
 jobs:
   live:
     runs-on: ubuntu-latest
+    timeout-minutes: 355
     env:
       SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
-    timeout-minutes: 20
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
       - id: d
         run: echo "today=$(TZ=Asia/Tokyo date +%F)" >> "$GITHUB_OUTPUT"
       - uses: actions/cache/restore@v4
-        id: c
         with:
           path: data/cache
           key: features-${{ steps.d.outputs.today }}
-      - name: 直前情報とオッズで更新
-        if: steps.c.outputs.cache-hit == 'true'
-        run: python scripts/predict.py live
-      - name: コミット
-        if: steps.c.outputs.cache-hit == 'true'
+      - name: 5分ごとに直前情報とオッズで更新
+        run: bash scripts/live_loop.sh 340 300
+      - name: 続きを起動(6〜22時台)
+        if: always()
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add docs/data data/previews data/odds_live
-          git commit -qm "予想: 直前更新 $(TZ=Asia/Tokyo date +%H:%M)" || exit 0
-          git pull --rebase -q && git push -q
+          H=$(TZ=Asia/Tokyo date +%-H)
+          if [ "$H" -ge 6 ] && [ "$H" -le 22 ]; then
+            gh workflow run live.yml --ref main && echo "次の直前予想を起動しました"
+          fi

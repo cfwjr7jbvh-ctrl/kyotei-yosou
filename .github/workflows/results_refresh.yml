@@ -32,5 +32,4 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/history
-          git commit -qm "data: 過去の成績にレースタイム・払戻を追加" || echo "no changes"
-          git pull --rebase -q && git push -q
+          if git commit -q -m "[CI Skip] data: 過去の成績にレースタイム・払戻を追加"; then bash scripts/push.sh; else echo "no changes"; fi

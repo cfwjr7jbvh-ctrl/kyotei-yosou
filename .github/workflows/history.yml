@@ -39,9 +39,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/history
-          git commit -m "data: 過去データ取得" || echo "no changes"
-          git pull --rebase
-          git push
+          if git commit -q -m "[CI Skip] data: 過去データ取得"; then bash scripts/push.sh; else echo "no changes"; fi
       - name: 時間切れで終わっていたら続きを自動で再実行
         env:
           GH_TOKEN: ${{ github.token }}

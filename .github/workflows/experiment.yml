@@ -62,11 +62,16 @@ jobs:
           git pull -q --no-rebase origin main
           git stash pop -q
           git add reports/experiments
-          git commit -qm "実験結果: ${{ github.event.inputs.branch }} (adopt=${{ steps.cmp.outputs.adopt }})"
+          git commit -qm "[CI Skip] 実験結果: ${{ github.event.inputs.branch }} (adopt=${{ steps.cmp.outputs.adopt }})"
           if [ "${{ steps.cmp.outputs.adopt }}" = "true" ]; then
-            git merge --no-edit -m "改良案を採用: ${{ github.event.inputs.branch }}" "${{ steps.cand.outputs.sha }}"
+            git merge --no-edit -m "[CI Skip] 改良案を採用: ${{ github.event.inputs.branch }}" "${{ steps.cand.outputs.sha }}"
           fi
-          git push -q origin HEAD:main
+          ok=0  # ほかのジョブの push とぶつかったら取り込み直してやり直す
+          for i in 1 2 3 4 5 6; do
+            if git push -q origin HEAD:main; then ok=1; break; fi
+            sleep $(( i * 5 )); git pull -q --no-rebase origin main || true
+          done
+          [ "$ok" = 1 ]
       - name: 採用したら本番モデルを学習し直す
         if: steps.cmp.outputs.adopt == 'true'
         env:

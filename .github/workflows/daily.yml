@@ -30,6 +30,12 @@ jobs:
       - name: 最近の成績を追加取得
         run: |
           python scripts/fetch_history.py --start "$(TZ=Asia/Tokyo date -d '5 days ago' +%F)"
+      - name: 前日の直前予想(live ブランチ)を戻す(答え合わせ用)
+        run: |
+          YD=$(TZ=Asia/Tokyo date -d '1 day ago' +%F)
+          if git fetch -q origin live 2>/dev/null && git cat-file -e "FETCH_HEAD:days/$YD.json" 2>/dev/null; then
+            git show "FETCH_HEAD:days/$YD.json" > "docs/data/days/$YD.json" && echo "前日の直前予想を戻しました"
+          fi
       - name: 朝の予想と前日の答え合わせ
         run: python scripts/predict.py morning
       - uses: actions/cache/save@v4
@@ -41,13 +47,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/data data/history data/previews reports
-          git commit -qm "予想: ${{ steps.d.outputs.today }} 朝" || echo "no changes"
-          git pull --rebase -q && git push -q
+          if git commit -q -m "[CI Skip] 予想: ${{ steps.d.outputs.today }} 朝"; then bash scripts/push.sh; else echo "no changes"; fi
       - name: 前日分のオッズを保存(検証用)
         run: |
           python scripts/fetch_odds.py --days 3 --time-limit 0.5
-          git add data/odds && git commit -qm "data: オッズ" || echo "no changes"
-          git pull --rebase -q && git push -q
+          git add data/odds && if git commit -q -m "[CI Skip] data: オッズ"; then bash scripts/push.sh; else echo "no changes"; fi
       - name: 過去データに抜けがあれば取得を再開
         env:
           GH_TOKEN: ${{ github.token }}
@@ -64,3 +68,10 @@ jobs:
           if [ "$LEFT" -gt 3 ] && [ "$RUNNING" = "0" ]; then
             gh workflow run history.yml --ref main -f start=2023-10-01 -f end=""
           fi
+      - name: 直前予想(常駐)を起動
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          N=$(gh run list --workflow live.yml --limit 10 --json status --jq '[.[] | select(.status != "completed")] | length')
+          H=$(TZ=Asia/Tokyo date +%-H)
+          if [ "$N" = "0" ] && [ "$H" -ge 6 ] && [ "$H" -le 22 ]; then gh workflow run live.yml --ref main && echo "起動しました"; fi

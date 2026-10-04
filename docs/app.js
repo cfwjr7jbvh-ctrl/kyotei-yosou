@@ -112,8 +112,8 @@ function stat(k, v, cls = "") { return `<div class="stat"><div class="k">${k}</d
 async function renderTrack() {
   const box = $("#tab-track");
   let track = { days: [] }, rep = null;
-  try { track = await getJSON("data/track.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
-  try { rep = await getJSON("data/report.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
+  try { track = await getJSON("api/data/track.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
+  try { rep = await getJSON("api/data/report.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
   const t = track.days.reduce((a, d) => {
     for (const k of ["races", "top1_hit", "bets", "bet_hits", "invest", "return"]) a[k] = (a[k] || 0) + d[k];
     return a;
@@ -159,7 +159,7 @@ async function renderTrack() {
 async function loadDay(day) {
   state.day = day;
   try {
-    state.data = await getJSON(`data/days/${day}.json`);
+    state.data = await getJSON(`api/data/days/${day}.json`);
   } catch (e) {
     if (e instanceof Locked) { showLogin(KEY ? "パスワードが変更されました。再入力してください" : ""); return false; }
     state.data = { races: [] };
@@ -181,7 +181,7 @@ async function init() {
     $("#login-msg").textContent = "確認中…";
     KEY = await deriveKey($("#pw").value);
     let ok = true;
-    try { await getJSON("data/check.json"); } catch (err) { ok = !(err instanceof Locked); }
+    try { await getJSON("api/data/check.json"); } catch (err) { ok = !(err instanceof Locked); }
     if (ok && state.day) ok = await loadDay(state.day);
     if (ok) { $("#login").hidden = true; $("#app").hidden = false; $("#login-msg").textContent = ""; }
     btn.disabled = false;
@@ -192,7 +192,12 @@ async function init() {
   };
   $("#logout").onclick = () => { localStorage.removeItem(LS); KEY = null; showLogin(""); };
   let idx = { days: [] };
-  try { idx = await getJSON("data/index.json"); } catch (e) { }
+  try { idx = await getJSON("api/data/index.json"); } catch (e) { }
+  // 今日の予想が一覧より先にできている(直前予想のループが先に作った)場合も今日を出す
+  const today = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  if (!idx.days.includes(today)) {
+    try { await getJSON(`api/data/days/${today}.json`); idx.days.push(today); idx.latest = today; } catch (e) { }
+  }
   const sel = $("#day");
   sel.innerHTML = idx.days.slice().reverse().map((d) => `<option value="${d}">${d.slice(5).replace("-", "/")}</option>`).join("");
   sel.onchange = () => loadDay(sel.value);
@@ -206,7 +211,7 @@ async function init() {
     if (v) { state.venue = v.dataset.v; renderAll(); }
   };
   state.day = idx.latest;
-  try { await getJSON("data/check.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
+  try { await getJSON("api/data/check.json"); } catch (e) { if (e instanceof Locked) return showLogin(""); }
   if (idx.latest) await loadDay(idx.latest);
   else { $("#updated").textContent = "予想データの準備中です"; $("#tab-ev").innerHTML = `<div class="empty">最初の予想は、過去データの学習が終わり次第ここに表示されます。</div>`; }
   setInterval(() => { if (state.day === idx.latest) loadDay(state.day); }, 5 * 60 * 1000);
