@@ -169,7 +169,7 @@ function evHTML(r) {
 function neraiHTML(r) {
   if (!r.nerai || !r.nerai.length) return "";
   return `<div class="ev nerai"><h3>荒れ狙い<em>参考・検証中</em></h3>
-    <p class="cap">1号艇が負けそうなレースで、モデルの確率×オッズが100%以上の組。最初の検証では回収率125%でしたが、学習の時期を変えて確かめ直すと83%(全レースは74%)。全レースより少し良い程度で、まだ勝てる根拠はありません。オッズを集めて追試中の参考です。</p>
+    <p class="cap">1号艇が負けそうなレースで、モデルの確率×オッズが100%以上の組。最初の検証では回収率125%でしたが、確かめ直すと全レースで同じ買い方をするのと変わらないか、むしろ悪い結果でした。勝てる根拠はなく、参考の表示です(オッズを集めて検証を続けています)。</p>
     ${betRows(r.nerai)}</div>`;
 }
 
@@ -190,7 +190,7 @@ function arashiHTML(r) {
   return `<div class="arashi lv${lv}"><span class="k">荒れ度</span><span class="dots" role="img" aria-label="5段階中${lv}">${dots}</span>
     <b class="w">${ARASHI_WORD[lv]}</b><span class="nums"><span>1号艇が負ける<b>${Math.round(a.in_lose * 100)}%</b></span>
     <span>万舟<b>${Math.round(a.manshu * 100)}%</b></span></span>${a.in_lose >= IN_LOSE_MIN && !(r.nerai && r.nerai.length)
-      ? `<p class="nerai">1号艇が負けそうなレース(荒れ狙いの対象)。この条件の期待値買いは、過去の検証では全レースより少し良い程度で、まだ勝てる根拠はありません(追試中)</p>` : ""}</div>`;
+      ? `<p class="nerai">1号艇が負けそうなレース(荒れ狙いの対象)。ただしこの条件の期待値買いは、確かめ直すと全レースより良くなっていません(参考)</p>` : ""}</div>`;
 }
 
 // ---- 展開予測 ----
