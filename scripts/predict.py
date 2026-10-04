@@ -182,6 +182,27 @@ def morning(day: dt.date):
 
 
 OWN = ROOT / "data/previews"
+LIVE_ODDS = ROOT / "data/odds_live"
+
+
+def save_live_odds(rows: list[dict]):
+    """直前予想のときに取った3連単オッズを保存する(締切前のオッズでの期待値の検証用、改良案 A2・F4)。
+
+    確定オッズは後からでも取れるが、締切前のオッズは今しか取れない。容量を抑えるため、
+    レースごとに「締切に一番近い取得」と「一番早い取得」の2回分だけ残す。
+    """
+    if not rows:
+        return
+    df = pd.DataFrame(rows)
+    LIVE_ODDS.mkdir(parents=True, exist_ok=True)
+    for ym, g in df.groupby(df["race_id"].str[:6]):
+        p = LIVE_ODDS / f"live_{ym}.csv.gz"
+        if p.exists():
+            g = pd.concat([pd.read_csv(p, dtype={"race_id": str}), g])
+        mb = g.groupby("race_id")["min_before"]
+        g = g[(g["min_before"] == mb.transform("min")) | (g["min_before"] == mb.transform("max"))]
+        g = g.drop_duplicates(["race_id", "min_before", "combo"]).sort_values(["race_id", "min_before", "combo"])
+        g.to_csv(p, index=False, compression="gzip")
 
 
 def save_own_previews(rows: list[dict]):
@@ -243,6 +264,7 @@ def live(day: dt.date, ahead_min: int = 35):
     hd = day.strftime("%Y%m%d")
     n = 0
     own_rows = []
+    odds_rows = []
     for i, race in enumerate(data["races"]):
         if not race.get("deadline"):
             continue
@@ -272,6 +294,9 @@ def live(day: dt.date, ahead_min: int = 35):
         rdf = features.add_late(rdf)
         oh = fetch("odds3t", race["jcd"], race["rno"], hd)
         od = parse_odds3t(oh) if oh else {}
+        mins = round((dl - now()).total_seconds() / 60, 1)  # 締切まで何分の時点のオッズか
+        odds_rows += [{"race_id": race["race_id"], "min_before": mins, "combo": c, "odds": v}
+                      for c, v in od.items() if c in COMBOS]
         odds = np.array([od.get(c, np.nan) for c in COMBOS]) if od else None
         p, stack, s23 = predict_win(bundle, "late", rdf)
         data["races"][i] = race_payload(rdf, p, stack, "late", odds, bundle.get("blend"),
@@ -280,6 +305,7 @@ def live(day: dt.date, ahead_min: int = 35):
     data["updated_at"] = t.strftime("%H:%M")
     write_json(jp, data)
     save_own_previews(own_rows)
+    save_live_odds(odds_rows)
     print("live updated:", n, "races")
 
 
