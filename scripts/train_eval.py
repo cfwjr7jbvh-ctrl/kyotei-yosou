@@ -24,6 +24,7 @@ import pandas as pd
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "src"))
 from kyotei import features  # noqa: E402
+from kyotei.arashi import confirm as arashi_confirm  # noqa: E402
 from kyotei.data import load_history  # noqa: E402
 from kyotei.betting import (COMBOS, BetFilter, backtest_ev, blend, entropy,  # noqa: E402
                             fit_blend, market_probs, model_tri_probs, odds_matrix)
@@ -166,6 +167,9 @@ def ev_analysis(te, p_ens, stack, races, odds, report, log, s23=None):
     PK = np.array([market_probs(o) for o in O])
     y = np.array([COMBOS.index(c) for c in rc["tri_combo"]])
     pay = rc["tri_pay"].values.astype(float)
+    # 荒れ狙いの追試(見つけた12日を除く): 合格したら本番の買い目を「1号艇が負けそうなレース」に絞る
+    report["arashi_confirm"] = arashi_confirm(rids, W, PM, O, y, pay)
+    log("arashi confirm:", json.dumps(report["arashi_confirm"], ensure_ascii=False))
     # オッズのある期間を3等分: ①合成係数の推定 ②買う/買わない判断の学習 ③検証
     n = len(rids)
     i1, i2 = n // 3, 2 * n // 3
@@ -234,6 +238,11 @@ def main():
             res = ev_analysis(te, p_ens, stack, races, odds, report, log, s23)
             if res:
                 bundle["blend"], bundle["bet_filter"] = res
+            ac = report.get("arashi_confirm") or {}
+            if ac.get("passed"):
+                from kyotei.arashi import IN_LOSE_MIN
+                bundle["bet_rule"] = {"in_lose_min": IN_LOSE_MIN, "prob": "model"}
+                log("bet_rule adopted:", bundle["bet_rule"])
         # 本番用: 学習+検証期間で学習し直す(アンサンブル重み・補正は検証で決めた値)
         full = pd.concat([tr, va])
         for k in models:

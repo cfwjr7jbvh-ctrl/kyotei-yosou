@@ -27,6 +27,7 @@ from kyotei.data import load_history  # noqa: E402
 from kyotei.parse_lzh import parse_program, parse_result  # noqa: E402
 from kyotei.publish import read_json, write_check, write_json  # noqa: E402
 from kyotei.scrape import fetch, parse_beforeinfo, parse_odds3t  # noqa: E402
+from kyotei.arashi import arashi  # noqa: E402
 from kyotei.tenkai import tenkai, traits  # noqa: E402
 
 JST = dt.timezone(dt.timedelta(hours=9))
@@ -60,7 +61,7 @@ def predict_win(bundle, stage, df):
 
 
 def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=None, blend_ab=None,
-                 bet_filter=None, s23=None):
+                 bet_filter=None, s23=None, bet_rule=None):
     rdf = rdf.sort_values("lane")
     w = np.full(6, 1e-6)
     w[rdf["lane"].values - 1] = p_win
@@ -78,6 +79,8 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
             p_final = blend(pm, pk, *blend_ab)
         p_bet = bet_filter.adjust(p_final, odds, (pk, entropy(w))) if bet_filter else p_final
         bets = select_bets(p_bet, odds, EV_MIN, P_MIN, MAX_BETS)
+        if bet_rule:  # 荒れ狙い(追試に合格したときだけ学習が入れる): 1号艇が負けそうなレースだけ、モデルの確率で買う
+            bets = select_bets(pm, odds, EV_MIN, P_MIN, MAX_BETS) if 1 - w[0] >= bet_rule["in_lose_min"] else []
     top = np.argsort(-p_final)[:10]
     r0 = rdf.iloc[0]
     boats = []
@@ -98,7 +101,9 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
            "top": [{"combo": COMBOS[i], "prob": round(float(p_final[i]), 4),
                     **({"odds": float(odds[i])} if odds is not None and np.isfinite(odds[i]) else {})}
                    for i in top],
-           "bets": bets, "tenkai": tk}
+           "bets": bets, "tenkai": tk,
+           # 荒れ度: 1号艇が負ける確率(各艇の1着確率と同じモデル)と、万舟になる確率(オッズがあれば100倍以上の組の確率)
+           "arashi": arashi(w, p_final, odds if market is not None else None)}
     if market is not None:
         out["market_top"] = [{"combo": COMBOS[i], "prob": round(float(market[i]), 4)}
                              for i in np.argsort(-market)[:3]]
@@ -331,7 +336,8 @@ def live(day: dt.date, ahead_min: int = 35):
                       for c, v in od.items() if c in COMBOS]
         odds = np.array([od.get(c, np.nan) for c in COMBOS]) if od else None
         p, stack, s23 = predict_win(bundle, "late", rdf)
-        new = race_payload(rdf, p, stack, "late", odds, bundle.get("blend"), bundle.get("bet_filter"), s23=s23)
+        new = race_payload(rdf, p, stack, "late", odds, bundle.get("blend"), bundle.get("bet_filter"), s23=s23,
+                           bet_rule=bundle.get("bet_rule"))
         # 展示前(朝予想)の1着率を残し、アプリで「展示を見てどう変わったか」を出せるようにする
         before = {b["lane"]: b.get("p_win_early", b.get("p_win") if race.get("stage") != "late" else None)
                   for b in race.get("boats", [])}

@@ -110,6 +110,18 @@ main{max-width:1120px;margin:0 auto;padding:10px 16px 20px}
 
 /* ---- AIのひと言・選手の特性 ---- */
 .ai{margin:8px 0 4px;font-size:16px;font-weight:700;line-height:1.5}
+.arashi{display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;margin:6px 0 10px;font-size:13px}
+.arashi .k{color:var(--mute)}
+.arashi .dots{display:inline-flex;gap:3px}
+.arashi .dots i{width:14px;height:8px;border-radius:2px;background:var(--rule)}
+.arashi .dots i.on{background:var(--ink)}
+.arashi.lv4 .dots i.on,.arashi.lv5 .dots i.on{background:var(--mark)}
+.arashi .w{font-size:14px}
+.arashi.lv5 .w{color:var(--mark)}
+.arashi .nums{display:inline-flex;gap:10px;color:var(--mute);margin-left:auto}
+.arashi .nums b{font-family:var(--num);font-size:16px;color:var(--ink);margin-left:3px}
+.arashi .nerai{flex-basis:100%;margin:2px 0 0;font-size:12.5px;color:var(--mark);line-height:1.5}
+.row .vr .are{font-size:11px;font-weight:700;color:var(--mark);margin-left:6px;vertical-align:2px}
 .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
 .chip{font-size:11.5px;line-height:1;padding:4px 6px;border-radius:4px;background:var(--soft);color:var(--mute)}
 .chip.plus{background:transparent;box-shadow:inset 0 0 0 1px var(--ink);color:var(--ink);font-weight:700}

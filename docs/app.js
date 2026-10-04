@@ -165,6 +165,26 @@ function evHTML(r) {
       <div class="e${b.ev >= 1.2 ? " strong" : ""}">${Math.round(b.ev * 100)}<small>%</small><span>期待値</span></div></div>`).join("") + `</div>`;
 }
 
+// ---- 荒れ度 ----
+// 万舟(3連単1万円以上)になる確率で5段階。区切りは検証期間の全レースの分布の20/40/60/80%点
+const ARASHI_CUTS = [0.14, 0.165, 0.19, 0.22];
+const IN_LOSE_MIN = 0.63; // 荒れ狙いの条件(追試中、src/kyotei/arashi.py と同じ値)
+const ARASHI_WORD = ["", "堅い", "やや堅い", "ふつう", "荒れ気味", "大荒れ注意"];
+function arashiLevel(r) {
+  const a = r.arashi;
+  return a && a.manshu != null ? 1 + ARASHI_CUTS.filter((c) => a.manshu >= c).length : 0;
+}
+function arashiHTML(r) {
+  const a = r.arashi;
+  const lv = arashiLevel(r);
+  if (!lv) return "";
+  const dots = [1, 2, 3, 4, 5].map((i) => `<i${i <= lv ? ' class="on"' : ""}></i>`).join("");
+  return `<div class="arashi lv${lv}"><span class="k">荒れ度</span><span class="dots" role="img" aria-label="5段階中${lv}">${dots}</span>
+    <b class="w">${ARASHI_WORD[lv]}</b><span class="nums"><span>1号艇が負ける<b>${Math.round(a.in_lose * 100)}%</b></span>
+    <span>万舟<b>${Math.round(a.manshu * 100)}%</b></span></span>${a.in_lose >= IN_LOSE_MIN
+      ? `<p class="nerai">1号艇が負けそうなレース。過去の検証では、この条件で期待値の買い目の回収率が高め(新しいデータで追試中)</p>` : ""}</div>`;
+}
+
 // ---- 展開予測 ----
 const KIM = ["逃げ", "差し", "まくり", "まくり差し", "その他"];
 function aiLine(r) {
@@ -174,7 +194,7 @@ function aiLine(r) {
   const inBoat = r.boats.find((b) => courseOf(r, b) === 1) || r.boats[0];
   const parts = [];
   if (k["逃げ"] >= 0.6) parts.push(`${inBoat.lane}号艇の逃げが本線`);
-  else if (k["逃げ"] >= 0.45) parts.push(`${inBoat.lane}号艇の逃げが優勢、ただし波乱含み`);
+  else if (k["逃げ"] >= 0.45) parts.push(`${inBoat.lane}号艇の逃げが優勢${arashiLevel(r) >= 4 ? "、ただし波乱含み" : ""}`);
   else parts.push(`インが不安で混戦模様`);
   const atk = (tk.paths || []).find((p) => p.type !== "逃げ" && p.p >= 0.07);
   if (atk) parts.push(`${atk.lane}号艇の${atk.type}に注意`);
@@ -231,8 +251,8 @@ function stageHTML(r) {
     : `<div class="stage">朝の予想(展示前)</div>`;
 }
 
-// 見る順: AIのひと言 → 結果 → 本命 → 期待値の買い目 → 展開予測 → 各艇 → ほかの候補
-const bodyHTML = (r) => stageHTML(r) + aiLine(r) + resultHTML(r) + honmeiHTML(r) + evHTML(r) + tenkaiHTML(r) + boatsHTML(r) + combosHTML(r);
+// 見る順: AIのひと言 → 荒れ度 → 結果 → 本命 → 期待値の買い目 → 展開予測 → 各艇 → ほかの候補
+const bodyHTML = (r) => stageHTML(r) + aiLine(r) + arashiHTML(r) + resultHTML(r) + honmeiHTML(r) + evHTML(r) + tenkaiHTML(r) + boatsHTML(r) + combosHTML(r);
 
 function clockHTML(r) {
   const left = minsLeft(r);
@@ -266,7 +286,7 @@ function rowHTML(r) {
   const right = r.result ? tri(r.result.tri_combo) : (r.top && r.top[0] ? tri(r.top[0].combo) : "");
   return `<details class="row" data-id="${r.race_id}"${state.open.has(r.race_id) ? " open" : ""}>
     <summary><span class="t">${esc(r.deadline || "")}<span class="subw" data-id="${r.race_id}">${subHTML(r)}</span></span>
-      <span class="vr"><b>${esc(r.venue)}</b><span class="n">${r.rno}R</span>${r.stage === "late" ? `<span class="late" title="直前予想"></span>` : ""}</span>
+      <span class="vr"><b>${esc(r.venue)}</b><span class="n">${r.rno}R</span>${r.stage === "late" ? `<span class="late" title="直前予想"></span>` : ""}${!r.result && arashiLevel(r) >= 5 ? `<span class="are">荒れ</span>` : ""}</span>
       <span class="hits">${hitBadge(r)}</span>${right}</summary>
     <div class="body">${bodyHTML(r)}</div></details>`;
 }

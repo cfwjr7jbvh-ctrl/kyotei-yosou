@@ -1,0 +1,201 @@
+"""荒れ度: 1号艇が負ける確率と、万舟(3連単の払戻1万円以上)になる確率。
+
+- 1号艇が負ける確率 = 1 − (1号艇の1着確率)
+- 万舟になる確率 = オッズ100倍以上の組が来る確率の合計。
+  オッズが無い(朝の予想)ときは、払戻 ≒ 0.75 ÷ 確率 とみなして「確率0.75%以下の組」の合計で見積もる。
+
+study() は「荒れ度が高いレースだけ期待値で買う」と「全レースで期待値で買う」の回収率を
+レース単位のブートストラップで比べる(scripts/upset_eval.py から使う)。
+"""
+from __future__ import annotations
+
+import json
+
+import numpy as np
+
+from .betting import COMBOS, blend, fit_blend, market_probs, select_bets
+
+MANSHU_ODDS = 100.0  # 万舟 = 100倍(1万円)以上
+TAKE = 0.75          # 3連単の払戻率
+FIRST1 = np.array([c[0] == "1" for c in COMBOS])
+
+
+def manshu_prob(P: np.ndarray, O: np.ndarray | None = None) -> np.ndarray:
+    """P: (..., 120) 3連単確率。O: 同じ形のオッズ(無ければ確率から払戻を見積もる)。"""
+    est = (P * (P <= TAKE / MANSHU_ODDS)).sum(-1)
+    if O is None:
+        return est
+    has = np.isfinite(O).sum(-1) >= 100
+    real = (P * (np.nan_to_num(O, nan=0) >= MANSHU_ODDS)).sum(-1)
+    return np.where(has, real, est)
+
+
+def arashi(p_win: np.ndarray, P: np.ndarray, O: np.ndarray | None = None) -> dict:
+    """1レース分(アプリ表示用)。p_win: 枠番順の1着確率(6)。"""
+    return {"in_lose": round(float(1 - p_win[0]), 4), "manshu": round(float(manshu_prob(P, O)), 4)}
+
+
+# ---------------------------------------------------------------- 荒れ狙い(追試中)
+# 2026-10-04 の検証で見つけた条件: 1号艇が負ける確率が 0.63 以上(テスト期間の上位20%)のレースに限ると、
+# モデルの期待値100%以上の買い目の回収率が全レースより高かった(125% 対 76%、オッズのある12日・1,776レース)。
+# 24通り試した中で一番良かった条件なので、偶然の可能性が残る。見つけた12日を除いた新しいオッズで追試し、
+# 合格したら本番の買い目をこの条件に絞る(train_eval.py が判定し、bundle["bet_rule"] に入れる)。
+IN_LOSE_MIN = 0.63
+DISCOVERY_DAYS = {"20250128", "20250129", "20250130", "20250131", "20250201", "20250202", "20250203",
+                  "20250204", "20260930", "20261001", "20261002", "20261003"}
+CONFIRM_MIN_RACES = 600  # 条件に合うレースがこれだけたまるまでは判定しない(少ないうちに何度も判定すると偶然の合格が増える)
+
+
+def confirm(rids, W, PM, O, y, pay, n_boot=4000, seed=0) -> dict:
+    """事前に決めた条件の追試(見つけた12日は使わない)。
+
+    「1号艇が負ける確率 ≥ IN_LOSE_MIN のレースだけ、モデルの確率で期待値100%以上を買う」と
+    「全レースで同じ買い方」の回収率の差を、日ごとにまとめて引き直すブートストラップ(同じ日のレースは似るため)で比べる。
+    合格: 条件に合うレースが CONFIRM_MIN_RACES 以上あり、差の90%区間の下限が0より上。
+    """
+    day = np.array([r[:8] for r in rids])
+    ok = (np.isfinite(O).sum(1) >= 100) & ~np.isin(day, list(DISCOVERY_DAYS))
+    hi = (1 - W[:, 0]) >= IN_LOSE_MIN
+    out = {"rule": f"1号艇が負ける確率 ≥ {IN_LOSE_MIN} のレースだけ、モデルの期待値100%以上を買う",
+           "races": int(ok.sum()), "hi_races": int((ok & hi).sum()), "passed": False}
+    if ok.sum() == 0:
+        return out
+    cost, ret = _bets(PM[ok], O[ok], y[ok], pay[ok], 1.0)
+    m, d = hi[ok], day[ok]
+    out["period"] = [str(min(d)), str(max(d))]
+    out["roi_all"] = round(float(ret.sum() / max(cost.sum(), 1)), 4)
+    out["roi_hi"] = round(float(ret[m].sum() / max(cost[m].sum(), 1)), 4)
+    out["bets_hi"] = int(cost[m].sum() // 100)
+    if out["hi_races"] < CONFIRM_MIN_RACES:
+        out["note"] = f"条件に合うレースが{CONFIRM_MIN_RACES}未満のため判定待ち"
+        return out
+    g, gid = np.unique(d, return_inverse=True)
+    Ca, Ra = np.bincount(gid, cost, len(g)), np.bincount(gid, ret, len(g))
+    Ch, Rh = np.bincount(gid, cost * m, len(g)), np.bincount(gid, ret * m, len(g))
+    idx = np.random.default_rng(seed).integers(0, len(g), (n_boot, len(g)))
+    ra = Ra[idx].sum(1) / np.maximum(Ca[idx].sum(1), 1)
+    rh = Rh[idx].sum(1) / np.maximum(Ch[idx].sum(1), 1)
+    lo, hi90 = (float(np.quantile(rh - ra, q)) for q in (0.05, 0.95))
+    out.update({"days": int(len(g)), "diff_ci90": [round(lo, 4), round(hi90, 4)],
+                "roi_hi_ci90": [round(float(np.quantile(rh, q)), 4) for q in (0.05, 0.95)],
+                "passed": bool(lo > 0)})
+    return out
+
+
+# ---------------------------------------------------------------- 検証
+
+def _bets(P, O, y, pay, ev_min, p_min=0.01, max_bets=5):
+    cost, ret = np.zeros(len(P)), np.zeros(len(P))
+    for i in range(len(P)):
+        for s in select_bets(P[i], O[i], ev_min, p_min, max_bets):
+            cost[i] += 100
+            if COMBOS.index(s["combo"]) == y[i]:
+                ret[i] += pay[i]
+    return cost, ret
+
+
+def _topk(P, y, pay, k):
+    top = np.argsort(-P, axis=1)[:, :k]
+    hit = (top == y[:, None]).any(1)
+    return np.full(len(P), 100.0 * k), np.where(hit, pay, 0.0)
+
+
+def _compare(cost, ret, A, cuts, idx):
+    """全レース vs 荒れ度が高いレースだけ(と、それ以外)。idx: ブートストラップの引き直し (B, n)。"""
+    def roi(c, r):
+        return r.sum(-1) / np.maximum(c.sum(-1), 1)
+    cb, rb = cost[idx], ret[idx]
+    all_b = roi(cb, rb)
+    out = {"all": _row(cost, ret, all_b)}
+    for name, th in cuts.items():
+        m = A >= th
+        mb = m[idx]
+        hi_b, lo_b = roi(cb * mb, rb * mb), roi(cb * ~mb, rb * ~mb)
+        row = _row(cost[m], ret[m], hi_b)
+        row["threshold"] = round(float(th), 4)
+        row["share_races"] = round(float(m.mean()), 3)
+        d, d2 = hi_b - all_b, hi_b - lo_b
+        row["diff_vs_all"] = round(float(row["roi"] - out["all"]["roi"]), 4) if row["roi"] is not None else None
+        row["diff_vs_all_ci90"] = [round(float(np.quantile(d, q)), 4) for q in (0.05, 0.95)]
+        row["p_better_than_all"] = round(float((d > 0).mean()), 3)
+        rest = _row(cost[~m], ret[~m], lo_b)
+        row["rest_roi"] = rest["roi"]
+        row["diff_vs_rest_ci90"] = [round(float(np.quantile(d2, q)), 4) for q in (0.05, 0.95)]
+        out[name] = row
+    return out
+
+
+def _row(c, r, boot):
+    bets = int(c.sum() // 100)
+    return {"races": int((c > 0).sum()), "bets": bets,
+            "hits": int((r > 0).sum()), "roi": round(float(r.sum() / c.sum()), 4) if bets else None,
+            "profit_yen": int(r.sum() - c.sum()),
+            "roi_ci90": [round(float(np.quantile(boot, q)), 4) for q in (0.05, 0.95)] if bets >= 30 else None}
+
+
+def _calib(pred, actual, bins=10):
+    q = np.unique(np.quantile(pred, np.linspace(0, 1, bins + 1)))
+    b = np.clip(np.searchsorted(q, pred, side="right") - 1, 0, len(q) - 2)
+    return [{"pred": round(float(pred[b == i].mean()), 4), "actual": round(float(actual[b == i].mean()), 4),
+             "n": int((b == i).sum())} for i in range(len(q) - 1) if (b == i).any()]
+
+
+def study(rids, W, PM, O, y, pay, log=print, n_boot=2000, seed=0) -> dict:
+    rng = np.random.default_rng(seed)
+    n = len(y)
+    in_lose = ~FIRST1[y]
+    manshu = pay >= MANSHU_ODDS * 100
+    A = {"in_lose": 1 - W[:, 0], "manshu": manshu_prob(PM)}
+    # 上位50% / 30% / 20% を「荒れ度が高い」とする(しきい値は予想だけから決め、結果は見ない)
+    cuts = {k: {f"top{int(round((1 - q) * 100))}": float(np.quantile(v, q)) for q in (0.5, 0.7, 0.8)}
+            for k, v in A.items()}
+    days = sorted({r[:8] for r in rids})
+    res = {"period": [days[0], days[-1]], "races": n,
+           "actual": {"in_lose_rate": round(float(in_lose.mean()), 4), "manshu_rate": round(float(manshu.mean()), 4)},
+           "calibration": {"in_lose": _calib(A["in_lose"], in_lose), "manshu": _calib(A["manshu"], manshu)},
+           "cuts": cuts}
+    log(json.dumps({k: res[k] for k in ("period", "races", "actual")}, ensure_ascii=False))
+
+    # 1) オッズ不要: モデルの上位5点を買う(全レースで比べられるので数が多い)
+    idx = rng.integers(0, n, (n_boot, n))
+    res["top5_all_races"] = {k: _compare(*_topk(PM, y, pay, 5), A[k], cuts[k], idx) for k in A}
+
+    # 2) オッズのあるレース: 期待値100%以上を買う(本番と同じ条件: 確率1%以上、1レース5点まで)
+    has = np.isfinite(O).sum(1) >= 100
+    res["odds_races"] = int(has.sum())
+    if has.sum() >= 300:
+        Pm, Oo, yy, pp = PM[has], O[has], y[has], pay[has]
+        PK = np.array([market_probs(o) for o in Oo])
+        # 合成(モデル×市場)の係数は、前半で決めて後半に、後半で決めて前半に使う(答えを見ずに当てはめる)
+        h = len(yy) // 2
+        PB = np.empty_like(Pm)
+        for fit, app in ((slice(h, None), slice(0, h)), (slice(0, h), slice(h, None))):
+            a, b = fit_blend(Pm[fit], PK[fit], yy[fit])
+            PB[app] = blend(Pm[app], PK[app], a, b)
+        Ao = {k: v[has] for k, v in A.items()}
+        Ao["manshu_odds"] = manshu_prob(PB, Oo)
+        Ao["in_lose_market"] = 1 - (PK * FIRST1).sum(1)
+        cuts_o = dict(cuts)
+        for k in ("manshu_odds", "in_lose_market"):
+            cuts_o[k] = {f"top{int(round((1 - q) * 100))}": float(np.quantile(Ao[k], q)) for q in (0.5, 0.7, 0.8)}
+        res["cuts_odds"] = {k: cuts_o[k] for k in ("manshu_odds", "in_lose_market")}
+        res["calibration"]["manshu_odds"] = _calib(Ao["manshu_odds"], manshu[has])
+        idx = rng.integers(0, len(yy), (n_boot, len(yy)))
+        ev = {}
+        for src, P in (("model", Pm), ("blend", PB)):
+            for th in (1.0, 1.2):
+                c, r = _bets(P, Oo, yy, pp, th)
+                ev[f"{src}_ev{int(th * 100)}"] = {k: _compare(c, r, Ao[k], cuts_o[k], idx) for k in Ao}
+        res["ev_odds_races"] = ev
+        # 時期で分けても同じ向きか(2つの期間で別々に)
+        halves = {}
+        for name, sl in (("first_half", slice(0, h)), ("second_half", slice(h, None))):
+            c, r = _bets(Pm[sl], Oo[sl], yy[sl], pp[sl], 1.0)
+            ii = rng.integers(0, len(c), (n_boot, len(c)))
+            halves[name] = {"period": [rids[has][sl][0][:8], rids[has][sl][-1][:8]],
+                            **{k: _compare(c, r, Ao[k][sl], cuts_o[k], ii) for k in ("in_lose", "manshu_odds")}}
+        res["ev_model_by_half"] = halves
+    res["confirm"] = confirm(rids, W, PM, O, y, pay)
+    return res
+
+
