@@ -168,8 +168,8 @@ function evHTML(r) {
 // 荒れ狙い(検証中): 1号艇が負けそうなレースで、モデルの確率×オッズが100%以上の組
 function neraiHTML(r) {
   if (!r.nerai || !r.nerai.length) return "";
-  return `<div class="ev nerai"><h3>荒れ狙い<em>検証中</em></h3>
-    <p class="cap">1号艇が負けそうなレースで、モデルの確率×オッズが100%以上の組。過去12日の検証では回収率125%でしたが、偶然の可能性があり追試中です。</p>
+  return `<div class="ev nerai"><h3>荒れ狙い<em>参考・検証中</em></h3>
+    <p class="cap">1号艇が負けそうなレースで、モデルの確率×オッズが100%以上の組。最初の検証では回収率125%でしたが、学習の時期を変えて確かめ直すと83%(全レースは74%)。全レースより少し良い程度で、まだ勝てる根拠はありません。オッズを集めて追試中の参考です。</p>
     ${betRows(r.nerai)}</div>`;
 }
 
@@ -190,7 +190,7 @@ function arashiHTML(r) {
   return `<div class="arashi lv${lv}"><span class="k">荒れ度</span><span class="dots" role="img" aria-label="5段階中${lv}">${dots}</span>
     <b class="w">${ARASHI_WORD[lv]}</b><span class="nums"><span>1号艇が負ける<b>${Math.round(a.in_lose * 100)}%</b></span>
     <span>万舟<b>${Math.round(a.manshu * 100)}%</b></span></span>${a.in_lose >= IN_LOSE_MIN && !(r.nerai && r.nerai.length)
-      ? `<p class="nerai">1号艇が負けそうなレース。過去の検証では、この条件で期待値の買い目の回収率が高め(新しいデータで追試中)</p>` : ""}</div>`;
+      ? `<p class="nerai">1号艇が負けそうなレース(荒れ狙いの対象)。この条件の期待値買いは、過去の検証では全レースより少し良い程度で、まだ勝てる根拠はありません(追試中)</p>` : ""}</div>`;
 }
 
 // ---- 展開予測 ----
@@ -354,7 +354,7 @@ function renderBets() {
   const races = visibleRaces().filter((r) => (r.bets && r.bets.length) || (r.nerai && r.nerai.length));
   const late = state.data.races.filter((r) => r.stage === "late").length;
   let html = `<p class="note">締切の約30分前から、展示とオッズを取り込んで5分ごとに更新します。確率×オッズ(期待値)が100%以上の組を出します。120%以上は赤で強調。直前予想 ${late} / ${state.data.races.length} レース</p>
-    <p class="note">「期待値のある買い目」はモデルとオッズを合わせた確率で計算するので、めったに出ません。「荒れ狙い(検証中)」は1号艇が負けそうなレースだけ、モデルの確率で計算した参考の買い目です。</p>`;
+    <p class="note">「期待値のある買い目」はモデルとオッズを合わせた確率で計算するので、めったに出ません。「荒れ狙い(参考・検証中)」は1号艇が負けそうなレースだけ、モデルの確率で計算した参考の買い目で、まだ勝てる根拠はありません。</p>`;
   if (!races.length) {
     box.innerHTML = html + `<div class="empty">今のところ期待値の高い買い目はありません。締切が近づくと出てきます。</div>`;
     return;

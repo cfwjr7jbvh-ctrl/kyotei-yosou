@@ -31,12 +31,12 @@ def message(races: list[dict], updated_at: str, last: bool = False) -> str:
     lines = [f"【期待値100%超え】{updated_at} 更新"]
     for r in races:
         lines.append("")
-        tag = "(荒れ狙い・検証中)" if r.get("kind") == "nerai" else ""
+        tag = "(荒れ狙い・参考)" if r.get("kind") == "nerai" else ""
         lines.append(f"{r['venue']} {r['rno']}R(締切 {r.get('deadline') or '?'}){tag}")
         for b in r["bets"]:
             lines.append(f"{b['combo']}  期待値{round(b['ev'] * 100)}%(確率{b['prob'] * 100:.1f}%×{b['odds']:.1f}倍)")
     if any(r.get("kind") == "nerai" for r in races):
-        lines += ["", "荒れ狙い = 1号艇が負けそうなレースで、モデルの確率×オッズが100%以上の組。過去12日の検証で回収率125%(偶然の可能性あり、追試中)"]
+        lines += ["", "荒れ狙い = 1号艇が負けそうなレースで、モデルの確率×オッズが100%以上の組。参考・検証中で、まだ勝てる根拠はありません"]
     lines += ["", SITE_URL]
     if last:
         lines.append("(今日の通知はこれで最後です)")
