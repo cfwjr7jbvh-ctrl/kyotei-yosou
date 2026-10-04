@@ -70,15 +70,20 @@ def main():
     res["slugs"] = slugs
     print("slugs", slugs)
     # 過去の日がどこまで見られるか(徳山と戸田、1R)
-    for slug in ("tokuyama", "toda"):
-        for d in ("20261003", "20260920", "20260801", "20260401", "20260101", "20250701", "20250101", "20240601", "20231015"):
+    import os
+    plan = {"tokuyama": ("20261003", "20260801", "20260401", "20260101", "20250701", "20250101", "20240601", "20231015"),
+            "toda": ("20261003",)}
+    if os.environ.get("PLAN"):  # 例: tokuyama:20231102,20240804;biwako:20231105
+        plan = {k: tuple(v.split(",")) for k, v in (x.split(":") for x in os.environ["PLAN"].split(";"))}
+    for slug, ds in plan.items():
+        for d in ds:
             x = look(f"{BASE}{slug}/{d}/1")
             res["dates"][f"{slug}/{d}"] = {k: x.get(k) for k in ("status", "final", "len", "comment_rows", "sign_rows", "comment_kinds")}
             print(slug, d, res["dates"][f"{slug}/{d}"])
     # 1レースのページの作り(見出しと表の見出し)
     res["race_page"] = look(f"{BASE}tokuyama/20261004/1")
     # 他の場の今日のページもあるか
-    for slug in list(slugs)[:16]:
+    for slug in ([] if os.environ.get("PLAN") else list(slugs)[:16]):
         x = look(f"{BASE}{slug}/20261004/1")
         res["dates"][f"{slug}/20261004"] = {k: x.get(k) for k in ("status", "final", "len", "comment_rows", "sign_rows", "comment_kinds")}
     OUT.parent.mkdir(parents=True, exist_ok=True)

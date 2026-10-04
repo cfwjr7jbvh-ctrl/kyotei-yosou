@@ -2,6 +2,10 @@ name: 日刊スポーツ予想情報の対象場と過去分の調査
 
 on:
   workflow_dispatch:
+    inputs:
+      plan:
+        description: "場:日付,日付;場:日付 の形"
+        default: ""
 
 permissions:
   contents: write
@@ -17,6 +21,8 @@ jobs:
           python-version: "3.12"
       - run: pip install -q requests beautifulsoup4
       - run: python scripts/probe_nikkan.py
+        env:
+          PLAN: ${{ inputs.plan }}
       - name: 調査結果(ページの作りの要約だけ)をコミット
         run: |
           git config user.name "github-actions[bot]"
