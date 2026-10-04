@@ -271,7 +271,23 @@ function tenkaiHTML(r) {
   const legend = KIM.filter((n) => k[n] >= 0.01).map((n) => `<span><i class="k${KIM.indexOf(n)}"></i>${n} <b>${Math.round(k[n] * 100)}%</b></span>`).join("");
   return `<div class="tenkai"><h3>展開予測</h3>
     <div class="kbar" aria-hidden="true">${seg}</div><div class="klegend">${legend}</div>
+    ${scenarioHTML(r)}
     <h4>スリット予想<small>${r.stage === "late" ? "展示STから" : "平均STから"}・右ほど早い</small></h4>${slitHTML(r)}</div>`;
+}
+
+// 展開シナリオ: 勝ち筋ごとに「その艇が勝つなら2着・3着は誰か」
+function scenarioHTML(r) {
+  const sc = (r.tenkai && r.tenkai.scenarios) || [];
+  if (!sc.length) return "";
+  const row = (x) => {
+    const how = x.type ? `${x.type}で勝つなら` : "勝つなら";
+    const sec = x.second.map((b) => `${tile(b.lane)}<b>${Math.round(b.p * 100)}%</b>`).join("");
+    const odds = x.best.odds ? `・${Number(x.best.odds).toFixed(1)}倍` : "";
+    return `<div class="scn"><div class="scn-h">${tile(x.lane)}<span>${how}</span><span class="scn-p">1着 <b>${Math.round(x.p_win * 100)}%</b></span></div>
+      <div class="scn-b"><span class="k">2着</span>${sec}</div>
+      <div class="scn-b"><span class="k">本線</span>${tri(x.best.combo)}<span class="scn-m">この展開の中で ${Math.round(x.best.p_cond * 100)}%${odds}</span></div></div>`;
+  };
+  return `<h4>展開シナリオ<small>勝ち筋ごとの2着と本線</small></h4><div class="scns">${sc.map(row).join("")}</div>`;
 }
 
 function resultHTML(r) {

@@ -29,7 +29,7 @@ from kyotei.publish import read_json, write_check, write_json  # noqa: E402
 from kyotei.scrape import fetch, fetch_many, parse_beforeinfo, parse_odds3t, parse_raceresult  # noqa: E402
 from kyotei.arashi import IN_LOSE_MIN, arashi  # noqa: E402
 from kyotei.notify import notify_bets  # noqa: E402
-from kyotei.tenkai import tenkai, traits  # noqa: E402
+from kyotei.tenkai import scenarios, tenkai, traits  # noqa: E402
 
 JST = dt.timezone(dt.timedelta(hours=9))
 DAYS = ROOT / "docs/data/days"
@@ -101,6 +101,8 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
         boats[-1]["traits"] = traits(b)  # 選手の特性(決まり手の得意度・ST・前づけ・当地・モーターなど)
     # 展開予測: 決まり手の確率と、勝ち筋(誰がどの決まり手で勝つか)
     tk = tenkai([b for _, b in rdf.iterrows()], {int(l): float(w[int(l) - 1]) for l in rdf["lane"]}, stage == "late")
+    # 展開シナリオ: 勝ち筋ごとに「その艇が勝つなら2着・3着は誰か」(表示している3連単の確率から)
+    tk["scenarios"] = scenarios(p_final, tk["paths"], odds if market is not None else None)
     out = {"race_id": r0["race_id"], "jcd": int(r0["jcd"]), "venue": VENUES.get(int(r0["jcd"]), ""),
            "rno": int(r0["rno"]), "deadline": r0.get("deadline"), "race_type": r0.get("race_type"),
            "stage": stage, "updated_at": now().strftime("%H:%M"), "boats": boats,

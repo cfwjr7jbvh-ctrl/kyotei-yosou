@@ -64,3 +64,36 @@ def tenkai(rows: list, p_win: dict, late: bool) -> dict:
     paths.sort(key=lambda x: -x["p"])
     return {"kimarite": {k: round(float(v / s), 4) for k, v in zip(KIMARITE, total)},
             "paths": paths[:4]}
+
+
+def scenarios(P: np.ndarray, paths: list[dict], odds: np.ndarray | None = None, n: int = 3) -> list[dict]:
+    """展開シナリオ: 「この艇が勝つ展開なら、2着・3着は誰か」。
+    P: 3連単120通りの確率(COMBOS の順)。paths: tenkai() の勝ち筋(艇と決まり手)。
+    勝ち筋の上位から艇が重ならないように最大 n 件。2着・3着は、その艇が1着になる組の確率から計算する
+    (モデルは決まり手ごとには分けていないので、同じ艇なら決まり手が違っても2着・3着の見立ては同じ)。"""
+    from .betting import COMBOS
+    first = np.array([int(c[0]) for c in COMBOS])
+    second = np.array([int(c[2]) for c in COMBOS])
+    lanes, out = [], []
+    for pth in paths:
+        if pth["lane"] not in lanes:
+            lanes.append(pth["lane"])
+    for a in np.argsort(-np.array([P[first == l].sum() for l in range(1, 7)])) + 1:  # 勝ち筋が少なければ1着確率の順で補う
+        if len(lanes) >= n:
+            break
+        if int(a) not in lanes:
+            lanes.append(int(a))
+    for a in lanes[:n]:
+        m = first == a
+        pa = float(P[m].sum())
+        if pa <= 0:
+            continue
+        sec = sorted(({"lane": int(b), "p": round(float(P[m & (second == b)].sum() / pa), 3)}
+                      for b in range(1, 7) if b != a), key=lambda x: -x["p"])[:2]
+        i = int(np.argmax(np.where(m, P, -1)))
+        best = {"combo": COMBOS[i], "p_cond": round(float(P[i] / pa), 3), "p": round(float(P[i]), 4)}
+        if odds is not None and np.isfinite(odds[i]):
+            best["odds"] = float(odds[i])
+        typ = next((x["type"] for x in paths if x["lane"] == a), "逃げ" if a == 1 else None)
+        out.append({"lane": int(a), "type": typ, "p_win": round(pa, 3), "second": sec, "best": best})
+    return out
