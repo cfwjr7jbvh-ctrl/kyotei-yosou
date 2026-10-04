@@ -6,7 +6,7 @@ on:
     types: [completed]
   workflow_dispatch:
   schedule:
-    - cron: "17 18 * * 6"   # 毎週日曜 3:17 JST
+    - cron: "17 18 * * *"   # 毎日 3:17 JST(新しいデータで学び直す。朝の予想はこの後に動く)
 
 permissions:
   contents: write
