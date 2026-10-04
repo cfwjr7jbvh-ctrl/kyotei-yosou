@@ -81,7 +81,10 @@ def parse_beforeinfo(html: str) -> dict:
             boats[lane] = {"weight_now": _num(tds[3].get_text()),
                            "exhibit_time": _num(tds[4].get_text()),
                            "tilt": _num(tds[5].get_text()),
-                           "parts_changed": int(bool(tds[7].get_text(strip=True))) if len(tds) > 7 else 0}
+                           "parts_changed": int(bool(tds[7].get_text(strip=True))) if len(tds) > 7 else 0,
+                           # 部品交換の中身(例: キャブ・ピストン、複数は「,」区切り)と、プロペラ(新ペラなど)
+                           "parts": ",".join(tds[7].get_text(" ", strip=True).split()) if len(tds) > 7 else "",
+                           "propeller": tds[6].get_text(strip=True) if len(tds) > 6 else ""}
     for course, div in enumerate(s.select("div.table1_boatImage1"), start=1):
         num = div.select_one(".table1_boatImage1Number")
         tm = div.select_one(".table1_boatImage1Time")

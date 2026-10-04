@@ -278,7 +278,8 @@ def preview_rows(race_id: str, info: dict) -> list[dict]:
              "weight_now": b.get("weight_now"), "tilt": b.get("tilt"),
              "wind_dir": info.get("wind_dir_code"), "p_wind": info.get("wind"),
              "p_wave": info.get("wave"), "air_temp": info.get("air_temp"),
-             "water_temp": info.get("water_temp"), "source": "own"}
+             "water_temp": info.get("water_temp"), "parts": b.get("parts") or "", "propeller": b.get("propeller") or "",
+             "source": "own"}
             for lane, b in info.get("boats", {}).items()]
 
 
