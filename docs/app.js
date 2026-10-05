@@ -339,6 +339,7 @@ function cardHTML(c, race, lane) {
       <div class="cd-kv"><div><span>1着率</span><b>${Math.round(c.win * 100)}%</b></div><div><span>3着内率</span><b>${Math.round(c.top3 * 100)}%</b></div>
         <div><span>勝率(点)</span><b>${c.pts?.toFixed(2) ?? "-"}</b></div><div><span>走数</span><b>${c.n}</b></div>
         <p class="cd-note">チャートは${esc(g)}の中での位置(100がトップ)。安定感はコースの有利不利を差し引いた3着内率</p></div></div>
+    ${c.fafter ? `<p class="cd-f"><b>F後${c.fafter.since}走目</b>(最後のフライング ${esc(c.fafter.date)})。全選手の傾向では、この時期はスタートが平均${fmtST(c.fafter.st).replace(/^\./, "+.")}秒ほど遅くなり、3着内率は${Math.round(c.fafter.top3 * 100)}ポイント。40走ほどで戻る(どれだけ控えるかは毎回ちがう)</p>` : ""}
     ${tags ? `<h4>ひと言タグ</h4><ul class="cd-tags">${tags}</ul>` : `<p class="muted">目立つタグはありません(どの項目も同じ級別の中で平均的)</p>`}
     <h4>スタート</h4><table class="cd-t"><tr><th>平均ST</th><td>${c.st.avg == null ? "-" : fmtST(c.st.avg)}</td><td>${pctTop(c.st.grp)}</td></tr>
       <tr><th>展示とのずれ</th><td>平均 ${c.ex.mae == null ? "-" : c.ex.mae.toFixed(3)}秒</td><td>${c.ex.grp == null ? "" : pctTop(c.ex.grp) + "の小ささ"}</td></tr>

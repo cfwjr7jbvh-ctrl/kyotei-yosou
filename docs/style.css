@@ -435,3 +435,6 @@ details.row[open]>summary{border-bottom:1px solid var(--rule)}
 .ana-copy{border:1px solid var(--rule);background:var(--deck);border-radius:16px;padding:6px 12px;font-size:13px;cursor:pointer;color:inherit}
 
 .tg .emb{vertical-align:-5px;margin-right:5px}
+
+.cd-f{margin:8px 0;padding:8px 10px;border-left:4px solid var(--mark);background:var(--soft);font-size:13px;line-height:1.6}
+.cd-f b{color:var(--mark)}
