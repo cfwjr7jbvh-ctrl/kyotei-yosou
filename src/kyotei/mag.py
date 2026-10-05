@@ -16,6 +16,7 @@ import math
 from . import nerai
 from . import racer_card as rc
 from .card_render import gull_svg, radar_svg
+from .xtext import xlen  # noqa: F401
 
 e = html.escape
 LANE_BG = ["#ffffff", "#17191c", "#e3141b", "#0b5fb4", "#f5d00a", "#12904a"]
@@ -23,11 +24,6 @@ LANE_FG = ["#111111", "#ffffff", "#ffffff", "#ffffff", "#111111", "#ffffff"]
 PREF = {1: "群馬", 2: "埼玉", 3: "東京", 4: "東京", 5: "東京", 6: "静岡", 7: "愛知", 8: "愛知", 9: "三重", 10: "福井", 11: "滋賀",
         12: "大阪", 13: "兵庫", 14: "徳島", 15: "香川", 16: "岡山", 17: "広島", 18: "山口", 19: "山口", 20: "福岡", 21: "福岡",
         22: "福岡", 23: "佐賀", 24: "長崎"}
-
-
-def xlen(text: str) -> int:
-    """X の文字数の数え方(全角などは2、英数字・記号は1。上限 280)。"""
-    return sum(1 if ord(ch) < 0x1100 or 0xFF61 <= ord(ch) <= 0xFF9F else 2 for ch in text)
 
 
 def pct(v) -> str:

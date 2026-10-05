@@ -51,8 +51,11 @@ jobs:
             H=$(TZ=Asia/Tokyo date +%H); if [ "$H" -lt 15 ]; then WHAT=morning; else WHAT=evening; fi
           fi
           ARGS=("$WHAT"); [ -n "${{ inputs.key }}" ] && ARGS+=(--key "${{ inputs.key }}")
-          python scripts/x_post.py "${ARGS[@]}"
-      - name: 下書きと投稿の記録をコミット
+          mkdir -p reports/x_drafts
+          python scripts/x_post.py "${ARGS[@]}" 2>&1 | tee reports/x_drafts/last_run.txt
+          exit "${PIPESTATUS[0]}"
+      - name: 下書きと投稿の記録をコミット(失敗しても記録は残す)
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

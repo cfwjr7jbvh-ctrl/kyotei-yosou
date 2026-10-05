@@ -24,7 +24,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from kyotei.mag import xlen  # noqa: E402
+from kyotei.xtext import xlen  # noqa: E402
 from kyotei.publish import read_json  # noqa: E402
 
 JST = dt.timezone(dt.timedelta(hours=9))
