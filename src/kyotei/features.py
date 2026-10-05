@@ -303,7 +303,7 @@ def add_body_hist(df: pd.DataFrame) -> pd.DataFrame:
 
     検証(scripts/lab.py weight・rest、model_lab body 2026-10-05: logloss -0.00105、90%区間が0をまたがない):
     - rest_days : 前の走からの日数(同じ日の2走目は0)。休み明けは3着内-3.3ポイント、連戦は+2.6
-    - _w_avg30  : 直近30走の当日体重の平均(10走未満は空)。本番の体重との差 w_dev は直前情報が来てから add_late で作る
+    - w_avg30  : 直近30走の当日体重の平均(10走未満は空)。本番の体重との差 w_dev は直前情報が来てから add_late で作る
     """
     if "racer_id" not in df or "date" not in df:
         return df
@@ -316,7 +316,7 @@ def add_body_hist(df: pd.DataFrame) -> pd.DataFrame:
         wn = pd.to_numeric(df.loc[o, "weight_now"], errors="coerce")
         wn = wn.where(wn > 30)
         avg = wn.groupby(g.values).transform(lambda s_: s_.shift(1).rolling(30, min_periods=10).mean())
-        df["_w_avg30"] = avg.reindex(df.index).values
+        df["w_avg30"] = avg.reindex(df.index).values
     return df
 
 
@@ -536,8 +536,9 @@ def add_late(df: pd.DataFrame) -> pd.DataFrame:
         df["ex_st_flying"] = (df["ex_st"] < 0).astype(float).where(df["ex_st"].notna())
     if "weight_now" in df:
         df["weight_diff"] = df["weight_now"] - df["weight"]
-        if "_w_avg30" in df:   # 当日体重と、その選手の直近30走の平均との差(重い日は3着内-4.3ポイント)
-            df["w_dev"] = df["weight_now"] - df["_w_avg30"]
+        if "w_avg30" in df:   # 当日体重と、その選手の直近30走の平均との差(重い日は3着内-4.3ポイント)
+            wn = pd.to_numeric(df["weight_now"], errors="coerce")
+            df["w_dev"] = wn.where(wn > 30) - df["w_avg30"]
     if "wind_dir" in df and "wind" in df:
         ang = (pd.to_numeric(df["wind_dir"], errors="coerce") - 1) * np.pi / 8
         df["wind_x"] = df["wind"] * np.cos(ang)
@@ -560,7 +561,8 @@ def feature_columns(df: pd.DataFrame, stage: str = "late") -> list[str]:
                "boat_no", "racer_name", "branch", "rating_strength", "deadline", "result_code",
                "st_flag", "race_type", "weight_now", "kimarite", "series_str",
                "race_time",  # race_time はレース結果(未来の情報)なので特徴量にしない
-               "ex_course", "p_wind", "p_wave"}  # course・wind・wave に入れ替え済み(重複)
+               "ex_course", "p_wind", "p_wave",
+               "w_avg30"}  # ex_course 等は course・wind・wave に入れ替え済み(重複)。w_avg30 は w_dev を作るためだけ
     cols = [c for c in df.columns if c not in exclude and pd.api.types.is_numeric_dtype(df[c])
             and df[c].notna().mean() > 0.5 and not c.startswith(("rcc_", "_"))
             # 展示STから作った特徴量は使わない(検証ラボ exst: 今日の展示STのずれは本番STのずれとほぼ無関係、相関0.01。
