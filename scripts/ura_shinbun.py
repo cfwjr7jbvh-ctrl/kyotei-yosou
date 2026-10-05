@@ -366,8 +366,41 @@ def render(title: str, venue_name: str | None, picks, all_cards, corners: list[t
 </div>"""
 
 
+def title_ideas(title: str, venue: str | None, n_all: int, picks, trend: dict | None) -> list[str]:
+    """note のタイトル案。考え方(発信方針): 先頭に「へえ」と思う具体的な数字のフック(場の傾向か注目1の数字)、
+    大会名と場名(検索)、人数(保存版の価値)。スマホの一覧で切れるので、フックは20字前後・全体は45字以内を目安。
+    「的中」「必勝」「儲かる」「裏」は使わない。"""
+    import re as _re
+    short = _re.sub(r"第[0-9０-９]+回", "", title)
+    short = _re.sub(r"[(（].*?[)）]", "", short).replace("  ", " ").strip()
+    c, t, heads, com, bc = picks[0]
+    out = []
+    if trend and venue:
+        tp = trend["top"] if trend["top"].get("n", 0) >= 100 else trend["all"]
+        nt = trend["nat_top"] if tp is trend["top"] else trend["nat_all"]
+        c1, nc1 = tp["c1"], nt["c1"]
+        if c1 - nc1 <= -0.04:
+            out.append(f"{venue}の1号艇は{c1:.0%}しか勝てない|{short} 出場{n_all}人をデータで読む")
+            out.append(f"{venue}の1号艇、どこまで信じる?|{short} 全{n_all}人の“型”と狙い目のコース")
+        elif c1 - nc1 >= 0.04:
+            out.append(f"{venue}のインは{c1:.0%}で逃げる|{short} 出場{n_all}人をデータで読む")
+            out.append(f"イン天国{venue}で、それでも崩す人は誰?|{short} 全{n_all}人の“型”")
+        else:
+            k = max(trend["kim_non1"].items(), key=lambda x: x[1])[0]
+            out.append(f"{venue}でインが負けるときは{k}が{trend['kim_non1'][k]:.0%}|{short} 出場{n_all}人をデータで読む")
+    cat = t["cat"]
+    if cat == "venue":
+        v = next((x for x in c["venues"] if x.get("jcd") == t.get("jcd")), c["venues"][0])
+        out.append(f"{c['name']}は{v['name']}で3着内率{rc.pts(v['res'])}|{short} 全{n_all}人の“型”と狙い目")
+    elif cat in ("nige", "makuri", "sashi", "mz", "start"):
+        out.append(f"{t['t']}{c['name']}の数字|{short} 出場{n_all}人をデータで読む")
+    out.append(f"【保存版】{short} 全{n_all}人のひと言タグとコース別の早見表")
+    out.append(f"{short}の{n_all}人、データで見ると誰が何の“職人”か")
+    return [f"{x}({len(x)}字)" for x in out[:5]]
+
+
 def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str] | None = None,
-              waku: list[str] | None = None, trend: list[str] | None = None) -> str:
+              waku: list[str] | None = None, trend: list[str] | None = None, trend_raw: dict | None = None) -> str:
     """note に貼る本文の下書き。考え方(発信方針): 答え(買い目)ではなく、読んだ人が自分で予想するのが楽しくなる「材料」を届ける。
     無料部分で1人分を丸ごとと場の傾向を見せて中身の質を伝え、有料部分の中身は見出しで見せる。"""
     n_all, n_pick = len(sel), len(picks)
@@ -385,10 +418,8 @@ def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str]
             out.append(f"狙い目のコース:{course_line(bc, c)}")
         return out + [""]
 
-    out = ["【タイトル案】",
-           f"1. 【データで読む】{title}|出場{n_all}人の“型”と狙い目のコース 予想が楽しくなる材料集",
-           f"2. {title}の出場{n_all}人、データで分かる“型”と狙い目のコース",
-           f"3. 【保存版】{title} 全{n_all}人のひと言タグとコース別の早見表",
+    out = ["【タイトル案】(先頭の数字がフック。スマホの一覧では40字くらいで切れるので、|より前が勝負)"] + \
+          [f"{i}. {x}" for i, x in enumerate(title_ideas(title, venue_name, n_all, picks, trend_raw), 1)] + [
            "", "――――――――――(ここから無料)――――――――――", "",
            f"{title}{'(' + venue_name + ')' if venue_name else ''}の出場予定{n_all}人を、過去3年・約17万レースの成績から読みました。",
            "このノートは買い目を売るものではありません。あなたが自分で予想するときに「へえ、この人はこういう型なのか」と使える材料を集めたものです。",
@@ -550,7 +581,7 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
     waku = [f"{crs}コース {label}:" + "、".join(xs) for crs, label, xs in waku_rows(wt) if xs]
     tl = nerai.trend_lines(trend, vname) if trend else None
     th = nerai.trend_headline(trend, vname) if trend else None
-    return {"html": page, "note": note_text(title, vname, picks, sel, txt, trust_lines, waku, tl),
+    return {"html": page, "note": note_text(title, vname, picks, sel, txt, trust_lines, waku, tl, trend),
             "x": x_text(title, vname, picks, sel, [c["name"] for c in trust], [c["name"] for v, c in vv[:3]], th),
             "picks": picks, "sel": sel, "missing": missing, "jcd": jcd, "venue": vname}
 
