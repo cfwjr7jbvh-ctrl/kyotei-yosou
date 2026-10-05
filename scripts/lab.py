@@ -2469,14 +2469,18 @@ def note_text(t: dict) -> str:
 
 
 def x_text(t: dict) -> str:
+    """X の投稿案。数字のひと言を残せる長さのうち、いちばん情報の多い形を選ぶ(全角は2文字で数える)。"""
     con = conclusion(t)
-    body = (f"【検証ラボ】{t['title']}\n\nゲンさん「{t['belief']}」\n\nミカタ「結論:{con[0]}。{t['lead'].split('。')[0]}」\n\n"
-            f"ゲンさん「{t.get('gen', '')}」\n\nみんなはこの説、信じてた?")
-    if xlen(body) > 280:  # 長いときは、数字の文を落として掛け合いだけ残す
-        body = f"【検証ラボ】{t['title']}\n\nゲンさん「{t['belief']}」\n\nミカタ「結論:{con[0]}」\n\nゲンさん「{t.get('gen', '')}」\n\nみんなは信じてた?"
-    if xlen(body) > 280:
-        body = f"【検証ラボ】{t['title']}\n\nゲンさん「{t['belief']}」\n\nミカタ「結論:{con[0]}」\n\nみんなは信じてた?"
-    return f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 紙面の上部のスクリーンショットか、表の部分"
+    head, gen = f"【検証ラボ】{t['title']}\n\nゲンさん「{t['belief']}」\n\n", t.get("gen", "")
+    num = (con[1].split("。")[0] + "。") if con[1] else ""
+    lead1 = t["lead"].split("。")[0] + "。"
+    cands = [f"{head}ミカタ「結論:{con[0]}。{lead1}」\n\nゲンさん「{gen}」\n\nみんなはこの説、信じてた?",
+             f"{head}ミカタ「結論:{con[0]}。{num}」\n\nゲンさん「{gen}」\n\nみんなは信じてた?",
+             f"{head}ミカタ「結論:{con[0]}。{num}」\n\nみんなは信じてた?",
+             f"{head}ミカタ「結論:{con[0]}」\n\nゲンさん「{gen}」\n\nみんなは信じてた?",
+             f"{head}ミカタ「結論:{con[0]}」\n\nみんなは信じてた?"]
+    body = next((c for c in cands if xlen(c) <= 280), cands[-1])
+    return f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 紙面の上部のスクリーンショットか、結果のカードの部分"
 
 
 def main():
