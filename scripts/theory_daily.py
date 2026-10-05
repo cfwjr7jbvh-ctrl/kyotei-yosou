@@ -90,6 +90,7 @@ def build(day: dt.date, data: dict) -> dict | None:
 .th.edge{{border-color:#c98a00}} .th.real,.th.known,.th.trial{{border-color:#2e8b57}} .th.occult{{border-color:#8a5cc8}}
 .bd{{font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--rule);margin-left:6px;color:var(--mute)}} .ln{{display:inline-block;min-width:18px;text-align:center;font:700 12px var(--num);border:1px solid var(--ink);margin-left:4px}}
 .vs{{display:grid;gap:4px;margin:0 0 8px;font-size:13px}} .vs .p{{color:#1e6b3f;font-weight:700}} .vs .m{{color:#a3121a;font-weight:700}}
+.dlg{{background:#f1e9fb;border:2px solid #8a5cc8;padding:10px 12px;font-size:14px;line-height:1.8}} .dlg .g{{color:#0b5fb4}} .dlg .m{{color:#c8141c}}
 .mag h4{{margin:14px 0 4px;font:400 16px var(--head)}} .mag h4 small{{margin-left:8px;font-size:12px;color:var(--mute)}} .ix{{margin:0;font-size:13.5px;line-height:1.8}}
 </style></head><body>
 <header class="cover"><div class="lanebar"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cv-in">
@@ -97,7 +98,9 @@ def build(day: dt.date, data: dict) -> dict | None:
 <p class="cv-kicker">買い目は言わない。考え方を並べる</p><h1 class="cv-h">{e(title)}</h1><p class="cv-deck">{e(lead)}</p>
 <div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ / 暦とオカルト担当 ゲンさん<br>理論の数字は検証ラボ(公式の成績データを独自に集計)から</span></div></div></header>
 <main class="mag">
-<section><span class="label">今日の暦(オカルト枠)</span><ul>{cal_html or "<li>今日は特別な暦の日ではない。……ふつうの日こそ、データの出番</li>"}</ul>
+<section><span class="label">今日の暦(オカルト枠)</span>
+<p class="dlg"><b class="g">ゲンさん</b>「暦も名前もモーター番号も、レースに関係ねえのは分かってる。でもな、ワンチャン大いなる力が働いてるかもしれねえだろ?」<br>
+<b class="m">ミカタ</b>「わかる。だから、データで差が出なかったものも『オカルト枠』として並べておくね。乗るかどうかは、気分しだい」</p><ul>{cal_html or "<li>今日は特別な暦の日ではない。……ふつうの日こそ、データの出番</li>"}</ul>
 <p>名前・モーター番号のオカルト: {e(occ_txt or "今日は見当たらない")}</p></section>
 <section><span class="label">今日の悩ましいレース</span><p>インに有利な理論と不利な理論が、同じレースでぶつかっている。どっちに乗る?</p>{sec_conf}</section>
 <section><span class="label">理論がいちばん集まったレース</span>{sec_rich}</section>

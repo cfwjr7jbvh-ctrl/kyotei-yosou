@@ -2857,9 +2857,71 @@ def measures_html(ms, subject="1号艇", verb="勝つ", no_market=False, compare
     return f'<div class="rcs">{cards}</div>'
 
 
+# オカルト枠の導入(2026-10-06 ユーザー: 関係ないのはわかってる。でもギャンブラーなら確かめたくなるだろ? ワンチャン大いなる力が働いてるかも。
+# 掛け合いで読み手の気持ちをつかむ)。(話す人, せりふ) の並び。g=ゲンさん、m=ミカタ。x は X の投稿に入れる短い版
+HOOKS = {
+    "lucky7": {"lines": [("g", "モーターの番号なんて、レースに関係ねえ。それくらい分かってるよ"), ("g", "でもな、出走表で『77号機』を見つけると、つい買いたくなっちまうんだ"),
+                         ("m", "わかる。7が並んでるだけで、なんかいいことありそうだもんね"), ("g", "だろ? ワンチャン、大いなる力が働いてるかもしれねえ"),
+                         ("m", "……よし、確かめよう。ギャンブラーなら、一度は白黒つけたいよね")],
+               "x": ("番号なんて関係ねえのは分かってる。でも77号機は買いたくなるだろ?", "わかる。ワンチャンあるかも。確かめよう")},
+    "moon": {"lines": [("g", "月で選手が速くなるわけがねえ。分かってるさ"), ("g", "でも満月の夜のナイターって、なんか荒れそうな気がしねえか?"),
+                       ("m", "する。水面がキラキラして、いつもとちがう感じがするよね"), ("g", "潮だって月で動くんだ。ワンチャン、大いなる力が働いてるかもしれねえ"),
+                       ("m", "そこまで言うなら、確かめるしかないね")],
+             "x": ("月で速くなるわけねえ。でも満月のナイターは荒れそうだろ?", "ワンチャン大いなる力が……確かめよう")},
+    "zorome": {"lines": [("g", "11月11日は1-1-1……は買えねえのか。まあいい"), ("g", "ゾロ目の日とか、13日の金曜日とか。関係ねえのは分かってても、気になるんだよ"),
+                         ("m", "カレンダーを見るだけで、ちょっとワクワクする日ってあるよね"), ("g", "ワンチャン、その日だけ何かが起きるかもしれねえだろ?"),
+                         ("m", "じゃあ、その『何か』があるのか、数えてみよう")],
+               "x": ("ゾロ目の日、13日の金曜日。関係ねえのは分かってるけど気になるだろ?", "ワンチャンあるかも。数えてみた")},
+    "payday": {"lines": [("g", "給料日は財布が温かいからな。つい本命をドカンと買いたくなる"), ("m", "みんなが同じことをしたら、本命のオッズが下がってそうだよね"),
+                         ("g", "だろ? 関係ねえようで、ワンチャンあるかもしれねえ"), ("m", "オッズのゆがみなら、数字で見える。確かめてみよう")],
+               "x": ("給料日は本命を買いたくなる。みんな同じならオッズがゆがむだろ?", "ワンチャンあるかも。確かめた")},
+    "birthday": {"lines": [("g", "誕生日だからってボートが速くなるわけじゃねえ。分かってる"), ("g", "でもな、誕生日に走る推しを見つけたら、応援したくなるのが人情だろ"),
+                           ("m", "わかる。その日に勝ったら、一生の思い出になりそう"), ("g", "ワンチャン、その日だけは大いなる力が背中を押してくれるかもしれねえ"),
+                           ("m", "じゃあ、誕生日の前後のレースを全部集めてみよう")],
+                 "x": ("誕生日だから速くなるわけねえ。でも推しの誕生日は応援したくなるだろ?", "ワンチャンあるかも。全部集めてみた")},
+    "blood": {"lines": [("g", "血液型で人が決まる、なんて話はいったん置いとくよ"), ("g", "でも『A型のスタートは几帳面』って聞くと、なんか分かる気がするんだよな"),
+                        ("m", "一度は聞いたことあるよね、そういう話"), ("g", "ワンチャン、あるかもしれねえだろ?"), ("m", "星座もいっしょに、確かめちゃおう")],
+              "x": ("血液型の話はいったん置いとく。でもA型のスタートは几帳面な気がするだろ?", "ワンチャンあるかも。確かめた")},
+    "manshu": {"lines": [("g", "前のレースが万舟だと、次も荒れる気がするんだよ。流れってやつだ"), ("m", "前のレースと次のレースは、別のレース……なんだけどね"),
+                         ("g", "頭では分かってる。でも、ワンチャン大いなる流れが来てるかもしれねえだろ?"), ("m", "その気持ち、すごくわかる。じゃあ流れがあるか、数えてみよう")],
+               "x": ("万舟のあとは、また荒れる気がするんだよ。流れってやつだ", "頭では分かってても気になるよね。数えてみた")},
+    "rokuyo": {"lines": [("g", "大安だの仏滅だので、水面が変わるわけがねえ。分かってるさ"), ("g", "でもカレンダーに『大安』とあると、本命で勝負したくなるんだよな"),
+                         ("m", "わかる。なんか背中を押してもらえる気がするよね"), ("g", "ワンチャン、暦の大いなる力が働いてるかもしれねえ"),
+                         ("m", "それなら、六曜ごとに全部のレースを数えてみよう")],
+               "x": ("大安で水面が変わるわけねえ。でも大安の日は本命で勝負したくなるだろ?", "ワンチャンあるかも。全部数えた")},
+    "name": {"lines": [("g", "名前に『勝』が入ってるから勝つ。そんなわけねえよな"), ("g", "……でも出走表で見つけると、ちょっと気になるんだよ"),
+                       ("m", "わかる。名前で応援したくなる選手っているよね"), ("g", "ワンチャン、名前に大いなる力が宿ってるかもしれねえだろ?"),
+                       ("m", "じゃあ、名前の字ごとに成績を並べてみよう")],
+             "x": ("名前に『勝』で勝つわけねえ。でも出走表で見つけると気になるだろ?", "ワンチャンあるかも。字ごとに並べた")},
+    "samefin": {"lines": [("g", "今日は3着がずっと6号艇だ。次も6を3着に置きたくなるだろ?"), ("m", "すごくわかる。もう、そういう日なんじゃないかって思うよね"),
+                          ("g", "前のレースと関係ねえのは分かってる。でもワンチャン、今日は大いなる流れが来てるかもしれねえ"), ("m", "じゃあ、その流れが本当にあるのか確かめよう")],
+                "x": ("今日は3着がずっと6号艇。次も6を置きたくなるだろ?", "わかる。流れが本当にあるか確かめた")},
+    "streak": {"lines": [("g", "イン逃げが3つ続いた。そろそろ荒れるぞ"), ("m", "ルーレットの赤と黒みたいに、前とは関係ない……って言うよね"),
+                         ("g", "分かってるよ。でもワンチャン、水面の大いなる力が働いてるかもしれねえだろ?"), ("m", "それなら確かめてみよう。結果は、ちょっと意外だったよ")],
+               "x": ("イン逃げが3つ続いた。そろそろ荒れるだろ?", "ワンチャンあるかも。確かめたら意外だった")},
+    "height": {"lines": [("g", "背の高さで勝ち負けが決まるなら、選手はみんな同じ背になってるはずだ"), ("g", "でも『小柄な選手はボートが軽い』って聞くと、ワンチャンあるかもって思っちまう"),
+                         ("m", "わかる。体のことって、なんとなく効きそうだもんね"), ("m", "よし、身長ごとに分けて確かめよう")],
+               "x": ("背の高さで決まるわけねえ。でも小柄なほうが軽くて有利な気がするだろ?", "ワンチャンあるかも。確かめた")},
+}
+
+
+def _hook(t):
+    return t.get("hook") or HOOKS.get(t.get("id"))
+
+
 def page(t: dict, asof: str) -> str:
     today = dt.date.today().strftime("%Y.%m.%d")
     con = conclusion(t)
+    hook = _hook(t)
+    hook_html = ""
+    if hook:
+        rows = "".join(f'<div class="hk {w}">{gull_svg(44, bg="#ffffff", cls="hk-g", who="gen" if w == "g" else "mikata")}<p><small>{"ゲンさん" if w == "g" else "ミカタ"}</small>{e(x)}</p></div>'
+                       for w, x in hook["lines"])
+        hook_html = f'<section class="hook"><span class="label">はじめに(正直に言うと)</span><div class="hks">{rows}</div></section>'
+    # オカルト枠は、表紙で答えを言わない(気持ちの導入から入り、数字は結論のあとの「くわしく」へ)
+    deck = (f"「{hook['x'][0]}」――関係ないのは分かってる。でも、ワンチャン大いなる力が働いてるかも? ギャンブラーの気持ちを、データで確かめた。" if hook else t["lead"])
+    detail_html = f'<section class="howto"><span class="label">くわしく</span><p>{e(t["lead"])}</p></section>' if hook else ""
+
     tables = "".join(table_html(*tb) for tb in t["tables"])
     use = "".join(f"<li>{e(x)}</li>" for x in t["use"])
     rules = ('<section class="side"><h3>まず、ルールをざっくり</h3><ol>' + "".join(f"<li>{e(x)}</li>" for x in t["rules"]) + "</ol></section>") if t.get("rules") else ""
@@ -2882,6 +2944,9 @@ def page(t: dict, asof: str) -> str:
 .rc-b{{display:flex;flex-wrap:wrap;gap:6px}} .bd{{font-size:11.5px;padding:3px 8px;border-radius:999px;border:1px solid var(--rule)}}
 .bd.ok{{background:#e7f6ec;border-color:#2e8b57;color:#1e6b3f}} .bd.warn{{background:#fff4d6;border-color:#c98a00;color:#7a5200}} .bd.mute{{color:var(--mute)}} .bd.base{{background:#eee}}
 .howto p{{margin:0;font-size:14px;line-height:1.8}}
+.hks{{display:grid;gap:8px;background:#f1e9fb;border:2px solid #8a5cc8;padding:12px}} .hk{{display:flex;gap:10px;align-items:flex-start}} .hk svg{{flex:0 0 44px;width:44px;height:44px}}
+.hk p{{margin:0;background:#fff;border-radius:10px;padding:8px 12px;font:700 14.5px/1.7 var(--serif);border:2px solid #c8141c}} .hk.g p{{border-color:#0b5fb4}}
+.hk p small{{display:block;font:700 11px var(--sans);color:#c8141c}} .hk.g p small{{color:#0b5fb4}} .hk.m{{flex-direction:row-reverse}}
 .gauge{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:8px}} .gauge div{{background:var(--card);border:2px solid var(--rule);padding:10px 12px}}
 .gauge b{{display:block;font:400 15px var(--head);color:var(--red)}} .gauge span{{font-size:13px}}
 .td-box{{display:flex;gap:12px;align-items:flex-start;background:var(--yellow);padding:14px 16px;border:3px solid var(--ink)}} .td-box p{{margin:0;font:700 15.5px/1.7 var(--serif)}} .td-box svg{{flex:0 0 48px;width:48px;height:48px}}
@@ -2891,13 +2956,13 @@ def page(t: dict, asof: str) -> str:
 <header class="cover"><div class="lanebar"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cv-in">
 <div class="cv-top"><div class="brand">ミカタ検証ラボ<small>「◯◯理論」を同じ物差しで試す</small></div><div class="issue"><b>LAB</b><br>{e(today)}</div></div>
 <p class="cv-kicker">検証する説</p><h1 class="cv-h">{e(t['title'])}</h1>
-<p class="cv-deck">{e(t['lead'])}</p>
+<p class="cv-deck">{e(deck)}</p>
 <div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ(カモメの記者)/ 説の持ち込み ゲンさん<br>公式の成績データ 2023-10〜{e(asof)} を独自に集計</span></div></div></header>
 <main class="mag">
-<section class="opener"><span class="label">ゲンさんの説</span><div class="gen-say">{gull_svg(64, bg="#ffffff", cls="gs", who="gen")}<p class="belief">{e(t['belief'])}</p></div>
+{hook_html}<section class="opener"><span class="label">ゲンさんの説</span><div class="gen-say">{gull_svg(64, bg="#ffffff", cls="gs", who="gen")}<p class="belief">{e(t['belief'])}</p></div>
 <p class="who">ゲンさん=験かつぎ歴40年の大先輩。ストップウォッチ片手に展示を見る目は確か。その説、ミカタがデータで確かめます</p></section>
 <section class="stamp"><span class="label">ミカタの結論</span><div class="st-box"><b>{e(con[0])}</b><p>{e(con[1])}</p></div></section>
-<section class="howto"><span class="label">数字の見方</span><p>数字はぜんぶ「{t.get('per', 100)}{t.get('unit') or ('走' if t.get('no_market') else 'レース')}あたり何回か」。棒の上が<b>くらべる相手</b>、下が<b>この条件</b>。差がはっきりしていて、たまたまでは出ない差なら「<b>本物の差</b>」のしるしが付きます。{'' if t.get('no_market') else 'オッズ(みんなの予想)も同じ差を見込んでいれば「<b>オッズも知ってる</b>」=配当はそのぶん堅め。'}</p></section>
+{detail_html}<section class="howto"><span class="label">数字の見方</span><p>数字はぜんぶ「{t.get('per', 100)}{t.get('unit') or ('走' if t.get('no_market') else 'レース')}あたり何回か」。棒の上が<b>くらべる相手</b>、下が<b>この条件</b>。差がはっきりしていて、たまたまでは出ない差なら「<b>本物の差</b>」のしるしが付きます。{'' if t.get('no_market') else 'オッズ(みんなの予想)も同じ差を見込んでいれば「<b>オッズも知ってる</b>」=配当はそのぶん堅め。'}</p></section>
 {rules}<section><span class="label">結果</span>{measures_html(t['measures'], t.get('subject', '1号艇'), t.get('verb', '勝つ'), t.get('no_market', False), t.get('compare', '全体'), t.get('ref_label'), t.get('unit'), t.get('per', 100))}{tables}</section>{faq}
 <section class="side"><h3>予想に使うなら</h3><ul>{use}</ul></section>
 <section class="todai"><span class="label">今日のお題</span><div class="td-box">{gull_svg(48, bg="#fff", cls="td")}<p>{e(t.get('challenge', '次に行く場で、この説が本当か自分の目で確かめてみよう'))}</p></div></section>
@@ -2911,6 +2976,7 @@ def page(t: dict, asof: str) -> str:
 def note_text(t: dict) -> str:
     con = conclusion(t)
     out = [f"【タイトル案】", f"1. {t['title']}|{t['belief'][:24]}…をデータで検証", f"2. 検証ラボ:{t['title']} 3つの物差しで確かめた", "",
+           *((["■はじめに(正直に言うと)"] + [f"{'ゲンさん' if w == 'g' else 'ミカタ'}「{x}」" for w, x in _hook(t)["lines"]] + [""]) if _hook(t) else []),
            "■ゲンさんの説(験かつぎ歴40年の大先輩)", f"「{t['belief']}」", "", f"■ミカタの結論:{con[0]}", con[1], "", "■くわしく", t["lead"], ""]
     out += ["■結果"]
     for name, m, v in t["measures"]:
@@ -2959,6 +3025,14 @@ def x_text(t: dict) -> str:
              f"{head}ミカタ「結論:{con[0]}。{num}」\n\nみんなは信じてた?",
              f"{head}ミカタ「結論:{con[0]}」\n\nゲンさん「{gen}」\n\nみんなは信じてた?",
              f"{head}ミカタ「結論:{con[0]}」\n\nみんなは信じてた?"]
+    hk = _hook(t)
+    if hk:   # オカルト枠は、説の代わりに掛け合いの導入から入る
+        gx, mx = hk["x"]
+        h2 = f"【検証ラボ】{t['title']}\n\nゲンさん「{gx}」\nミカタ「{mx}」\n\n"
+        cands = [h2 + f"結論:{con[0]}。{num}\n\nゲンさん「{gen}」\n\nみんなは信じてた?",
+                 h2 + f"結論:{con[0]}。{num}\n\nみんなは信じてた?",
+                 h2 + f"結論:{con[0]}\n\nゲンさん「{gen}」",
+                 h2 + f"結論:{con[0]}"] + cands
     body = next((c for c in cands if xlen(c) <= 280), cands[-1])
     return f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 紙面の上部のスクリーンショットか、結果のカードの部分"
 
