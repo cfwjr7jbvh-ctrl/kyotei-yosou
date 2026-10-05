@@ -287,25 +287,25 @@ details.row[open]>summary{border-bottom:1px solid var(--rule)}
 .an-stage{position:relative}
 .an-stage svg{display:block;width:100%;height:auto;max-width:560px}
 .an-water{fill:var(--soft);stroke:var(--rule)}
-.an-slit{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:3 3;opacity:.55}
+.an-slit{stroke:var(--ink);stroke-width:.25;stroke-dasharray:.8 .8;opacity:.55}
 .an-mark{fill:var(--mark)} .an-mark2{fill:var(--mute);opacity:.5}
-.an-lbl{font-size:9.5px;fill:var(--mute)}
-.an-phase{font-size:15px;font-weight:700;fill:var(--ink)}
-.an-tr{fill:none;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:.5}
+.an-lbl{fill:var(--mute)}
+.an-phase{position:absolute;left:10px;top:8px;font-size:15px;font-weight:700;color:var(--ink);pointer-events:none}
+.an-tr{fill:none;stroke-width:.32;stroke-linecap:round;stroke-linejoin:round;opacity:.5}
 .an-tr.l1{stroke:var(--bar1)} .an-tr.l2{stroke:var(--l2)} .an-tr.l3{stroke:var(--l3)}
 .an-tr.l4{stroke:var(--l4)} .an-tr.l5{stroke:var(--l5)} .an-tr.l6{stroke:var(--l6)}
 @media (prefers-color-scheme:dark){ .an-tr.l2{stroke:var(--l2edge)} }
-.an-bt .an-hull{stroke-width:1.2;stroke-linejoin:round}
-.an-bt text{font:700 10.5px var(--num)}
+.an-bt .an-hull{stroke-width:.16;stroke-linejoin:round}
+.an-bt text{font-family:var(--num);font-weight:700}
 .an-bt.l1 .an-hull{fill:var(--l1);stroke:var(--l1edge)} .an-bt.l1 text{fill:var(--l1i)}
 .an-bt.l2 .an-hull{fill:var(--l2);stroke:var(--l2edge)} .an-bt.l2 text{fill:var(--l2i)}
 .an-bt.l3 .an-hull{fill:var(--l3);stroke:none} .an-bt.l3 text{fill:var(--l3i)}
 .an-bt.l4 .an-hull{fill:var(--l4);stroke:none} .an-bt.l4 text{fill:var(--l4i)}
 .an-bt.l5 .an-hull{fill:var(--l5);stroke:none} .an-bt.l5 text{fill:var(--l5i)}
 .an-bt.l6 .an-hull{fill:var(--l6);stroke:none} .an-bt.l6 text{fill:var(--l6i)}
-.an-bt text.an-flag{font:700 9.5px "BIZ UDPGothic",system-ui,sans-serif;fill:var(--mute)}
+.an-bt text.an-flag{font-family:"BIZ UDPGothic",system-ui,sans-serif;font-weight:700;fill:var(--mute);paint-order:stroke;stroke:var(--soft);stroke-width:.5}
 .an-bt text.an-flag.atk{fill:var(--mark)} .an-bt text.an-flag.fin{fill:var(--ink)}
-.an-bt text.an-flag.fast{fill:var(--mark);font-size:11px}
+.an-bt text.an-flag.fast{fill:var(--mark)}
 .an-re{position:absolute;right:8px;top:8px;border:1px solid var(--rule);background:var(--deck);border-radius:999px;
   padding:3px 10px;font-size:12px;cursor:pointer}
 .an-cap{margin:6px 0 0;font-size:13.5px;font-weight:700;min-height:1.5em}
