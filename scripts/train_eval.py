@@ -158,6 +158,26 @@ def arashi_walk_forward() -> dict:
     return {**(res.get("confirm") or {}), "source": "walk_forward"}
 
 
+def pos_calibration(PM, PK, PB, y) -> dict:
+    """枠×着順ごとの「実際の回数 ÷ 確率の合計」(1.0 なら見込みどおり)。改良案 J13: 市場は1号艇の3着を多く見込みすぎ(0.90)。
+    モデル・市場・合成のそれぞれで、どの枠のどの着順を見込みすぎ/少なすぎかを見る。"""
+    parts = np.array([[int(x) for x in c.split("-")] for c in COMBOS])   # (120, 3)
+    yy = parts[y]                                                       # 実際の着順(各レース)
+    out = {}
+    for nm, P in (("model", PM), ("market", PK), ("blend", PB)):
+        tab = {}
+        for pos, lbl in enumerate(("1着", "2着", "3着")):
+            row = []
+            for k in range(1, 7):
+                m = parts[:, pos] == k
+                exp_ = float(P[:, m].sum())
+                act = float((yy[:, pos] == k).sum())
+                row.append(round(act / exp_, 3) if exp_ > 0 else None)
+            tab[lbl] = row
+        out[nm] = tab
+    return out
+
+
 def ev_analysis(te, p_ens, stack, races, odds, report, log, s23=None):
     rids = np.sort(te["race_id"].unique())
     O = odds_matrix(odds, rids)
@@ -199,6 +219,7 @@ def ev_analysis(te, p_ens, stack, races, odds, report, log, s23=None):
            "ev_model": backtest_ev(PM[sl], O[sl], y[sl], pay[sl]),
            "ev_blend": backtest_ev(PB[sl], O[sl], y[sl], pay[sl]),
            "ev_filtered": backtest_ev(PB[sl], O[sl], y[sl], pay[sl], filt=filt, extra=extra)}
+    out["pos_calib"] = pos_calibration(PM[sl], PK[sl], PB[sl], y[sl])
     log(json.dumps(out, ensure_ascii=False, indent=1))
     report["ev"] = out
     return (a, b), filt
