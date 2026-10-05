@@ -2261,6 +2261,364 @@ def t_season(ent, r):
     }
 
 
+def _accident(ent):
+    """選手ごと・審査期間ごとの『事故率の目安』(その走より前の事故点÷出走回数)。
+    事故点は非公式の目安(F・選手責任の出遅れ20、選手責任の欠場・失格10、妨害失格15)。待機行動違反などの点はデータに無いので入らない。
+    審査期間: 5/1〜10/31(A)、11/1〜4/30(B)。期末=期の最後の6週間。"""
+    e = ent.copy(); e["rc"] = e["result_code"].astype(str); e["dt"] = pd.to_datetime(e["date"])
+    mo, yr = e["dt"].dt.month, e["dt"].dt.year
+    e["per"] = np.where(mo.between(5, 10), yr.astype(str) + "A", (yr + (mo >= 11)).astype(str) + "B")
+    e["pts"] = e["rc"].map({"F": 20, "L1": 20, "K1": 10, "S1": 10, "S2": 15}).fillna(0)
+    e["cnt"] = e["rc"].isin(["01", "02", "03", "04", "05", "06", "F", "L1", "K1", "S1", "S2"]).astype(float)
+    e = e.sort_values(["racer_id", "dt", "rno"])
+    g = e.groupby(["racer_id", "per"])
+    cp, cc = g["pts"].cumsum() - e["pts"], g["cnt"].cumsum() - e["cnt"]
+    e["acc_rate"] = cp / cc.where(cc >= 20)
+    end = pd.to_datetime(np.where(e["per"].str.endswith("A"), e["per"].str[:4] + "-10-31", e["per"].str[:4] + "-04-30"))
+    e["days_left"] = (end - e["dt"]).dt.days
+    e["per_end"] = e["days_left"].between(0, 42)
+    k = e.groupby("racer_id").cumcount()
+    last = k.where(e["rc"].isin(["F", "L1"])).groupby(e["racer_id"]).ffill().groupby(e["racer_id"]).shift(1)
+    e["f_since"] = (k - last).fillna(999)
+    st = e["st"].where(e["st"].between(0, 0.6) & (e["st_flag"] != "F"))
+    e["st_dev"] = st - st.groupby(e["racer_id"]).transform("mean")
+    return e
+
+
+def t_penalty(ent, r):
+    """減点と失格ってなに? 期末の事故率は予想を変える?"""
+    e = _accident(ent)
+    nr = r["race_id"].nunique()
+    per1000 = lambda c: (e["rc"] == c).sum() / nr * 1000  # noqa: E731
+    codes = e.groupby("race_id")["rc"].agg(lambda q: set(q))
+    xr = r.copy(); cs = xr["race_id"].map(codes)
+    xr["hasS"] = cs.map(lambda q: isinstance(q, set) and bool(q & {"S0", "S1", "S2"}))
+    mu = measure(xr, xr["hasS"], ref=~xr["hasS"], col="upset", qcol="_none")
+    mu.update({"ref_label": "失格のないレース", "subject": "万舟", "verb": "出る", "unit": "レース"})
+    # 選手単位: 期末×事故率(F後40走は除く。F直後の慎重さと分けるため)
+    x = _adj(ent).join(e.set_index(["race_id", "lane"])[["acc_rate", "per_end", "f_since", "st_dev"]], on=["race_id", "lane"])
+    ok = x["f_since"] > 40
+    hi_end, lo_end = ok & x["per_end"] & (x["acc_rate"] >= 0.5), ok & x["per_end"] & (x["acc_rate"] < 0.3)
+    hi_mid, lo_mid = ok & ~x["per_end"] & (x["acc_rate"] >= 0.5), ok & ~x["per_end"] & (x["acc_rate"] < 0.3)
+    me, mm = measure(x, hi_end, ref=lo_end), measure(x, hi_mid, ref=lo_mid)
+    me.update({"ref_label": "期末・事故率が低い人", "subject": "その選手", "verb": "3着に入る", "unit": "走"})
+    mm.update({"ref_label": "期の途中・低い人", "subject": "その選手", "verb": "3着に入る", "unit": "走"})
+    st_e = float(x.loc[hi_end, "st_dev"].mean() - x.loc[lo_end, "st_dev"].mean())
+    st_m = float(x.loc[hi_mid, "st_dev"].mean() - x.loc[lo_mid, "st_dev"].mean())
+    tbl = []
+    for lo, hi, nm in ((0, 0.2, "0.2未満"), (0.2, 0.4, "0.2〜0.4"), (0.4, 0.55, "0.4〜0.55"), (0.55, 0.7, "0.55〜0.7"), (0.7, 99, "0.7以上")):
+        a = ok & x["per_end"] & x["acc_rate"].between(lo, hi, inclusive="left")
+        b = ok & ~x["per_end"] & x["acc_rate"].between(lo, hi, inclusive="left")
+        sd = lambda m_: (lambda v: "ほぼ同じ" if abs(v) < 0.003 else f"{abs(v):.3f}秒{'遅い' if v > 0 else '早い'}")(x.loc[m_, "st_dev"].mean())  # noqa: E731
+        tbl.append([nm, sd(a), f"{_n100(x.loc[a, 'c1'].mean())}回", sd(b), f"{_n100(x.loc[b, 'c1'].mean())}回"])
+    ctbl = [["フライング(F)", f"{per1000('F') / 10:.1f}回", "返還。休み(1本目30日)と事故点"], ["選手の責任の失格(転覆・落水など)", f"{per1000('S1') / 10:.1f}回", "返還なし。減点5点(実例)"],
+            ["妨害失格", f"{per1000('S2') / 10:.1f}回", "返還なし。賞典除外(実例)"], ["責任のない失格(ぶつけられた等)", f"{per1000('S0') / 10:.1f}回", "返還なし。減点なし"],
+            ["欠場", f"{(per1000('K0') + per1000('K1')) / 10:.1f}回", "返還"], ["出遅れ(L)", f"{(per1000('L0') + per1000('L1')) / 10:.1f}回", "返還"]]
+    d_e = (me["in1"] - me["in1_ref"]) * 100
+    return {
+        "id": "penalty", "title": "減点と失格ってなに? 期末の『事故率』は予想を変える?",
+        "belief": "失格や減点なんて、たまにしか起きねえ。予想にはほとんど関係ないだろ",
+        "subject": "その選手", "verb": "3着に入る", "no_market": True, "unit": "走",
+        "lead": f"失格は100レースに約{(per1000('S0') + per1000('S1') + per1000('S2')) / 10:.0f}回、フライングは約{per1000('F') / 10:.0f}回。失格が出たレースは万舟が100レースで{_n100(mu['in1'])}回(ほかは{_n100(mu['in1_ref'])}回)。"
+                f"そして予想に効くのは『事故率』。いまは10月=審査期間の終わり。事故率がボーダー(0.70)に近い選手は、期末になると本人のふだんよりスタートが{abs(st_e):.3f}秒遅く、"
+                f"3着に入る回数も100走で{abs(d_e):.1f}回少ない(フライングの直後の人は除いて)。期の途中では、差はずっと小さい。",
+        "conclusion": ["ウソ。期末は事故率が予想を変える",
+                       f"10月・4月の終わりは、事故率が0.5を超えた選手が安全運転になる。スタートは{abs(st_e):.3f}秒(約{abs(st_e) * 2000:.0f}cm)遅く、3着内は100走で{abs(d_e):.1f}回少ない。"
+                       "B2級に落ちないための、もっともな作戦"],
+        "tables": [("失格・欠場は、100レースに何回?", ctbl, ["できごと", "100レースあたり", "舟券と罰"]),
+                   ("事故率の目安ごとの、スタート(本人のふだんとくらべて)と3着内。F直後の人は除く", tbl, ["事故率", "期末のST", "期末の3着内(100走)", "期の途中のST", "期の途中の3着内"])],
+        "measures": [("期末に、事故率が0.5以上", me, verdicts(me)), ("期の途中で、事故率が0.5以上", mm, verdicts(mm)), ("失格が出たレースの万舟", mu, verdicts(mu))],
+        "rules": ["欠場: スタートまでの理由(フライング・出遅れ・待機行動中の転覆・病気など)で走らなかった艇。その艇がからむ舟券はお金が返ってくる(返還)",
+                  "失格: スタートしたあとの理由(転覆・落水・エンスト・周回の間違い・妨害など)。舟券は返ってこない",
+                  "減点: 節の得点(予選の成績)から引かれる点。待機行動違反と不良航法は7点、選手の責任の転覆・落水は5点(公式の実例)。妨害失格は、その節の優勝争いから外される(賞典除外)",
+                  "待機行動: ピットを出てからスタートまでの動き(コース取りを含む)。蛇行や他艇のじゃま、モーターを止めることなどが禁止。破ると待機行動違反",
+                  "事故率: 半年(5/1〜10/31、11/1〜4/30)の事故点の合計÷出走回数。0.70を超えると、勝率に関係なくB2級に落ちる(公式)。事故点はF・出遅れが20点など。この記事の事故率は成績から計算した目安(待機行動違反などの点は入っていない)"],
+        "faq": [("待機行動違反って、どんなとき?", "ピットを出てからスタートまでの間に、ほかの艇の進路をふさぐ、決められた動きをしない、モーターを止める、など。節の得点から7点引かれる。舟券は返ってこないし、失格にもならない"),
+                ("失格した艇の舟券は?", "返ってこない。フライングや出遅れ(欠場)は返ってくる。だから失格が出たレースは、残った艇で決まって高い配当になりやすい"),
+                ("賞典除外って?", "その節の準優勝戦・優勝戦に進めなくなること。妨害失格などで起きる。除外されても、残りのレースは走る"),
+                ("期末の事故率はどこで分かる?", "いちばんの手がかりは、出走表の『F1』『F2』などのフライングの数(Fは1本で20点ほど)。今期の出走回数が少ない人ほど、1本のFで事故率が大きく上がる。10月と4月の終わりは、そういう人のスタートを少し控えめに見る")],
+        "use": ["10月・4月の終わりは、今期にFや失格がある選手(事故率0.5以上が目安)のスタートを控えめに見る", "失格・減点はレース前には分からない。分かるのは『今期のFの数』と『F持ち』。こっちを見る"],
+        "mikata": "期末の安全運転は、選手が級を守るための大事な作戦。数字の裏に、ちゃんと理由があるのがおもしろいね",
+        "gen": "期末のベテランは無理しねえ、ってのは知ってたけどよ。数字で出ると、なるほどってなるな",
+        "challenge": "10月の終わりまで、出走表で事故率の高い選手を1人見つけて、その人のスタート(ST)を毎レース見てみよう",
+        "numbers": {"per1000": {c: float(per1000(c)) for c in ("F", "S0", "S1", "S2", "K0", "K1", "L0", "L1")}, "st_end": st_e, "st_mid": st_m},
+    }
+
+
+def _st_usual(ent):
+    """その走より前の60走の平均ST(フライングを除く、20走以上)。レースID×枠の表で返す。"""
+    e = ent.copy(); e["dt"] = pd.to_datetime(e["date"]); e = e.sort_values(["racer_id", "dt", "rno"])
+    st = e["st"].where(e["st"].between(0, 0.6) & (e["st_flag"] != "F"))
+    e["stu"] = st.groupby(e["racer_id"]).transform(lambda q: q.shift(1).rolling(60, min_periods=20).mean())
+    return e.drop_duplicates(["race_id", "lane"]).set_index(["race_id", "lane"])["stu"]
+
+
+def t_slowdash(ent, r):
+    """なんでスローとダッシュがあるの? 『カド』って? カドの一撃はいつ来る?"""
+    KM = {1: "逃げ", 2: "差し", 3: "まくり", 4: "まくり差し", 5: "抜き", 6: "恵まれ"}
+    e = ent[ent["finish"].notna() & ent["course"].notna()].copy()
+    e["st_ok"] = e["st"].where(e["st"].between(0, 0.6) & (e["st_flag"] != "F"))
+    e["win"] = (e["finish"] == 1).astype(float)
+    e["slit1"] = (e.groupby("race_id")["st_ok"].rank(method="min") == 1).astype(float)
+    e["km"] = pd.to_numeric(e["race_id"].map(r.set_index("race_id")["kimarite"]), errors="coerce").map(KM)
+    nari_act = e.groupby("race_id").apply(lambda g: bool((g["course"] == g["lane"]).all()))
+    en = e[e["race_id"].map(nari_act)]
+    g = en.groupby("course").agg(st=("st_ok", "mean"), slit1=("slit1", "mean"), win=("win", "mean"))
+    tbl = []
+    for c in range(1, 7):
+        top = en[(en["win"] == 1) & (en["course"] == c)]["km"].value_counts(normalize=True)
+        tbl.append([f"{c}" + ("スロー" if c <= 3 else "ダッシュ"), f"{g.loc[c, 'st']:.3f}", _n100(g.loc[c, 'slit1']), _n100(g.loc[c, 'win']),
+                    f"{top.index[0]} {_n100(top.iloc[0])}" if len(top) else "-"])
+    mk4 = float(en[(en["win"] == 1) & (en["course"] == 4)]["km"].isin(["まくり", "まくり差し"]).mean())
+    # カドの一撃: 展示で枠なり(=ふつうの3対3が多い)のレースで、4コースの選手のふだんのSTが内の3人より速いとき
+    stu = _st_usual(ent)
+    exn = ent.groupby("race_id").apply(lambda q: bool((q["ex_course"] == q["lane"]).all() and len(q) == 6))
+    x = r.copy(); x["nari"] = x["race_id"].map(exn).fillna(False).astype(bool)
+    for k in range(1, 5):
+        x[f"stu{k}"] = stu.reindex(pd.MultiIndex.from_arrays([x["race_id"], pd.Series(k, index=x.index)])).values
+    x["w4"] = (x["win_lane"] == 4).astype(float)
+    gap = x["stu4"] - x[["stu1", "stu2", "stu3"]].min(axis=1)       # マイナス=カドが内の誰よりも速い
+    gap3 = x["stu4"] - x["stu3"]
+    fast, even = x["nari"] & (gap <= -0.02), x["nari"] & (gap3.abs() < 0.01)
+    m4 = measure(x, fast, ref=even, col="w4", qcol="q_l4")
+    m4.update({"ref_label": "カドとカド受けが同じくらい", "subject": "4コース(カド)", "verb": "1着になる"})
+    m1 = measure(x, fast, ref=even)
+    m1.update({"ref_label": "カドとカド受けが同じくらい", "subject": "1号艇", "verb": "1着になる"})
+    v4, v1 = verdicts(m4), verdicts(m1)
+    beat = v4.get("edge") == 1
+    return {
+        "id": "slowdash", "title": "なんでスローとダッシュがあるの? 『カド』って?",
+        "belief": "内の艇は助走が短くて損してる。ダッシュのほうが勢いがあって有利だろ。4カドからの一撃がいちばん気持ちいい",
+        "subject": "4コース(カド)", "unit": "レース",
+        "lead": f"競艇のスタートは、大時計の針が0〜1秒の間に、走りながらスタートラインを越える『フライングスタート』。モーターは止められないので、"
+                f"内のコースを取りたい艇は早めに位置について助走が短い『スロー』、外の艇は大きく後ろに下がって助走をとる『ダッシュ』になる。ダッシュのいちばん内側が『カド』。"
+                f"ふつうの並び(1〜3コースがスロー、4〜6コースがダッシュ)で、4コース=カドが勝つのは100レースで{_n100(g.loc[4, 'win'])}回。勝つときの10回に{round(mk4 * 10)}回は、まくりかまくり差し。"
+                f"そして、カドの選手のふだんのスタートが内の3人より速いとき、カドの1着は{_n100(m4['in1'])}回にはね上がる"
+                + ("。しかもオッズの見込みより多い。" if beat else "。"),
+        "conclusion": [("本当。カドの一撃は、条件がそろうとオッズが思うより来る" if beat else "本当。カドの一撃は、条件がそろうと来る"),
+                       f"ふだんは1コースがいちばん強い(100レースで{_n100(g.loc[1, 'win'])}回)。でも、カドの選手のスタートが内の3人より速いと、カドが{_n100(m4['in1'])}回、1号艇は{_n100(m1['in1'])}回。"
+                       "スリットでカドがのぞいた瞬間が、いちばん熱い"],
+        "tables": [("ふつうの並び(枠なり)のときの、コースごとの数字。回数は100レースあたり、勝ち方は勝ったとき100回あたり", tbl, ["コース", "平均ST(秒)", "スリット一番前", "1着", "多い勝ち方"])],
+        "measures": [("カドの選手のふだんのSTが、内の3人の誰よりも0.02秒以上速い", m4, v4), ("そのときの1号艇", m1, v1)],
+        "rules": ["フライングスタート: 大時計の針が0〜1秒を指す間にスタートラインを通る。0秒より早いとフライング、1秒より遅いと出遅れで、どちらも欠場(舟券は返還)",
+                  "スロー: スタートの向きに近い位置から、短い助走で出る。インコースを主張する艇が多い。ダッシュ: スタートと反対向きに大きく引っぱって、長い助走で出る(公式の用語解説)",
+                  "カド: ダッシュの艇のうち、いちばん内側。まくり・まくり差しを最初に打ちやすい場所。ふつうは4コースで『4カド』。カドのひとつ内(ふつうは3コース)は『カド受け』と呼ばれる",
+                  "ST(スタートタイミング): 0秒からスタートラインを通るまでの時間。小さいほど早い。ダッシュの艇は、STが同じでも勢い(スピード)がついた状態でラインを越える",
+                  "『ふだんのST』は、その選手の直前60走の平均(フライングを除く)。展示の進入が枠なりのレースで調べた"],
+        "faq": [("なんでわざわざ助走が短いスローにするの?", "内のコースを取るため。内ほど1マークまでの距離が短く、まわって先頭に立ちやすい。そのかわり、内を取り合うと助走がどんどん短くなる(深くなる)"),
+                ("STは1コースがいちばん早いのに、ダッシュが有利?", f"STはタイミングの数字。1コースの平均は{g.loc[1, 'st']:.3f}秒、4コースは{g.loc[4, 'st']:.3f}秒でほぼ同じ。でもダッシュの艇は全速でラインを越えるので、スリットのあと伸びて前に出やすい。だからカドはまくりが多い"),
+                ("カド受けって?", "カドのすぐ内側の艇(ふつうは3コース)。カドが伸びてくると最初に叩かれる位置なので、カド受けのスタートが遅いと、カドの一撃が決まりやすい"),
+                ("オッズは知ってる?", ("カドの選手のスタートが速いレースでは、カドの1着はオッズの見込みより多く、1号艇は見込みより少なかった。" if beat else "だいたい知っている。") + "スタートの速さの『差』は、出走表のぱっと見では気づきにくいのかも")],
+        "use": ["出走表で、4号艇の平均STと、1〜3号艇の平均STをくらべる。4号艇がいちばん速ければ『カドの一撃』に注意",
+                "展示の進入が枠なりかどうかも見る。4号艇がカドにいないと、この話は使えない"],
+        "mikata": "大時計の針が回って、スリットでカドがスッと出てくる瞬間。競艇でいちばん鳥肌が立つところだよね",
+        "gen": "4カドのまくりこそ競艇の華よ! スタートの速いやつがカドにいたら、俺はそこから買う。……数字のお墨付きまでもらったな",
+        "challenge": "次のレースで、展示の前に『カドの選手のふだんのST』と『カド受けのふだんのST』をくらべて予想。スリットで答え合わせ",
+        "numbers": {"by_course": {int(c): {"st": float(q.st), "slit1": float(q.slit1), "win": float(q.win)} for c, q in g.iterrows()}, "mk4": mk4},
+    }
+
+
+def t_formation(ent, r):
+    """オールスロー・オールダッシュって何が起きてる? 隊形がくずれたら?(隊形そのものの記録はないので、外の艇が内に入ったレースで見る)"""
+    e = ent[ent["course"].notna()].copy()
+    e["st_ok"] = e["st"].where(e["st"].between(0, 0.6) & (e["st_flag"] != "F"))
+    exc = e.pivot_table(index="race_id", columns="lane", values="ex_course", aggfunc="first")
+    six_in = exc.get(6)
+    five_in = exc.get(5)
+    x = r.copy()
+    x["six"] = x["race_id"].map(six_in); x["five"] = x["race_id"].map(five_in)
+    nari = exc.eq(pd.Series(range(1, 7), index=range(1, 7)), axis=1).all(axis=1) if exc.shape[1] == 6 else None
+    x["nari"] = x["race_id"].map(nari).fillna(False).astype(bool)
+    deep = (x["six"] <= 3) | (x["five"] <= 2)
+    mid = ((x["six"] == 4) | (x["five"] == 3)) & ~deep
+    win = ent[ent["finish"] == 1].drop_duplicates("race_id").set_index("race_id")["course"]
+    x["wc"] = x["race_id"].map(win)
+    x["c4win"] = (x["wc"] == 4).astype(float)
+    x["c56win"] = x["wc"].isin([5, 6]).astype(float)
+    c1st = e[e["course"] == 1].drop_duplicates("race_id").set_index("race_id")["st_ok"]
+    x["c1st"] = x["race_id"].map(c1st)
+    m1 = measure(x, deep, ref=x["nari"], col="cc1", qcol="qc1")
+    m1.update({"ref_label": "枠なり", "subject": "1コースの艇", "verb": "1着になる"})
+    mu = measure(x, deep, ref=x["nari"], col="upset", qcol="_none")
+    mu.update({"ref_label": "枠なり", "subject": "万舟", "verb": "出る"})
+    m4 = measure(x, deep, ref=x["nari"], col="c4win", qcol="_none")
+    m4.update({"ref_label": "枠なり", "subject": "4コース", "verb": "1着になる"})
+    rows = []
+    for nm, mk in (("枠なり", x["nari"]), ("少し内へ", mid), ("深く内へ", deep)):
+        q = x[mk]
+        rows.append([nm, f"{len(q):,}", _n100(q['cc1'].mean()), _n100(q['c4win'].mean()), f"{q['c1st'].mean():.3f}", _n100(q['upset'].mean())])
+    share_deep = float(deep.mean())
+    st_gap = float(x.loc[deep, "c1st"].mean() - x.loc[x["nari"], "c1st"].mean())
+    return {
+        "id": "formation", "title": "オールスロー・オールダッシュって何が起きてる?",
+        "belief": "前づけ合戦でみんながスローになったら、インの艇は助走がなくなってボロボロ。外のダッシュが一気にくる",
+        "subject": "1コースの艇", "unit": "レース",
+        "lead": f"ふつうは1〜3コースがスロー、4〜6コースがダッシュの『3対3』。外の艇が前づけで内に入ってくると、スローの艇が増えて4対2、5対1、全員がスローの『オールスロー(6対0)』になることがある。"
+                f"隊形そのものの記録は公式の成績に無いので、スタート展示で外の艇が深く内に入ったレース(100レースに{_n100(share_deep)}回)で調べた。"
+                f"このとき1コースの艇の1着は100レースで{_n100(m1['in1'])}回(枠なりは{_n100(m1['in1_ref'])}回)、1コースのSTは{abs(st_gap):.3f}秒遅くなり、4コースの1着が{_n100(m4['in1'])}回(枠なり{_n100(m4['in1_ref'])}回)に増える。",
+        "conclusion": ["本当。インが深くなると、1コースは苦しい",
+                       f"外の艇が内に入ってスローが増えると、1コースは助走が短くなってSTが遅れ、1着は{_n100(m1['in1'])}回まで下がる。代わりに4コースの1着が増え、万舟も増える({_n100(mu['in1'])}回)。オッズもそこはだいたい知っている"],
+        "tables": [("展示の進入ごとの数字(回数は100レースあたり。STは1コースの艇の平均)", rows, ["展示の進入", "レース数", "1コース1着", "4コース1着", "1コースST(秒)", "万舟"])],
+        "measures": [("外の艇が深く内へ: 1コースの艇", m1, verdicts(m1)), ("外の艇が深く内へ: 4コース", m4, verdicts(m4)), ("外の艇が深く内へ: 万舟", mu, verdicts(mu))],
+        "rules": ["進入隊形は『3対3』のように書き、最初の数字がスローの艇の数(公式の用語解説)",
+                  "4対2: スローが4艇、ダッシュが2艇(5コースがカド)。5対1: ダッシュは6コースだけ。オールスロー(6対0): 全員スロー。どれも、外の艇の前づけで内を取り合うと起きやすい",
+                  "オールダッシュ: 全員が大きく下がる形。1コースの艇には下がる理由がないので、ふつうは見ない。内の艇も下がって『2対4』(3コースがカド)になることはある",
+                  "この記事の『深く内へ』は、スタート展示で6号艇が3コースより内、または5号艇が2コースに入ったレース。『少し内へ』は6号艇が4コース、または5号艇が3コース。本番の進入は展示とちがうこともある(展示どおりは約9割)"],
+        "faq": [("オールスローだと誰が得をする?", "全員が助走の短いスタートになるので、短い助走でもスタートを決められる人が有利、と言われる。データで言えるのは、外の艇が深く入るとインのSTが遅れ、1コースの1着が減ること"),
+                ("どんなときに起きる?", "前づけが得意な選手が外の枠にいるとき。どうしても内が欲しい場面(予選の勝負どころなど)で起きやすいと言われる。前づけする選手は、時期を変えてもほぼ同じ顔ぶれ(検証ラボ『前づけは本当に得なのか』)"),
+                ("展示で深くなったら、本番も?", "展示と本番の進入がちがうのは約1割。展示で前づけがあったレースでも、本番で同じ並びは3回に2回ほど(検証ラボ『スタート展示の進入は信じていい?』)")],
+        "use": ["スタート展示で外の艇が深く入ってきたら、1号艇の頭を少し疑う。4コースに入った艇と、助走をとれる外の艇を見る", "万舟が増えるレース。人気の1号艇から買うなら、配当とのバランスで"],
+        "mikata": "ピットを出てから進入が決まるまでの数十秒、どの艇がどこに入るかを見守るのも競艇の楽しみ。展示で並びが崩れたら、もう一段ワクワクしていいよ",
+        "gen": "オールスローなんて見た日には、もう手に汗にぎるよ。インの選手、助走ほとんどねえんだぞ",
+        "challenge": "スタート展示で、外の艇が内に入ってくるレースを見つけたら、本番の並びと1コースのSTを予想してみよう",
+        "numbers": {"share_deep": share_deep, "st_gap": st_gap},
+    }
+
+
+def t_samefin(ent, r):
+    """同じ着順が続くと買いたくなる。3着がずっと6号艇……に理由はある? 選手の気持ちは?"""
+    x = r[r["tri_combo"].astype(str).str.match(r"^[1-6]-[1-6]-[1-6]$")].copy().sort_values(["date", "jcd", "rno"])
+    tc = x["tri_combo"].astype(str).str.split("-", expand=True).astype(int)
+    x["p3"], x["p2"] = tc[2].values, tc[1].values
+    x["mon"] = pd.to_datetime(x["date"]).dt.month
+    g = x.groupby(["date", "jcd"])
+    x["p3_prev"], x["p3_prev2"] = g["p3"].shift(1), g["p3"].shift(2)
+    cell = pd.crosstab([x["jcd"], x["mon"], x["rno"]], x["p3"], normalize="index")
+    P = cell.reindex(pd.MultiIndex.from_arrays([x["jcd"], x["mon"], x["rno"]])).values
+    ok = x["p3_prev"].notna().values
+    idx = x["p3_prev"].fillna(1).astype(int).values - 1
+    expv = P[np.arange(len(x)), idx]
+    act = (x["p3"] == x["p3_prev"]).astype(float).values
+    ok2 = ok & (x["p3_prev"] == x["p3_prev2"]).values
+
+    def _m(mask, label):
+        a_, e_ = act[mask], expv[mask]
+        d = a_ - e_
+        rng = np.random.default_rng(0)
+        bt = [d[rng.integers(0, len(d), len(d))].mean() for _ in range(300)]
+        late = x["late"].values[mask]
+        m_ = {"n": int(mask.sum()), "in1": float(a_.mean()), "in1_ref": float(e_.mean()), "upset": 0.0, "upset_ref": 0.0,
+              "in1_ci": [float(e_.mean() + np.quantile(bt, 0.05) + (a_.mean() - e_.mean() - d.mean())), float(e_.mean() + np.quantile(bt, 0.95) + (a_.mean() - e_.mean() - d.mean()))],
+              "half": [float(d[~late].mean()), float(d[late].mean())], "ref_label": label, "subject": "前と同じ枠", "verb": "3着になる", "unit": "レース"}
+        return m_
+    m1, m2 = _m(ok, "見込み(番組と場・季節から)"), _m(ok2, "見込み(番組と場・季節から)")
+    # 1日12レースのどこかで、同じ枠が3レース続けて3着になる日は?
+    run3 = x.assign(s1=(x["p3"] == x["p3_prev"]) & (x["p3"] == x["p3_prev2"])).groupby(["date", "jcd"])["s1"].any()
+    days12 = x.groupby(["date", "jcd"]).size() >= 12
+    share_run3 = float(run3[days12].mean())
+    # 選手: 同じ節で2走続けて同じ着順 → 次も?
+    e = ent[ent["finish"].between(1, 6)].copy(); e["dt"] = pd.to_datetime(e["date"]); e = e.sort_values(["racer_id", "dt", "rno"])
+    gg = e.groupby("racer_id")
+    same = (gg["jcd"].shift(1) == e["jcd"]) & (gg["jcd"].shift(2) == e["jcd"]) & ((e["dt"] - gg["dt"].shift(2)).dt.days <= 4)
+    e["late"] = e["dt"].dt.year >= 2025; e["upset"] = 0.0; e["date"] = e["date"].astype(str)
+    rows, ms_r = [], []
+    for f in (1, 3, 6):
+        hit = (e["finish"] == f).astype(float)
+        res = hit - hit.groupby(e["course"]).transform("mean")
+        e[f"c{f}"] = float(hit.mean()) + res - res.groupby(e["racer_id"]).transform("mean")
+        mk = same & (gg["finish"].shift(1) == f) & (gg["finish"].shift(2) == f)
+        m_ = measure(e, mk, ref=same & ~mk, col=f"c{f}", qcol="_none")
+        m_.update({"ref_label": "その人のふだん", "subject": "その選手", "verb": f"{f}着になる", "unit": "走"})
+        ms_r.append((f"同じ選手が、今節2走続けて{f}着", m_, verdicts(m_)))
+    d1 = (m1["in1"] - m1["in1_ref"]) * 100
+    v1, v2 = verdicts(m1), verdicts(m2)
+    return {
+        "id": "samefin", "title": "同じ着順が続くと、つい買いたくなる。理由はある?",
+        "belief": "3着がずっと6号艇の日がある。そういう日は流れが来てるんだ。次も6を3着に置けば当たる",
+        "subject": "前と同じ枠", "verb": "3着になる", "no_market": True, "unit": "レース",
+        "lead": f"同じ日・同じ場で、前のレースと同じ枠が3着に来るのは100レースで{m1['in1'] * 100:.1f}回。レース番号(番組)と場・季節から見込める回数は{m1['in1_ref'] * 100:.1f}回で、ほぼ同じ。"
+                f"2レース続けて同じ枠が3着だったあとも{m2['in1'] * 100:.1f}回(見込み{m2['in1_ref'] * 100:.1f}回)。ところが、1日12レースのどこかで『同じ枠が3レース続けて3着』になる日は、{fun_rate(share_run3)}ある。"
+                "続くのは、偶然でもよく起きることだった。",
+        "conclusion": ["ほぼ偶然。でも『続いて見える』のは当たり前",
+                       f"3着の枠が続いても、次のレースで同じ枠が3着になる回数は見込みとほぼ同じ。そもそも、どこかで3連続が起きる日は{fun_rate(share_run3)}。人の目は『続き』を見つけるのが得意なだけ"],
+        "tables": [],
+        "measures": [("前のレースと同じ枠が3着", m1, v1), ("2レース続けて同じ枠が3着のあと", m2, v2)] + ms_r,
+        "rules": ["くらべ方: レース番号ごとの番組のくせ(検証ラボ『番組屋の癖は本物か』)と、場・月で、その枠が3着になる見込みを出し、実際とくらべた",
+                  "レースごとに出る選手はちがう。同じ選手が続けて走ることはほとんどない",
+                  "選手の欄は、同じ節で前の2走が同じ着順だった選手の、次の走(コースの有利不利を差し引き、本人のふだんとくらべた)"],
+        "faq": [("選手の気持ちで続くことはある?", "3着が続く日は、レースごとに選手がちがうので、気持ちはつながらない。同じ選手で見ると、2走続けて3着の人が次も3着になるのはふだんとほぼ同じ。"
+                 "ただ、2走続けて6着の人は次も6着が多い。気持ちというより、その節のモーターの足が足りないサイン(検証ラボ『今節2連勝中の選手は、次も来る?』)"),
+                ("じゃあ続いている枠は買わないほうがいい?", "買っても買わなくても、来る確率はふだんと同じ。『流れ』で買うのは、当たっても外れても楽しい遊び方としてならアリ"),
+                ("1着も続かない?", "1着(イン逃げ)は少し続く。理由はおもに番組の組み方(検証ラボ『イン逃げが続いたあとは荒れるのか』)")],
+        "use": ["3着の枠が続いても、次のレースの見方は変えなくていい", "見るべきは同じ選手の『今節の着順』。大敗が続く人は、足が足りないかも"],
+        "mikata": "続きを見つけると、人はつい物語を作りたくなる。でもそれが競艇の楽しさでもあるよね。数字は『偶然でもよくあるよ』って教えてくれる",
+        "gen": "ずっと6が3着に来てたら、そりゃ乗るだろ! ……え、ふつうの日でも、どこかでは3回続くのか。なんだ、俺がたまたま見てただけか",
+        "challenge": "次に現地に行ったら、1Rから3着の枠をメモしよう。3回続いたら、それは『よくある偶然』。次の3着を当ててみて",
+        "numbers": {"share_run3": share_run3, "same_prev": [m1["in1"], m1["in1_ref"]], "same_prev2": [m2["in1"], m2["in1_ref"]]},
+    }
+
+
+def _series_types(ent):
+    """節(同じ場の連続した開催)ごとに、出場選手の顔ぶれで大会の種類を分ける。過去の大会名・グレードの記録が無いための代わり。"""
+    pr = _profiles()
+    e = ent.copy()
+    d = e.drop_duplicates(["jcd", "date"])[["jcd", "date", "day_no"]].sort_values(["jcd", "date"])
+    d["dt"] = pd.to_datetime(d["date"])
+    gap = d.groupby("jcd")["dt"].diff().dt.days
+    d["new"] = (d["day_no"].fillna(0) <= 1) | (gap > 1) | gap.isna()
+    d["sid"] = d["jcd"].astype(str) + "_" + d.groupby("jcd")["new"].cumsum().astype(str)
+    e = e.merge(d[["jcd", "date", "sid"]], on=["jcd", "date"])
+    p = e.drop_duplicates(["sid", "racer_id"])[["sid", "racer_id", "racer_class", "age"]]
+    p["sex"] = p["racer_id"].map(pr["sex"]).astype(str)
+    s = p.groupby("sid").agg(acls=("racer_class", lambda q: q.isin(["A1", "A2"]).mean()), fem=("sex", lambda q: (q == "女").mean()),
+                             age_max=("age", "max"), age_min=("age", "min"))
+    s["type"] = np.select([s["fem"] >= 0.95, s["age_min"] >= 45, s["age_max"] <= 30, s["acls"] >= 0.95],
+                          ["女子だけ", "45歳以上だけ", "30歳以下だけ", "A級だけ"], "ふつうの一般戦")
+    return d[["jcd", "date", "sid"]], s
+
+
+def t_series(ent, r):
+    """大会ってなにがちがう? SG・G1・女子戦・マスターズ・若手。大会で予想は変わる?"""
+    d, s = _series_types(ent)
+    x = r.merge(d, on=["jcd", "date"], how="left")
+    x["type"] = x["sid"].map(s["type"]).fillna("ふつうの一般戦")
+    km = pd.to_numeric(x["kimarite"], errors="coerce")
+    x["mk"], x["sa"] = km.isin([3, 4]).astype(float), (km == 2).astype(float)
+    base = x["type"] == "ふつうの一般戦"
+    order = ["A級だけ", "ふつうの一般戦", "女子だけ", "45歳以上だけ", "30歳以下だけ"]
+    g = x.groupby("type").agg(n=("c1", "size"), in1=("c1", "mean"), up=("upset", "mean"), mk=("mk", "mean"), sa=("sa", "mean"))
+    tbl = [[t, f"{int(g.loc[t, 'n']):,}", _n100(g.loc[t, "in1"]), _n100(g.loc[t, "up"]), _n100(g.loc[t, "mk"]), _n100(g.loc[t, "sa"])] for t in order if t in g.index]
+    ma = measure(x, x["type"] == "A級だけ", ref=base); ma["ref_label"] = "ふつうの一般戦"
+    mf = measure(x, x["type"] == "女子だけ", ref=base, col="upset", qcol="_none")
+    mf.update({"ref_label": "ふつうの一般戦", "subject": "万舟", "verb": "出る"})
+    mm = measure(x, x["type"] == "45歳以上だけ", ref=base); mm["ref_label"] = "ふつうの一般戦"
+    va, vf, vm = verdicts(ma), verdicts(mf), verdicts(mm)
+    concept = [["SG(年8回)", "その年のトップが集まる最高峰。ダービー・グランプリなど", "勝率・賞金・前の大会の成績などで選ばれる。グランプリは賞金上位18人だけ"],
+               ["プレミアムG1", "テーマのある特別な大会", "ヤングダービーは30歳未満、マスターズチャンピオンはベテラン、レディースチャンピオンとクイーンズクライマックスは女子"],
+               ["G1", "各場の周年記念、地区選手権など", "原則A級だけ"],
+               ["G2・G3", "G1に準じる大会、企業杯、オールレディース(女子)、マスターズリーグ(45歳以上)、イースタン/ウエスタンヤング(30歳未満)", "大会ごとに条件"],
+               ["一般戦", "毎日どこかで開催。ルーキーシリーズ(登録6年未満)、ヴィーナスシリーズ(女子)など", "級はいろいろ混ざる"]]
+    return {
+        "id": "series", "title": "大会ってなにがちがう? SG・G1・女子戦・マスターズ",
+        "belief": "大きな大会ほど強い選手どうしで荒れる。女子戦は荒れる。マスターズはベテランぞろいで堅い",
+        "subject": "1号艇", "unit": "レース", "compare": "ふつうの一般戦",
+        "lead": f"競艇の大会には、SGを頂点にグレードがあり、それぞれにテーマ(コンセプト)がある。過去の大会名の記録は手元に無いので、出場選手の顔ぶれで分けてくらべた。"
+                f"全員がA級の大会(G1以上にあたる)では、1号艇が勝つのは100レースで{_n100(ma['in1'])}回(ふつうの一般戦は{_n100(ma['in1_ref'])}回)。"
+                f"女子だけの大会の万舟は{_n100(mf['in1'])}回で、一般戦の{_n100(mf['in1_ref'])}回より少ないくらい。45歳以上だけの大会の1号艇は{_n100(mm['in1'])}回"
+                + ((f"で、オッズの見込みより少し少ない(オッズのあるレースが{mm.get('n_odds', 0)}レースと少ないので追試中)。" if mm.get("n_odds", 0) < 1500 else "で、オッズの見込みより少ない。") if vm.get("edge") == -1 else "。"),
+        "conclusion": ["大きな大会ほどインが堅い。女子戦は荒れない",
+                       f"全員A級の大会は1号艇{_n100(ma['in1'])}回(一般戦{_n100(ma['in1_ref'])}回)。スタートも速い(平均で0.03秒ほど)。実力の近い選手どうしだと、1コースの有利さがそのまま出やすいのかも。"
+                       f"『女子戦は荒れる』は数字には出ない(万舟は{_n100(mf['in1'])}回)。オッズはどれもだいたい知っている"],
+        "tables": [("大会のグレードとコンセプト(公式の用語解説などから)", concept, ["グレード", "どんな大会", "出られる人"]),
+                   ("出場選手の顔ぶれ別の数字(100レースあたりの回数)", tbl, ["大会の顔ぶれ", "レース数", "1号艇の1着", "万舟", "まくり系", "差し"])],
+        "measures": [("全員A級の大会(G1以上にあたる)", ma, va), ("女子だけの大会の万舟", mf, vf), ("45歳以上だけの大会", mm, vm)],
+        "rules": ["顔ぶれの分け方: 節ごとの出場選手が、全員A級=『A級だけ』(G1以上の大会にあたる)、ほぼ全員女子=『女子だけ』(オールレディース・ヴィーナスシリーズなど)、"
+                  "全員45歳以上=『45歳以上だけ』(マスターズ系)、全員30歳以下=『30歳以下だけ』(ヤング系の一部)。それ以外を『ふつうの一般戦』とした",
+                  "SGは年8回。グレードはSG・G1・G2・G3・一般の5つ(公式の用語解説)",
+                  "これから: G1トーキョー・ベイ・カップ(平和島 10/13〜18)、G1全日本王者決定戦(唐津 10/18〜23)、SGボートレースダービー(尼崎 10/27〜11/1)"],
+        "faq": [("ダービーってどんな大会?", "SGのひとつで、長い歴史を持つ大会。今年は尼崎で、52人が出場する(開催場の公式サイトより)。勝率の上位など、1年を通して強かった選手が集まる"),
+                ("大きな大会は荒れる?", f"万舟は100レースで{_n100(g.loc['A級だけ', 'up'])}回と、一般戦({_n100(g.loc['ふつうの一般戦', 'up'])}回)より少し多い。ただ、1号艇はむしろ堅い。実力が近いぶん、2着・3着がばらけやすいのかも"),
+                ("女子戦は荒れるって聞くけど?", f"このデータでは、女子だけの大会の1号艇は{_n100(g.loc['女子だけ', 'in1'])}回、万舟は{_n100(g.loc['女子だけ', 'up'])}回。一般戦とほぼ同じか、むしろ荒れない"),
+                ("マスターズは?", f"1号艇は{_n100(mm['in1'])}回。前づけなど進入の駆け引きが増えると言われる。オッズは1号艇を{'少し買いかぶっているかも(追試中)' if vm.get('edge') == -1 else 'だいたい正しく見ている'}")],
+        "use": ["G1以上の大会は、1号艇の信頼度が上がる。オッズも知っているので、2着・3着の組み立てで勝負", "女子戦だからと荒れ目を狙う必要はない"],
+        "mikata": "大会ごとにテーマがあって、出る選手もがらっと変わる。大会のコンセプトを知ると、出走表を見るのがもっと楽しくなるよ",
+        "gen": "ダービーの季節だな! でかい大会は、やっぱり1号艇の重みがちがう。……数字でもそうなってるのか",
+        "challenge": "次のG1の出走表を見て、1号艇に誰が入っているか確認しよう。強い選手が内に来る番組が、何レースあるか数えてみて",
+        "numbers": {"by_type": {t: {k: float(g.loc[t, k]) for k in ("in1", "up", "mk", "sa")} | {"n": int(g.loc[t, "n"])} for t in g.index},
+                    "series_counts": s["type"].value_counts().to_dict()},
+    }
+
+
 THEORIES = {t["id"]: t for t in []}
 BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke, "tenji": t_tenji, "flying": t_flying, "combo": t_combo,
             "rest": t_rest, "travel": t_travel, "weight": t_weight, "dayno": t_dayno, "twice": t_twice, "tilt": t_tilt,
@@ -2269,7 +2627,7 @@ BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in"
             "birthday": t_birthday, "blood": t_blood, "height": t_height, "furusato": t_furusato,
             "pressure": t_pressure, "humid": t_humid, "heat": t_heat,
             "lane6": t_lane6, "motor": t_motor, "entry": t_entry,
-            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season}
+            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season, "penalty": t_penalty, "slowdash": t_slowdash, "formation": t_formation, "samefin": t_samefin, "series": t_series}
 
 
 # ---------------------------------------------------------------- 記事
