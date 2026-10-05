@@ -51,6 +51,14 @@ def base():
         r = r.merge(q1, on="race_id", how="left")
     ent = ent.copy()
     ent["race_id"] = ent["race_id"].astype(str)
+    # 1コースに入った艇(前づけのレースでは1号艇とは限らない)の枠番と、その艇が勝ったか、オッズの見込み
+    c1 = ent[ent["course"] == 1].drop_duplicates("race_id").set_index("race_id")
+    r["lane_c1"] = r["race_id"].map(c1["lane"])
+    r["cc1"] = (r["win_lane"] == r["lane_c1"]).astype(float)
+    if odds is not None:
+        ql = o.assign(l=o["combo"].str.split("-").str[0].astype(int)).groupby(["race_id", "l"])["q"].sum()
+        key = pd.MultiIndex.from_arrays([r["race_id"], r["lane_c1"].fillna(1).astype(int)])
+        r["qc1"] = ql.reindex(key).values
     return ent, r
 
 
@@ -60,9 +68,11 @@ def boot_ci(x: np.ndarray, n=400, seed=0):
     return float(np.quantile(m, 0.05)), float(np.quantile(m, 0.95))
 
 
-def measure(r: pd.DataFrame, mask: pd.Series, ref: pd.Series | None = None) -> dict:
-    """①率 ②市場との比 ③前半・後半。ref は比べる相手(無ければ全体)。"""
+def measure(r: pd.DataFrame, mask: pd.Series, ref: pd.Series | None = None, col: str = "c1", qcol: str = "q1") -> dict:
+    """①率 ②市場との比 ③前半・後半。ref は比べる相手(無ければ全体)。col="cc1" なら「1コースの艇」(前づけ込み)で測る。"""
     x, y = r[mask], (r[ref] if ref is not None else r)
+    if col != "c1":
+        x, y = x.assign(c1=x[col], q1=x.get(qcol)), y.assign(c1=y[col], q1=y.get(qcol))
     m = {"n": int(len(x)), "in1": float(x["c1"].mean()), "in1_ref": float(y["c1"].mean()),
          "upset": float(x["upset"].mean()), "upset_ref": float(y["upset"].mean())}
     lo, hi = boot_ci(x["c1"].values)
@@ -110,8 +120,10 @@ def verdicts(m: dict) -> dict:
 
 
 def conclusion(t: dict) -> tuple[str, str]:
-    """記事の冒頭に置く結論(ハンコ)。(見出し, ひとこと)。"""
-    vs = [v for _, _, v in t["measures"]]
+    """記事の冒頭に置く結論(ハンコ)。(見出し, ひとこと)。理論側で決めてあればそれを使う。"""
+    if t.get("conclusion"):
+        return tuple(t["conclusion"])
+    vs = [v for _, _, v in t["measures"] if not v.get("baseline")]
     real = any(v.get("real") for v in vs)
     edge = [v.get("edge") for v in vs if v.get("edge") is not None]
     if not real:
@@ -250,8 +262,71 @@ def t_a1in(ent, r):
     }
 
 
+def t_maezuke(ent, r):
+    """前づけ: ルールの整理と「勝てるなら全員やればいい?」への答え。"""
+    e = ent[ent["course"].between(1, 6) & ent["finish"].between(1, 6)].copy()
+    full = e.groupby("race_id")["lane"].transform("size") == 6
+    e = e[full]
+    e["win"] = e["finish"] == 1
+    e["front"] = e["course"] < e["lane"]
+    rf = e.groupby("race_id")["front"].any()
+    r2 = r[r["race_id"].isin(e["race_id"].unique())].copy()
+    r2["has_front"] = r2["race_id"].map(rf).fillna(False).astype(bool)
+    a = measure(r2, r2["lane_c1"] == 1, col="cc1", qcol="qc1")                      # 枠なりの1コース
+    b = measure(r2, r2["lane_c1"].between(2, 3), ref=r2["lane_c1"] == 1, col="cc1", qcol="qc1")   # 2・3号艇が前づけで1コース
+    c = measure(r2, r2["lane_c1"] >= 4, ref=r2["lane_c1"] == 1, col="cc1", qcol="qc1")            # 4〜6号艇が前づけで1コース
+    for m, nm in ((a, "枠なり"), (b, "2・3号艇から"), (c, "4〜6号艇から")):
+        m["note"] = nm
+    va, vb, vc = verdicts(a), verdicts(b), verdicts(c)
+    va["baseline"] = True
+    # ST(助走の深さ)と、押し出された1号艇
+    ok = e["st"].notna() & e["st_flag"].isna() & (e["st"] < 0.6)
+    c1 = e[(e["course"] == 1) & ok]
+    st_nari, st_front = float(c1[c1["lane"] == 1]["st"].mean()), float(c1[c1["lane"] > 1]["st"].mean())
+    pushed = e[(e["lane"] == 1) & (e["course"] == 2)]
+    base_c2 = float(e[(e["course"] == 2) & (e["lane"] == 2)]["win"].mean())
+    fr = e[e["front"]]
+    base_l = e[~e["race_id"].isin(rf[rf].index)].groupby("lane")["win"].mean()
+    own = float(fr["win"].mean()); own_ref = float(fr["lane"].map(base_l).mean())
+    reg = e[e["lane"] > 1].groupby("racer_id").agg(n=("front", "size"), f=("front", "mean")).query("n >= 150")
+    n_reg = int((reg["f"] > 0.3).sum())
+    vshare = e.groupby("jcd").apply(lambda d: d.groupby("race_id")["front"].any().mean()).sort_values(ascending=False)
+    rows = [{"venue": VENUES[int(j)], "rno": "", "n": int(e[e["jcd"] == j]["race_id"].nunique()), "in1": float(v)} for j, v in vshare.head(6).items()]
+    share = float(rf.mean())
+    return {
+        "id": "maezuke", "title": "前づけは本当に得なのか", "belief": "内のコースを取れば勝てる。なら、全員が前づけすればいいじゃないか",
+        "lead": f"前づけがあるレースは全体の{share:.0%}。前づけで1コースに入った艇が勝つのは、2・3号艇からなら{b['in1']:.0%}、4〜6号艇からだと{c['in1']:.0%}。"
+                f"枠なりの1コース({a['in1']:.0%})より低い。助走が短くなってスタートが平均{st_front - st_nari:.3f}秒遅れるから。"
+                f"それでも本人には得({own_ref:.0%}→{own:.0%})。ただし押し出された1号艇は{pushed['win'].mean():.0%}まで下がり、取り合いになれば両方が深くなる。",
+        "subject": "1コースの艇",
+        "rules": ["コースは艇の番号(枠)で決まっていない。ピットを出てからスタートまでの「待機行動」の間に、各艇が自分で取る(内から1〜6コース)",
+                  "枠より内のコースを取ることを「前づけ」と言う(2号艇が1コースへ、6号艇が2コースへ、など)。入られた艇は外へずれる",
+                  "内のコースほど助走が短い(スロー勢)。外は長い助走で全速(ダッシュ勢)。前づけで割り込むと、自分も押し出された艇も助走が足りず「深い」スタートになりやすい",
+                  "企画レースなど「進入固定」のレースは枠なりで固定。前づけはできない",
+                  "待機行動には決まりがあり(内側のブイより内へ入らない、時間の制限など)、違反は減点などの対象。ここは公式のルールを確かめてほしい"],
+        "tables": [("前づけが多い場", rows, "前づけがあるレースの割合")],
+        "measures": [("枠なりの1号艇(基準)", a, va), ("2・3号艇が前づけで1コース", b, vb), ("4〜6号艇が前づけで1コース", c, vc)],
+        "conclusion": ["本人は得。でも、全員はできない", f"前づけした本人の1着率は{own_ref:.0%}→{own:.0%}。ただし1コースの値打ちは下がり({a['in1']:.0%}→{b['in1']:.0%})、押し出された1号艇は{pushed['win'].mean():.0%}。取り合いになれば両方が深くなる"],
+        "faq": [("勝てるなら、全員が前づけすればいい?",
+                 f"本人だけ見れば得(枠なりなら{own_ref:.0%}の1着率が、前づけすると{own:.0%})。でも3つの壁がある。①1コースの値打ちが下がる: 助走が短くなってスタートが平均{st_front - st_nari:.3f}秒遅れ、"
+                 f"1着率は枠なりの{a['in1']:.0%}が{c['in1']:.0%}(4〜6号艇から)まで落ちる。②押し出された1号艇は{pushed['win'].mean():.0%}(ふだんの2コースの{base_c2:.0%}より低い)。相手も譲らなければ取り合いになり、両方が深くなって外のダッシュ勢が得をする。"
+                 f"③実際にやる人は少ない。前づけ率30%を超える選手は{n_reg}人(主にベテラン)。多くの選手は枠なりで走るのが暗黙の了解になっている"),
+                ("前づけされた1号艇はどうなる?", f"2コースへ押し出されるのが大半で、1着率は{pushed['win'].mean():.0%}。ふだんの2コース({base_c2:.0%})より低いのは、助走が深くなるから"),
+                ("前づけした艇は、オッズに織り込まれている?", f"2・3号艇が1コースに入ったレース({b.get('n_odds', 0)}レース)では、オッズの見立て({per100(b['in1'] / b['market_ratio']) if b.get('market_ratio') else '-'})より実際({per100(b['in1'])})がかなり多い。"
+                 "ただし、集めているオッズは締切の少し前の値なので、進入が決まったあとの動きを取り切れていない可能性がある。レース数も少ないので追試中"),
+                ("前づけが多いのはどんなとき?", f"場で差がある(上の表)。前づけの常連が出走表にいる日は、進入が決まるまでが最初のレース。ミカタ新聞のカードの「前づけの仕掛け人」の型がその目印")],
+        "use": ["出走表に前づけの常連(カードの「前づけの仕掛け人」)がいたら、1号艇の1着率を55%ではなく50%前後で考える",
+                "前づけで内に入った艇より、押し出されずに済んだ艇と、外で全速になれるダッシュ勢のほうが得をすることが多い",
+                "進入が読めないレースは、展示航走(直前)の進入を見てから決める。アプリの直前予想は展示の進入で計算している"],
+        "mikata": "前づけの常連がいる日は、スタート展示を見るまで予想を決めないのがコツ。進入が決まった瞬間、レースはもう半分始まってる",
+        "gen": "取れりゃ勝てるが、取り合いになったら共倒れだ。前づけは仕掛ける相手を見てやるもんなんだよ",
+        "challenge": "出走表から前づけ率の高い選手を1人見つけて、進入がどうなるか友達と当てっこ。展示航走で答え合わせ",
+        "numbers": {"share": share, "st_nari": st_nari, "st_front": st_front, "own": own, "own_ref": own_ref, "pushed": float(pushed["win"].mean()), "n_regular": n_reg},
+    }
+
+
 THEORIES = {t["id"]: t for t in []}
-BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in}
+BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke}
 
 
 # ---------------------------------------------------------------- 記事
@@ -259,11 +334,11 @@ def pc(v):
     return "-" if v is None or v != v else f"{v:.0%}"
 
 
-def table_html(title, rows):
+def table_html(title, rows, label="1号艇の1着率"):
     if not rows:
         return ""
     has_ratio = any("ratio" in x for x in rows)
-    head = "<tr><th>場・レース名</th><th>R</th><th>レース数</th><th>1号艇の1着率</th>" + ("<th>オッズとの比</th>" if has_ratio else "") + "</tr>"
+    head = f"<tr><th>場・レース名</th><th>R</th><th>レース数</th><th>{e(label)}</th>" + ("<th>オッズとの比</th>" if has_ratio else "") + "</tr>"
     body = "".join(f"<tr><td>{e(str(x['venue']))}</td><td>{x['rno']}</td><td>{x['n']:,}</td><td><b>{pc(x['in1'])}</b></td>"
                    + (f"<td>{x['ratio']:.2f}</td>" if has_ratio and x.get('ratio') else ("<td>-</td>" if has_ratio else "")) + "</tr>" for x in rows)
     return f'<h4>{e(title)}</h4><table class="scn lab cells">{head}{body}</table>'
@@ -275,6 +350,8 @@ def per100(v):
 
 def mark(v):
     """表に入れる短い判定。"""
+    if v.get("baseline"):
+        return "基準", "○ みんな知ってる" if v.get("edge") == 0 else "-", "基準"
     ex = "○ 本当" if v.get("real") else "– ふだん並み"
     e_ = v.get("edge")
     kn = "○ みんな知ってる" if e_ == 0 and "追試中" not in v.get("known", "") else ("！ 見立て超え(追試中)" if "追試中" in v.get("known", "") else
@@ -284,7 +361,7 @@ def mark(v):
     return ex, kn, sb
 
 
-def measures_html(ms):
+def measures_html(ms, subject="1号艇"):
     ref = next((m["market_ref"] for _, m, _ in ms if "market_ref" in m), None)
     ref_w = f"(全レースの平均で {round((ref - 1) * 100):+d}%)" if ref is not None else ""
     rows = ""
@@ -298,7 +375,7 @@ def measures_html(ms):
             rs = f"見立てより{round((r - 1) * 100):+d}%"
         rows += (f"<tr><th>{e(name)}<small>{m['n']:,}レース</small></th><td><b>{per100(m['in1'])}</b><small>{e(fun_rate(m['in1']))}。{e(ex)}</small></td>"
                  f"<td><b>{e(rw)}</b><small>{e(rs)}。{e(kn)}</small></td><td>{e(sb)}</td></tr>")
-    legend = (f"<p class=\"legend\">①は「100レースで1号艇が勝つ回数」(ふだんは{per100(ms[0][1]['in1_ref'])}、{fun_rate(ms[0][1]['in1_ref'])})。"
+    legend = (f"<p class=\"legend\">①は「100レースで{e(subject)}が勝つ回数」(ふだんは{per100(ms[0][1]['in1_ref'])}、{fun_rate(ms[0][1]['in1_ref'])})。"
               f"②は「オッズがみんなの予想として見立てていた回数」と実際の回数。1号艇はどのレースでも見立てより少し多く勝つ{e(ref_w)}ので、それと同じなら、みんな知っている=配当は堅め。③は前の2年と最近の1年で同じ向きか。</p>")
     return ('<div class="tw"><table class="scn lab"><tr><th>条件</th><th>①本当?</th><th>②知られてる?</th><th>③来年も?</th></tr>'
             + rows + "</table></div>" + legend)
@@ -307,8 +384,10 @@ def measures_html(ms):
 def page(t: dict, asof: str) -> str:
     today = dt.date.today().strftime("%Y.%m.%d")
     con = conclusion(t)
-    tables = "".join(table_html(h, rows) for h, rows in t["tables"])
+    tables = "".join(table_html(*tb) for tb in t["tables"])
     use = "".join(f"<li>{e(x)}</li>" for x in t["use"])
+    rules = ('<section class="side"><h3>まず、ルールをざっくり</h3><ol>' + "".join(f"<li>{e(x)}</li>" for x in t["rules"]) + "</ol></section>") if t.get("rules") else ""
+    faq = ('<section><span class="label">よくある疑問</span>' + "".join(f'<h4>Q. {e(q)}</h4><p class="faq">{e(a)}</p>' for q, a in t["faq"]) + "</section>") if t.get("faq") else ""
     return f"""<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><title>ミカタ検証ラボ {e(t['title'])}</title>{mag.FONTS}<style>{mag.CSS}
 .mag section{{min-width:0}} .tw{{overflow-x:auto;-webkit-overflow-scrolling:touch}}
 .lab{{width:100%;margin:0;min-width:0}} .legend{{font-size:12.5px;color:var(--mute);line-height:1.6;margin:8px 0 0}} .lab td,.lab th{{text-align:left;white-space:normal}} .lab td b{{font:700 17px var(--num);color:var(--red)}} .lab small{{display:block;font-size:11px;color:var(--mute);white-space:normal}}
@@ -320,7 +399,7 @@ def page(t: dict, asof: str) -> str:
 .gauge b{{display:block;font:400 15px var(--head);color:var(--red)}} .gauge span{{font-size:13px}}
 .td-box{{display:flex;gap:12px;align-items:flex-start;background:var(--yellow);padding:14px 16px;border:3px solid var(--ink)}} .td-box p{{margin:0;font:700 15.5px/1.7 var(--serif)}} .td-box svg{{flex:0 0 48px;width:48px;height:48px}}
 .st-box{{background:var(--red);color:#fff;padding:14px 16px}} .st-box b{{display:block;font:400 clamp(20px,5.5vw,28px)/1.3 var(--head)}} .st-box p{{margin:6px 0 0;font-size:14px;line-height:1.6}}
-.mag h4{{margin:14px 0 6px;font:400 17px var(--head)}} .side ul{{font-size:14.5px}}
+.mag h4{{margin:14px 0 6px;font:400 17px var(--head)}} .side ul,.side ol{{font-size:14.5px}} .faq{{margin:0 0 10px;font-size:14.5px;line-height:1.8}}
 </style></head><body>
 <header class="cover"><div class="lanebar"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cv-in">
 <div class="cv-top"><div class="brand">ミカタ検証ラボ<small>「◯◯理論」を同じ物差しで試す</small></div><div class="issue"><b>LAB</b><br>{e(today)}</div></div>
@@ -334,7 +413,7 @@ def page(t: dict, asof: str) -> str:
 <section><span class="label">3つの物差し</span><div class="gauge"><div><b>① 本当にある?</b><span>「ふだん」と比べて差があるか。同じ数のレースをサイコロで決めても出るくらいの差なら「ふだん並み」</span></div>
 <div><b>② みんな知ってる?</b><span>オッズは「みんなの予想」。1号艇はどのレースでもオッズの見立てより少し多く来るので、その「全レースの平均」と同じなら、知られている=配当は安い</span></div>
 <div><b>③ 来年も同じ?</b><span>前の2年と最近の1年で、同じ向きに出るか。出なければ一時のもの</span></div></div></section>
-<section><span class="label">結果</span>{measures_html(t['measures'])}{tables}</section>
+{rules}<section><span class="label">結果</span>{measures_html(t['measures'], t.get('subject', '1号艇'))}{tables}</section>{faq}
 <section class="side"><h3>予想に使うなら</h3><ul>{use}</ul></section>
 <section class="todai"><span class="label">今日のお題</span><div class="td-box">{gull_svg(48, bg="#fff", cls="td")}<p>{e(t.get('challenge', '次に行く場で、この説が本当か自分の目で確かめてみよう'))}</p></div></section>
 <blockquote class="ft-quote">{gull_svg(64, bg="#ffffff", cls="q")}<p><small>ミカタのひと言</small>{e(t['mikata'])}</p></blockquote>
@@ -355,8 +434,12 @@ def note_text(t: dict) -> str:
         odds = (f"オッズの見立ては{per100(m['in1'] / r)}、実際は{per100(m['in1'])}({round((r - 1) * 100):+d}%)" if r and r == r else "オッズのデータは集計中")
         out.append(f"・{name}({m['n']:,}レース): 100レースで1号艇が勝つのは{per100(m['in1'])}({fun_rate(m['in1'])}。ふだんは{per100(m['in1_ref'])})→ {ex}。"
                    f"{odds} → {kn}。来年も同じか: {sb}")
-    for h, rows in t["tables"]:
+    for h, rows, *_lbl in t["tables"]:
         out += ["", f"■{h}"] + [f"・{x['venue']}{x['rno']}{'R' if x['rno'] != '' else ''} {pc(x['in1'])}({x['n']:,}レース)" for x in rows]
+    if t.get("rules"):
+        out += ["", "■まず、ルールをざっくり"] + [f"{i + 1}. {x}" for i, x in enumerate(t["rules"])]
+    if t.get("faq"):
+        out += ["", "■よくある疑問"] + [f"Q. {q}\n{a}" for q, a in t["faq"]]
     out += ["", "■予想に使うなら"] + [f"・{x}" for x in t["use"]] + ["", f"■今日のお題", t.get("challenge", ""), "", f"ミカタのひと言:「{t['mikata']}」", "",
             "■データについて", "公式の成績データと締切時のオッズを自分たちで集計。この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。"]
     return "\n".join(out)
