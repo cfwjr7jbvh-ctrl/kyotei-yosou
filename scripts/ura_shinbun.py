@@ -760,7 +760,8 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
         txt += ["■大一番はここが違う(場面ごとの指数)"] + [f"・{x}" for x in scn] + ["※過去3年の全レースを場面ごとに集計。予選と比べた違い"]
     jinx, occ = jinx_lines(), occult_lines()
     if jinx or occ:
-        body = ""
+        body = ("<p style='display:flex;gap:10px;align-items:center'>" + gull_svg(44, bg="#ffffff", cls="q", who="gen") +
+                "<span>ゲンさん「勝負駆けに強いやつ、荒れ水面に強いやつっているだろ?」<br>ミカタ「調べました。時期を変えて同じ選手に出るかで見ます」</span></p>")
         if jinx:
             body += "<p>選手の「○○に強い」は本物?</p><ul>" + "".join(f"<li>{e(x)}</li>" for x in jinx) + "</ul>"
         if occ:
@@ -768,7 +769,8 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
         body += ("<p style='margin-top:6px'>調べ方は、同じ選手を奇数月と偶数月に分けて、片方で強かった選手がもう片方でも強いかを見る(顔ぶれが同じなら本物の型)。"
                  "データでは差が出なくても、信じて買うのも競艇の楽しみ。こういう見方もあるよ、ということで</p>")
         corners.append(("ジンクス・オカルト検証", body))
-        txt += ["■ジンクス・オカルト検証", "(選手の「○○に強い」は本物?)"] + [f"・{x}" for x in jinx] + ["(よく聞くオカルト)"] + [f"・{x}" for x in occ] + \
+        txt += ["■ジンクス・オカルト検証", "ゲンさん「勝負駆けに強いやつ、荒れ水面に強いやつっているだろ?」", "ミカタ「調べました。時期を変えて同じ選手に出るかで見ます」", "",
+                "(選手の「○○に強い」は本物?)"] + [f"・{x}" for x in jinx] + ["(よく聞くオカルト)"] + [f"・{x}" for x in occ] + \
                ["※調べ方は、同じ選手を奇数月と偶数月に分けて、片方で強かった選手がもう片方でも強いかを見る(顔ぶれが同じなら本物の型)。",
                 "データでは差が出なくても、信じて買うのも競艇の楽しみ。こういう見方もあるよ、ということで"]
     # 選手同士の相性: 対戦の多い組(よく当たるライバル)を、両方の先着数で並べる(負けた側だけを強調しない)

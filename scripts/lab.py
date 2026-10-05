@@ -166,6 +166,7 @@ def t_bangumi(ent, r):
                 "ただし堅い枠はオッズも堅い。人気どおりなら、1号艇を軸にするかどうかは配当との相談(ここは読者の判断)",
                 "荒れる枠は、2〜4号艇にまくり型・差し型の選手が入っているかを先に見る"],
         "mikata": "番組屋さんの気持ちになって出走表を読むと、レースがもう一段おもしろくなるよ。『この枠に、なぜこの人を置いた?』って",
+        "gen": "だろ? 番組屋の癖は昔からあるんだ。堅い枠は黙って1号艇、荒れる枠は俺の出番だ",
         "challenge": "今日行く場の「堅い枠」と「荒れる枠」を1つずつ覚えておく。荒れる枠のレースで、2〜4号艇にまくり屋がいたら、友達より先に言ってみよう",
         "numbers": {"corr_half": corr, "max": float(g["in1"].max()), "min": float(g["in1"].min()), "n_cells": int(len(g))},
     }
@@ -195,6 +196,7 @@ def t_kikaku(ent, r):
                 "堅いレースこそ、2着・3着の並びで差がつく。差し型・まくり差し型の選手が2〜3号艇にいるかを見る",
                 "オッズの見立てを大きく超える企画レースが見つかったら追試する(ミカタは毎週ここを更新する)"],
         "mikata": "『堅い』と『おいしい』は別もの。堅いレースは、2着3着で遊ぶのがコツかも",
+        "gen": "知ってたよ。でもな、堅いレースの2着探しがいちばんおもしろいんだ。そこが腕の見せどころ",
         "challenge": "企画レースを1つ選んで、1号艇は「来るもの」と決めてしまい、2着・3着だけを当てにいく。差し屋・まくり差しの人が2〜3号艇にいるかが勝負",
         "numbers": {},
     }
@@ -219,6 +221,7 @@ def t_streak(ent, r):
         "use": ["『そろそろ荒れる』『そろそろ来る』は、前のレースとは関係ない。見るべきはそのレースの6人と水面",
                 "ただし同じ日の同じ場で風が強まっているなら話は別。それは『流れ』ではなく天気"],
         "mikata": "ルーレットで赤が続いたら次は黒、と同じやつ。レースは毎回まっさらだよ",
+        "gen": "…そうは言っても、3つ続いたら次は荒れる気がするんだよ。気がするだけでも、買うのは楽しいだろ?",
         "challenge": "1号艇が3連勝したとき、友達が「そろそろ荒れる」と言ったら、この記事を見せる。そのうえで6人のSTと決まり手を見て、自分の予想を立てる",
         "numbers": {},
     }
@@ -241,6 +244,7 @@ def t_a1in(ent, r):
         "use": ["級別は出走表でいちばん目立つ情報なので、オッズにいちばん早く織り込まれる。級別『以外』の材料(ST・決まり手の型・今節の足)で差をつける",
                 "B1の1号艇でも、平均STが速くて逃げ率が高い選手ならA1なみ。ミカタ新聞のカードはそこを見る"],
         "mikata": "A1かどうかは、みんな見てる。見てないところを見るのが、いろんな角度ってやつ",
+        "gen": "A1は見りゃ分かる。俺が見てるのはスタートの構えだ。B1でもピタッと行くやつはいる",
         "challenge": "今日の出走表から、B1の1号艇で「平均STが速い・逃げ率が高い」人を1人見つける。A1なみに扱ってみて、結果を友達と答え合わせ",
         "numbers": {},
     }
@@ -309,7 +313,9 @@ def page(t: dict, asof: str) -> str:
 .mag section{{min-width:0}} .tw{{overflow-x:auto;-webkit-overflow-scrolling:touch}}
 .lab{{width:100%;margin:0;min-width:0}} .legend{{font-size:12.5px;color:var(--mute);line-height:1.6;margin:8px 0 0}} .lab td,.lab th{{text-align:left;white-space:normal}} .lab td b{{font:700 17px var(--num);color:var(--red)}} .lab small{{display:block;font-size:11px;color:var(--mute);white-space:normal}}
 .lab.cells{{min-width:0}} .lab.cells td,.lab.cells th{{white-space:nowrap}}
-.belief{{margin:0;font:700 clamp(16px,4.2vw,20px)/1.7 var(--serif);border-left:6px solid var(--yellow);padding:4px 0 4px 14px;background:rgba(255,225,0,.18)}}
+.belief{{margin:0;font:700 clamp(16px,4.2vw,20px)/1.7 var(--serif);border-left:6px solid var(--yellow);padding:4px 0 4px 14px;background:rgba(255,225,0,.18);flex:1 1 auto}}
+.gen-say{{display:flex;gap:12px;align-items:flex-start}} .gen-say svg{{flex:0 0 64px}} .who{{margin:8px 0 0;font-size:12.5px;color:var(--mute);line-height:1.6}}
+.ft-quote.gen p{{border-color:#0b5fb4}} .ft-quote.gen small{{color:#0b5fb4}}
 .gauge{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:8px}} .gauge div{{background:var(--card);border:2px solid var(--rule);padding:10px 12px}}
 .gauge b{{display:block;font:400 15px var(--head);color:var(--red)}} .gauge span{{font-size:13px}}
 .td-box{{display:flex;gap:12px;align-items:flex-start;background:var(--yellow);padding:14px 16px;border:3px solid var(--ink)}} .td-box p{{margin:0;font:700 15.5px/1.7 var(--serif)}} .td-box svg{{flex:0 0 48px;width:48px;height:48px}}
@@ -320,9 +326,10 @@ def page(t: dict, asof: str) -> str:
 <div class="cv-top"><div class="brand">ミカタ検証ラボ<small>「◯◯理論」を同じ物差しで試す</small></div><div class="issue"><b>LAB</b><br>{e(today)}</div></div>
 <p class="cv-kicker">今週の理論</p><h1 class="cv-h">{e(t['title'])}</h1>
 <p class="cv-deck">{e(t['lead'])}</p>
-<div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ(カモメの記者)<br>公式の成績データ 2023-10〜{e(asof)} を独自に集計</span></div></div></header>
+<div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ(カモメの記者)/ 説の持ち込み ゲンさん<br>公式の成績データ 2023-10〜{e(asof)} を独自に集計</span></div></div></header>
 <main class="mag">
-<section class="opener"><span class="label">検証する説</span><p class="belief">{e(t['belief'])}</p></section>
+<section class="opener"><span class="label">ゲンさんの説</span><div class="gen-say">{gull_svg(64, bg="#ffffff", cls="gs", who="gen")}<p class="belief">{e(t['belief'])}</p></div>
+<p class="who">ゲンさん=験かつぎ歴40年の大先輩。ストップウォッチ片手に展示を見る目は確か。その説、ミカタがデータで確かめます</p></section>
 <section class="stamp"><span class="label">ミカタの結論</span><div class="st-box"><b>{e(con[0])}</b><p>{e(con[1])}</p></div></section>
 <section><span class="label">3つの物差し</span><div class="gauge"><div><b>① 本当にある?</b><span>「ふだん」と比べて差があるか。同じ数のレースをサイコロで決めても出るくらいの差なら「ふだん並み」</span></div>
 <div><b>② みんな知ってる?</b><span>オッズは「みんなの予想」。1号艇はどのレースでもオッズの見立てより少し多く来るので、その「全レースの平均」と同じなら、知られている=配当は安い</span></div>
@@ -331,6 +338,7 @@ def page(t: dict, asof: str) -> str:
 <section class="side"><h3>予想に使うなら</h3><ul>{use}</ul></section>
 <section class="todai"><span class="label">今日のお題</span><div class="td-box">{gull_svg(48, bg="#fff", cls="td")}<p>{e(t.get('challenge', '次に行く場で、この説が本当か自分の目で確かめてみよう'))}</p></div></section>
 <blockquote class="ft-quote">{gull_svg(64, bg="#ffffff", cls="q")}<p><small>ミカタのひと言</small>{e(t['mikata'])}</p></blockquote>
+<blockquote class="ft-quote gen">{gull_svg(64, bg="#ffffff", cls="q", who="gen")}<p><small>ゲンさんの返し</small>{e(t.get('gen', 'ふーん。で、今日はどこが荒れるんだ?'))}</p></blockquote>
 <section class="method"><h3>データについて</h3><p>公式の成績データ(番組表・競走成績)と、締切時のオッズ(集めたレース分)を自分たちで集計。「オッズの見立て」は、締切時のオッズから、ひかれる分(控除)を除いて逆算した1号艇の勝つ見込み。
 「ふだん並み」かどうかは、同じ数のレースを何度も引き直したときに出るブレの幅(統計でいう90%区間)で判定。この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
 <footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ検証ラボ ・ 毎週1本。競艇をいろんな角度から。買い目は売りません。</span></footer></main></body></html>"""
@@ -339,7 +347,7 @@ def page(t: dict, asof: str) -> str:
 def note_text(t: dict) -> str:
     con = conclusion(t)
     out = [f"【タイトル案】", f"1. {t['title']}|{t['belief'][:24]}…をデータで検証", f"2. 検証ラボ:{t['title']} 3つの物差しで確かめた", "",
-           "■検証する説", t["belief"], "", f"■ミカタの結論:{con[0]}", con[1], "", "■くわしく", t["lead"], "", "■3つの物差し",
+           "■ゲンさんの説(験かつぎ歴40年の大先輩)", f"「{t['belief']}」", "", f"■ミカタの結論:{con[0]}", con[1], "", "■くわしく", t["lead"], "", "■3つの物差し",
            "①本当にある?(ふだんと比べて、はっきり差があるか) ②みんな知ってる?(オッズの見立てどおりなら知られている=配当は安い) ③来年も同じ?(前の2年と最近の1年で同じ向きか)", ""]
     for name, m, v in t["measures"]:
         ex, kn, sb = mark(v)
@@ -357,10 +365,12 @@ def note_text(t: dict) -> str:
 def x_text(t: dict) -> str:
     m = t["measures"][0][1]
     con = conclusion(t)
-    body = (f"【検証ラボ】{t['title']}\n\n説:{t['belief']}\n\n結論:{con[0]}\n{t['lead'].split('。')[0]}。\n\n"
-            f"{ratio_words(m.get('market_ratio'))}。\n\nみんなはこの説、信じてた?")
+    body = (f"【検証ラボ】{t['title']}\n\nゲンさん「{t['belief']}」\n\nミカタ「結論:{con[0]}。{t['lead'].split('。')[0]}」\n\n"
+            f"ゲンさん「{t.get('gen', '')}」\n\nみんなはこの説、信じてた?")
+    if xlen(body) > 280:  # 長いときは、数字の文を落として掛け合いだけ残す
+        body = f"【検証ラボ】{t['title']}\n\nゲンさん「{t['belief']}」\n\nミカタ「結論:{con[0]}」\n\nゲンさん「{t.get('gen', '')}」\n\nみんなは信じてた?"
     if xlen(body) > 280:
-        body = f"【検証ラボ】{t['title']}\n\n結論:{con[0]}\n{t['lead'].split('。')[0]}。\n\n{ratio_words(m.get('market_ratio'))}。\n\nみんなはこの説、信じてた?"
+        body = f"【検証ラボ】{t['title']}\n\nゲンさん「{t['belief']}」\n\nミカタ「結論:{con[0]}」\n\nみんなは信じてた?"
     return f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 紙面の上部のスクリーンショットか、表の部分"
 
 

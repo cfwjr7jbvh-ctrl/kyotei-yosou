@@ -53,8 +53,16 @@ def catch(c: dict, jcd: int | None = None, used: set | None = None) -> tuple[str
     return "データで見る選手カード", f"{c['n']}走の成績から"
 
 
-def gull_svg(size: int = 104, ring: str = "#c8141c", bg: str = "#eef1e4", cls: str = "gull") -> str:
-    """カモメの記者のアイコン(赤い輪の中の顔)。公式のキャラとは無関係の自作。カード画像・下書き・アプリで共通。"""
+GEN_RING = "#0b5fb4"
+
+
+def gull_svg(size: int = 104, ring: str = "#c8141c", bg: str = "#eef1e4", cls: str = "gull", who: str = "mikata") -> str:
+    """カモメのアイコン(輪の中の顔)。公式のキャラとは無関係の自作。カード画像・下書き・アプリで共通。
+
+    who="mikata": 記者のミカタ(赤い輪、鉛筆は別のパターン)。who="gen": ゲンさん(ハンチング帽、青い輪。験かつぎの大先輩)。
+    """
+    if who == "gen" and ring == "#c8141c":
+        ring = GEN_RING
     body = ('<path d="M 58 200 L 90 182 C 102 152 125 139 146 133 C 134 110 140 70 176 58 C 206 48 229 72 227 100 '
             'C 226 118 219 130 213 138 C 241 160 246 205 221 232 C 196 258 141 262 111 245 C 99 238 93 229 89 221 Z" '
             'fill="#ffffff" stroke="#14212c" stroke-width="5" stroke-linejoin="round"/>'
@@ -67,8 +75,15 @@ def gull_svg(size: int = 104, ring: str = "#c8141c", bg: str = "#eef1e4", cls: s
             '<circle cx="199" cy="90" r="5.8" fill="#14212c"/>'
             '<path d="M 192.4 87.6 A 6.6 6.6 0 0 1 205.6 87.6 Q 199 85.2 192.4 87.6 Z" fill="' + bg + '"/>'
             '<path d="M 192.2 87.8 Q 199 85.2 205.8 87.8" stroke="#14212c" stroke-width="3" stroke-linecap="round" fill="none"/>')
-    uid = f"g{size}{cls}"
-    return (f'<svg class="{cls}" viewBox="0 0 300 300" width="{size}" height="{size}" role="img" aria-label="カモメの記者">'
+    if who == "gen":  # ハンチング帽と、目じりのしわ(ベテラン)
+        body += ('<path d="M 139 86 C 143 56 172 40 202 44 C 221 47 233 59 236 72 L 256 79 C 252 86 238 87 226 85 C 200 79 168 80 140 91 Z" '
+                 'fill="#14212c" stroke="#14212c" stroke-width="3" stroke-linejoin="round"/>'
+                 '<path d="M 150 72 C 170 62 205 60 230 70" stroke="#56636e" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
+                 f'<circle cx="188" cy="44" r="4.5" fill="{ring}"/>'
+                 '<path d="M 186 97 Q 190 100 194 98" stroke="#14212c" stroke-width="2.2" stroke-linecap="round" fill="none"/>')
+    uid = f"g{size}{cls}{who[0]}"
+    label = "カモメの記者ミカタ" if who == "mikata" else "験かつぎの大先輩ゲンさん"
+    return (f'<svg class="{cls}" viewBox="0 0 300 300" width="{size}" height="{size}" role="img" aria-label="{label}">'
             f'<defs><clipPath id="{uid}"><circle cx="150" cy="150" r="121"/></clipPath></defs>'
             f'<circle cx="150" cy="150" r="150" fill="{bg}"/>'
             f'<g clip-path="url(#{uid})"><g transform="translate(136 182) scale(1.45) translate(-188 -98)">{body}</g></g>'
