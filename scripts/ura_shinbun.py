@@ -21,7 +21,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from kyotei import nerai  # noqa: E402
 from kyotei import racer_card as rc  # noqa: E402
-from kyotei.card_render import radar_svg  # noqa: E402
+from kyotei.card_render import gull_svg, radar_svg  # noqa: E402
 
 LANE_BG = ["#ffffff", "#17191c", "#e3141b", "#0b5fb4", "#f5d00a", "#12904a"]
 LANE_FG = ["#102230", "#ffffff", "#ffffff", "#ffffff", "#102230", "#ffffff"]
@@ -237,8 +237,8 @@ CSS = """
 body{background:var(--paper);color:var(--ink);font:15px/1.7 var(--body);padding-inline:16px;padding-block:20px 48px}
 .wrap{max-width:860px;margin:0 auto;display:grid;gap:22px}
 .mast{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;border-bottom:3px solid var(--ink);padding-bottom:12px}
-.seal{width:64px;height:64px;border:3px solid var(--stamp);color:var(--stamp);border-radius:50%;display:grid;place-items:center;
-  font:400 34px/1 var(--head);transform:rotate(-8deg)}
+.seal{width:64px;height:64px;transform:rotate(-6deg)}
+.seal svg{display:block;width:64px;height:64px}
 .mast h1{margin:0;font:400 clamp(24px,5vw,38px)/1.15 var(--head);text-wrap:balance}
 .mast p{margin:4px 0 0;color:var(--mute);font-size:13px}
 .lead{background:var(--paper2);border-radius:6px;padding:12px 14px;font-size:14px}
@@ -349,12 +349,12 @@ def render(title: str, venue_name: str | None, picks, all_cards, corners: list[t
     keys = list(dict.fromkeys(rule_key(x) for x in shown))
     basis = "".join(f"<dt>{e(k)}</dt><dd>{e(rules[k])}</dd>" for k in keys if k in rules)
     today = dt.date.today().isoformat()
-    return f"""<title>裏新聞 {e(title)}</title>
+    return f"""<title>{e(title)} 出場選手をデータで読む</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=BIZ+UDPGothic:wght@400;700&family=Barlow+Condensed:wght@600;700&display=swap">
 <style>{CSS}</style>
 <div class="wrap">
-<header class="mast"><div class="seal" aria-hidden="true">裏</div><div><h1>裏新聞 {e(title)}</h1>
+<header class="mast"><div class="seal">{gull_svg(64, bg="#f8faf2")}</div><div><h1>{e(title)} 出場選手をデータで読む</h1>
 <p>{e(venue_name + '開催 ・ ' if venue_name else '')}注目選手 {len(picks)}人 ・ 集計 {e(meta['period'][0])}〜{e(meta['asof'])} ・ 下書き {today}</p></div></header>
 <p class="lead">{note}公式の予想紙・スポーツ紙とは別の切り口で、選手の「型」と「相性」をデータで読む下書きです。数字はすべて公式の成績データを自分たちで集計したもので、<b>見出しはどれも下の基準を満たした数字に基づいています</b>。</p>
 {blocks}
@@ -386,7 +386,7 @@ def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str]
         return out + [""]
 
     out = ["【タイトル案】",
-           f"1. 【ウラ新聞】{title}|出場{n_all}人をデータで読む 予想が楽しくなる“材料”集",
+           f"1. 【データで読む】{title}|出場{n_all}人の“型”と狙い目のコース 予想が楽しくなる材料集",
            f"2. {title}の出場{n_all}人、データで分かる“型”と狙い目のコース",
            f"3. 【保存版】{title} 全{n_all}人のひと言タグとコース別の早見表",
            "", "――――――――――(ここから無料)――――――――――", "",

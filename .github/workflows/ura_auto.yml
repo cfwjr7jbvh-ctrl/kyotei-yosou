@@ -1,0 +1,43 @@
+name: 記事の下書き(グレードレース)
+
+# SG・PG1・G1・G2 の初日の7日前から節が終わるまで、毎朝、記事の下書き(HTML・note の本文・X の投稿案)と注目選手のカード画像を作り直し、
+# 暗号化して cards ブランチの ura/ に置く(scripts/ura_auto.py)。アプリの「記事」タブから読む。出場選手一覧は assen.yml が 6:20 に更新する。
+on:
+  workflow_dispatch:
+    inputs:
+      args:
+        description: "ura_auto.py に渡す引数(例: --days-before 14 --only 04_20261013)"
+        default: ""
+  schedule:
+    - cron: "40 22 * * *"   # 毎日 7:40 JST(選手カードの更新 7:05 のあと)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cards           # cards.yml と同じ場所(cards ブランチ)に書くので、順番に動かす
+  cancel-in-progress: false
+
+jobs:
+  ura:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - name: 日本語フォントと描画用のブラウザ
+        run: |
+          sudo apt-get install -y -q fonts-noto-cjk fonts-dejavu-core >/dev/null
+          pip install -q playwright
+          python -m playwright install --with-deps chromium >/dev/null
+      - name: 下書きと画像を作る
+        run: python scripts/ura_auto.py --out "$RUNNER_TEMP/out" ${{ inputs.args }}
+      - name: cards ブランチの ura/ に置く
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/push_cards.sh "$RUNNER_TEMP/out" ura

@@ -53,14 +53,36 @@ def catch(c: dict, jcd: int | None = None, used: set | None = None) -> tuple[str
     return "データで見る選手カード", f"{c['n']}走の成績から"
 
 
+def gull_svg(size: int = 104, ring: str = "#c8141c", bg: str = "#eef1e4", cls: str = "gull") -> str:
+    """カモメの記者のアイコン(赤い輪の中の顔)。公式のキャラとは無関係の自作。カード画像・下書き・アプリで共通。"""
+    body = ('<path d="M 58 200 L 90 182 C 102 152 125 139 146 133 C 134 110 140 70 176 58 C 206 48 229 72 227 100 '
+            'C 226 118 219 130 213 138 C 241 160 246 205 221 232 C 196 258 141 262 111 245 C 99 238 93 229 89 221 Z" '
+            'fill="#ffffff" stroke="#14212c" stroke-width="5" stroke-linejoin="round"/>'
+            '<path d="M 105 170 C 130 150 185 155 207 186 C 217 206 202 228 172 232 C 142 236 110 225 92 212 Z" '
+            'fill="#a9b4bb" stroke="#14212c" stroke-width="5" stroke-linejoin="round"/>'
+            '<path d="M 223 92 C 242 91 259 95 271 102 C 266 108 257 108 249 106 L 223 108 Z" fill="#f2c230" stroke="#14212c" stroke-width="4" stroke-linejoin="round"/>'
+            '<path d="M 223 108 L 250 107 C 256 111 254 118 246 118 C 236 117 229 115 223 114 Z" fill="#f2c230" stroke="#14212c" stroke-width="4" stroke-linejoin="round"/>'
+            '<circle cx="246.5" cy="112" r="3.6" fill="#c8141c"/>'
+            '<path d="M 224 109.5 Q 220.6 109.2 218.9 106.3" stroke="#14212c" stroke-width="2.6" stroke-linecap="round" fill="none"/>'
+            '<circle cx="199" cy="90" r="5.8" fill="#14212c"/>'
+            '<path d="M 192.4 87.6 A 6.6 6.6 0 0 1 205.6 87.6 Q 199 85.2 192.4 87.6 Z" fill="' + bg + '"/>'
+            '<path d="M 192.2 87.8 Q 199 85.2 205.8 87.8" stroke="#14212c" stroke-width="3" stroke-linecap="round" fill="none"/>')
+    uid = f"g{size}{cls}"
+    return (f'<svg class="{cls}" viewBox="0 0 300 300" width="{size}" height="{size}" role="img" aria-label="カモメの記者">'
+            f'<defs><clipPath id="{uid}"><circle cx="150" cy="150" r="121"/></clipPath></defs>'
+            f'<circle cx="150" cy="150" r="150" fill="{bg}"/>'
+            f'<g clip-path="url(#{uid})"><g transform="translate(136 182) scale(1.45) translate(-188 -98)">{body}</g></g>'
+            f'<circle cx="150" cy="150" r="128" fill="none" stroke="{ring}" stroke-width="13"/></svg>')
+
+
 IMG_CSS = """
 *{box-sizing:border-box}
 body{margin:0;width:1080px;height:1350px;background:#eef1e4;color:#14212c;font-family:"Noto Sans CJK JP","BIZ UDPGothic",sans-serif}
 .card{position:relative;width:1080px;height:1350px;padding:56px 64px 48px;display:grid;grid-template-rows:auto auto auto 1fr auto;gap:24px}
 .top{display:flex;align-items:center;justify-content:space-between}
 .kicker{font-size:30px;font-weight:700;letter-spacing:.06em;color:#56636e}
-.seal{width:104px;height:104px;border:6px solid #c8141c;color:#c8141c;border-radius:50%;display:grid;place-items:center;
-  font:900 60px/1 "Noto Sans CJK JP Black","Noto Sans CJK JP",sans-serif;transform:rotate(-8deg)}
+.seal{width:112px;height:112px;transform:rotate(-6deg)}
+.seal svg{display:block;width:112px;height:112px}
 .name{font:900 108px/1.05 "Noto Sans CJK JP Black","Noto Sans CJK JP",sans-serif;letter-spacing:.02em}
 .sub{font-size:34px;color:#56636e;margin-top:12px}
 .catch{background:#c8141c;color:#fff;border-radius:10px;padding:22px 30px}
@@ -113,7 +135,7 @@ def card_image_html(c: dict, jcd: int | None = None, kicker: str = "データで
     return f"""<!doctype html><meta charset="utf-8"><style>{IMG_CSS}</style>
 <div class="card">
   <div class="top"><div><div class="kicker">{e(kicker)}</div><div class="name">{e(c['name'])}</div>
-    <div class="sub">{e(c['class'] or '')} ・ {e(c['branch'] or '')} ・ {int(c['age'] or 0)}歳</div></div><div class="seal">裏</div></div>
+    <div class="sub">{e(c['class'] or '')} ・ {e(c['branch'] or '')} ・ {int(c['age'] or 0)}歳</div></div><div class="seal">{gull_svg(112)}</div></div>
   <div class="catch"><b>{e(t0)}</b><span>{e(why0)}</span></div>
   <div class="mid"><div>{radar_svg(c['radar'], W=620, H=390, R=120, cls='rimg')}<div class="cap">{e(g)}の中での位置(100がトップ)</div></div>
     <div class="kv"><div><span>3着内率</span><b>{c['top3']:.0%}</b></div><div><span>1コース逃げ率</span><b>{nige}</b></div>

@@ -244,7 +244,7 @@ details.row[open]>summary{border-bottom:1px solid var(--rule)}
 .note{color:var(--mute);font-size:13px;margin:4px 2px 12px}
 
 /* ---- 下のタブ(親指で押せる位置) ---- */
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;display:grid;grid-template-columns:repeat(3,1fr);
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;display:grid;grid-template-columns:repeat(4,1fr);
   background:var(--deck);border-top:1px solid var(--rule);padding-bottom:env(safe-area-inset-bottom)}
 .tabs button{border:0;background:none;padding:14px 0 13px;font-size:15px;font-weight:700;color:var(--mute);cursor:pointer;position:relative}
 .tabs button[aria-selected="true"]{color:var(--ink)}
@@ -394,3 +394,29 @@ details.row[open]>summary{border-bottom:1px solid var(--rule)}
 .cd-note,.cd-foot{font-size:11.5px;color:var(--mute);margin:6px 0 0}
 .cd-foot{margin-top:14px}
 .muted{color:var(--mute)}
+
+/* 記事(グレードレースの下書き) */
+.ura-list{display:grid;gap:10px}
+.ura-item{background:var(--deck);border-radius:12px;padding:14px 14px 12px;border-top:5px solid var(--ink);display:grid;gap:6px;cursor:pointer;text-align:left;border-left:0;border-right:0;border-bottom:0;width:100%}
+.ura-item .g{font-size:12px;font-weight:700;color:var(--mark)}
+.ura-item .t{font-size:17px;font-weight:700}
+.ura-item .m{font-size:12.5px;color:var(--mute)}
+.ura-head{display:flex;align-items:center;gap:10px;margin:4px 0 10px}
+.ura-head button{border:1px solid var(--rule);background:var(--deck);border-radius:20px;padding:6px 12px;font-size:13px;cursor:pointer}
+.ura-head h2{margin:0;font-size:18px}
+.ura-sec{background:var(--deck);border-radius:12px;padding:14px;margin-bottom:12px}
+.ura-sec h3{margin:0 0 8px;font-size:14px;color:var(--mute)}
+.ura-sec p{margin:0 0 8px;font-size:13.5px}
+.ura-btns{display:flex;flex-wrap:wrap;gap:8px}
+.ura-btns button,.ura-btns a{border:0;background:var(--ink);color:var(--deck);border-radius:8px;padding:9px 14px;font-size:14px;font-weight:700;cursor:pointer;text-decoration:none}
+.ura-btns button.sub,.ura-btns a.sub{background:var(--soft);color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)}
+.ura-post{background:var(--soft);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:14px;white-space:pre-wrap;line-height:1.6}
+.ura-post .n{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--mute);margin-bottom:4px}
+.ura-post .n button{border:1px solid var(--rule);background:var(--deck);border-radius:14px;padding:3px 10px;font-size:12px;cursor:pointer}
+.ura-imgs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.ura-imgs figure{margin:0;display:grid;gap:4px}
+.ura-imgs img{width:100%;height:auto;border-radius:8px;box-shadow:0 1px 4px rgba(0,0,0,.15)}
+.ura-imgs figcaption{font-size:12px;color:var(--mute);display:flex;justify-content:space-between;gap:6px}
+.ura-imgs figcaption a{color:var(--ink);font-weight:700;text-decoration:none}
+.ura-frame{width:100%;height:70vh;border:1px solid var(--rule);border-radius:10px;background:#eef1e4}
+.ura-note{font-size:12px;color:var(--mute);margin:0}

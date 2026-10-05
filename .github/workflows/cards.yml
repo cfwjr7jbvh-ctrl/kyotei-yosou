@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: cards
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   cards:
@@ -31,5 +31,5 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          bash scripts/push_cards.sh "$RUNNER_TEMP/out"
+          bash scripts/push_cards.sh "$RUNNER_TEMP/out" cards
           bash scripts/commit_files.sh "[CI Skip] report: 選手カードの基準とタグの数" reports/racer_cards_meta.json

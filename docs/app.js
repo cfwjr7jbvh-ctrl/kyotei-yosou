@@ -909,6 +909,86 @@ async function renderTrack() {
   renderDeme();
 }
 
+// ---- 記事(グレードレースの下書き: 毎朝 cards ブランチの ura/ に置かれる) ----
+const URA = { index: null, open: null, cache: {} };
+async function copyText(text, btn) {
+  try { await navigator.clipboard.writeText(text); } catch (e) {
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e2) { }
+    ta.remove();
+  }
+  if (btn) { const t = btn.textContent; btn.textContent = "コピーしました"; setTimeout(() => btn.textContent = t, 1500); }
+}
+function uraMeta(it) {
+  const hd = `${+it.hd.slice(4, 6)}/${+it.hd.slice(6)}`;
+  return `${esc(it.venue)} ${hd}〜 ・ 出場${it.n}人 ・ 注目${(it.picks || []).length}人`;
+}
+async function renderUra() {
+  const box = $("#tab-ura");
+  if (URA.open) return renderUraOne(box, URA.open);
+  box.innerHTML = `<div class="empty">読み込み中…</div>`;
+  try { URA.index = await getJSON("api/data/ura/index.json"); } catch (e) {
+    box.innerHTML = `<div class="empty">${e instanceof Locked ? "記事の下書きは作り直し中です。しばらくすると見られます。" : "グレードレース(SG・G1)の初日が近づくと、ここに下書きが出ます。"}</div>`;
+    return;
+  }
+  const items = URA.index.items || [];
+  let html = `<p class="ura-note">SG・G1 の初日の${URA.index.days_before}日前から、毎朝作り直します(${esc(URA.index.asof)})。note の本文、X の投稿、選手カードの画像をここからコピー・保存できます。</p>`;
+  html += items.length ? `<div class="ura-list">` + items.map((it) =>
+    `<button class="ura-item" data-key="${esc(it.key)}"><span class="g">${esc(it.grade)}</span><span class="t">${esc(it.title)}</span><span class="m">${uraMeta(it)}</span></button>`).join("") + `</div>`
+    : `<div class="empty">いま対象の節はありません。</div>`;
+  box.innerHTML = html;
+  $$(".ura-item", box).forEach((b) => b.onclick = () => { URA.open = b.dataset.key; renderUra(); window.scrollTo({ top: 0 }); });
+}
+async function renderUraOne(box, key) {
+  if (!URA.cache[key]) {
+    box.innerHTML = `<div class="empty">読み込み中…</div>`;
+    try { URA.cache[key] = await getJSON(`api/data/ura/${key}.json`); } catch (e) { URA.open = null; return renderUra(); }
+  }
+  const d = URA.cache[key];
+  const body = d.x.split("\n").filter((l) => !/^(画像|出し方):/.test(l)).join("\n");
+  const posts = body.split(/\n(?=--- 投稿)/).filter((x) => x.startsWith("--- 投稿")).map((x) => {
+    const m = x.match(/^--- 投稿(\d+)\((\d+)字\)(.*?) ---\n([\s\S]*?)\n*$/);
+    return m ? { n: m[1], len: m[2], warn: m[3].trim(), body: m[4].trim() } : null;
+  }).filter(Boolean);
+  const tail = (d.x.split("\n").filter((l) => /^(画像|出し方):/.test(l))).join("\n");
+  let html = `<div class="ura-head"><button id="ura-back">← 一覧</button><h2>${esc(d.title)}</h2></div>
+  <p class="ura-note">${uraMeta(d)} ・ 集計 ${esc(d.asof)}${d.missing && d.missing.length ? ` ・ 見つからない選手 ${d.missing.length}人` : ""}</p>
+  <div class="ura-sec"><h3>記事(確認用)</h3><p>出す前に、見出しと数字を読んで直してください。</p>
+    <div class="ura-btns"><button id="ura-open">別のタブで開く</button><button class="sub" id="ura-inline">ここで読む</button></div><div id="ura-frame"></div></div>
+  <div class="ura-sec"><h3>note の本文</h3><p>無料と有料の切れ目の線が入っています。タイトル案は冒頭。</p>
+    <div class="ura-btns"><button id="ura-copy-note">本文をコピー</button></div></div>
+  <div class="ura-sec"><h3>X の投稿案</h3>${posts.map((p) =>
+    `<div class="ura-post"><div class="n"><span>投稿${p.n}(${p.len}字)${p.warn ? " " + esc(p.warn) : ""}</span><button data-copy="${p.n}">コピー</button></div>${esc(p.body)}</div>`).join("")}
+    ${tail ? `<p class="ura-note" style="margin-top:8px;white-space:pre-wrap">${esc(tail)}</p>` : ""}</div>
+  <div class="ura-sec"><h3>選手カードの画像(${d.images.length}枚)</h3><p>長押しかタップで保存。投稿1に注目1人目、投稿2に相性のいい選手。</p>
+    <div class="ura-btns"><button class="sub" id="ura-imgs-load">画像を読み込む</button></div><div class="ura-imgs" id="ura-imgs"></div></div>`;
+  box.innerHTML = html;
+  $("#ura-back").onclick = () => { URA.open = null; renderUra(); };
+  $("#ura-open").onclick = () => {
+    const url = URL.createObjectURL(new Blob([d.html], { type: "text/html" }));
+    window.open(url, "_blank");
+  };
+  $("#ura-inline").onclick = (e) => {
+    const f = $("#ura-frame");
+    f.innerHTML = f.innerHTML ? "" : `<iframe class="ura-frame" sandbox="allow-same-origin" srcdoc="${esc(d.html)}"></iframe>`;
+    e.target.textContent = f.innerHTML ? "閉じる" : "ここで読む";
+  };
+  $("#ura-copy-note").onclick = (e) => copyText(d.note, e.target);
+  $$("[data-copy]", box).forEach((b) => b.onclick = () => copyText(posts.find((p) => p.n === b.dataset.copy).body, b));
+  $("#ura-imgs-load").onclick = async (e) => {
+    e.target.disabled = true;
+    const wrap = $("#ura-imgs");
+    for (const im of d.images) {
+      try {
+        const x = await getJSON(`api/data/ura/${im.file}`);
+        const src = "data:image/png;base64," + x.png;
+        wrap.insertAdjacentHTML("beforeend", `<figure><img src="${src}" alt="${esc(x.name)}"><figcaption><span>${esc(x.name.replace(/^\d+_|\.png$/g, ""))}</span><a href="${src}" download="${esc(x.name)}">保存</a></figcaption></figure>`);
+      } catch (err) { wrap.insertAdjacentHTML("beforeend", `<p class="ura-note">${esc(im.name)} は読めませんでした</p>`); }
+    }
+    e.target.hidden = true;
+  };
+}
+
 function renderVenues() {
   const vs = [...new Set(state.data.races.map((r) => r.venue))];
   if (state.venue !== "all" && !vs.includes(state.venue)) state.venue = "all";
@@ -932,6 +1012,7 @@ function render() {
   if (state.tab === "now") renderNow();
   if (state.tab === "bets") renderBets();
   if (state.tab === "track") renderTrack();
+  if (state.tab === "ura") renderUra();
 }
 
 async function loadDay(day) {
@@ -950,7 +1031,7 @@ async function loadDay(day) {
 
 // 締切までの残り時間だけ書き換える(締切を過ぎたレースが出たら並べ直す)
 function tick() {
-  if (!state.data || state.day !== jst().date || state.tab === "track") return;
+  if (!state.data || state.day !== jst().date || state.tab === "track" || state.tab === "ura") return;
   const done = state.data.races.filter(finished).length;
   if (done !== state.doneCount) { state.doneCount = done; render(); return; }
   const byId = Object.fromEntries(state.data.races.map((r) => [r.race_id, r]));
@@ -992,7 +1073,7 @@ async function init() {
     state.tab = b.dataset.tab;
     $$(".tabs button").forEach((x) => x.setAttribute("aria-selected", x === b));
     $$(".panel").forEach((p) => p.hidden = p.id !== "tab-" + state.tab);
-    $("#venues").hidden = state.tab === "track";
+    $("#venues").hidden = state.tab === "track" || state.tab === "ura";
     render();
     window.scrollTo({ top: 0 });
   });
