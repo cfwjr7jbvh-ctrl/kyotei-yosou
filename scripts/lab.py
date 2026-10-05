@@ -100,7 +100,9 @@ def measure(r: pd.DataFrame, mask: pd.Series, ref: pd.Series | None = None, col:
 def verdicts(m: dict) -> dict:
     """3つの物差しの答えを、ふだんの言葉で。統計の言い方(区間・相関)は読者に見せない。"""
     d = m["in1"] - m["in1_ref"]
-    real = abs(d) >= 0.03 and not (m["in1_ci"][0] <= m["in1_ref"] <= m["in1_ci"][1])
+    # 3ポイント以上の差。もともと少ないこと(20%未満)は、2割以上の増減でもよい(10回→13回など)
+    big = abs(d) >= 0.03 or (min(m["in1"], m["in1_ref"]) < 0.2 and m["in1_ref"] > 0 and abs(d) / m["in1_ref"] >= 0.2)
+    real = big and not (m["in1_ci"][0] <= m["in1_ref"] <= m["in1_ci"][1])
     out = {"exists": ("本当にある(ふだんより" + ("多い" if d > 0 else "少ない") + ")") if real else "ふだんと同じ(差は出なかった)", "real": real}
     if "market_ratio" in m:
         lo, hi = m["market_ci"]
@@ -1787,7 +1789,7 @@ def t_wind(ent, r):
                   "『場と季節をそろえて』は、同じ場・同じ月の平均からのずれでくらべたということ(風の強い場・季節がもともとインが弱い、という見かけの差を取りのぞく)",
                   "風向きは公式記録の8方位。場ごとに水面の向きがちがうので、『追い風・向かい風』ではなく方位のままで調べた"],
         "faq": [("向かい風はまくり、追い風は差し?", f"風が強くなると、まくりも差しも両方増える。場ごとに『インが弱い向き』を前の2年で選んでも、最近の1年で同じだったのは{n_dir}場中{keep_dir}場。向きのくせは、思ったより入れかわる"),
-                ("どの場がいちばん風に弱い?", f"下の表のとおり。風に弱い場の顔ぶれは、前の2年と最近の1年で{sim_words(corr)}"),
+                ("どの場がいちばん風に弱い?", f"結果の表のとおり。風に弱い場の顔ぶれは、前の2年と最近の1年で{sim_words(corr)}"),
                 ("波は?", f"波5cm以上だと、1号艇の勝ちは100レースで{_n100(mw['in1'])}回(波2cm以下は{_n100(mw['in1_ref'])}回)。波は風といっしょに高くなるので、風と波は同じ話の表と裏"),
                 ("オッズは風を知ってる?", f"少しは知っている(風が強いと1号艇の人気は下がる)。でも、下がり方が足りない。風5m以上だと、オッズから見込める1号艇の勝ちは100レースで{_n100(m5['in1'] / m5['market_ratio'] * (m5.get('market_ref') or 1.0)) if m5.get('market_ratio') else '-'}回、実際は{_n100(m5['in1'])}回")],
         "use": ["直前情報の風速が5mを超えたら、1号艇の頭は少し疑ってみる", "強風の日は、まくり屋と差し屋の両方に出番。2〜4号艇の型を見る",
@@ -1800,6 +1802,270 @@ def t_wind(ent, r):
     }
 
 
+def t_exst(ent, r):
+    """スタート展示のSTは、本番の参考になる? 今日の展示がいつもより速いと? 人ごとのずれは?"""
+    x = _adj(ent).sort_values(["racer_id", "date", "rno"])
+    ex = x["ex_st"].where(x["ex_st"].between(-0.3, 0.6))
+    st = x["st"].where(x["st"].between(0, 0.6) & (x["st_flag"] != "F"))
+    g = x["racer_id"]
+    roll = lambda q: q.groupby(g).transform(lambda s_: s_.shift(1).rolling(60, min_periods=20).mean())  # noqa: E731
+    x["ex_dev"], x["st_dev"] = ex - roll(ex), st - roll(st)
+    fast, usual, slow = x["ex_dev"] <= -0.05, x["ex_dev"].abs() < 0.02, x["ex_dev"] >= 0.05
+    mf, msl = measure(x, fast, ref=usual), measure(x, slow, ref=usual)
+    for m_ in (mf, msl):
+        m_["ref_label"] = "いつもどおりの展示"
+        m_["subject"], m_["verb"] = "その選手", "3着に入る"
+    sd_f, sd_u, sd_s = (float(x.loc[k, "st_dev"].mean()) for k in (fast, usual, slow))
+    ok = x["ex_dev"].notna() & x["st_dev"].notna()
+    c_day = float(x.loc[ok, "ex_dev"].corr(x.loc[ok, "st_dev"]))
+    # 展示→本番のずれ(人ごと)。奇数月と偶数月で同じ人は同じずれか
+    d = (st - ex)
+    mon = x["dt"].dt.month
+    o = d[mon % 2 == 1].groupby(g[mon % 2 == 1]).agg(["size", "mean"]); v_ = d[mon % 2 == 0].groupby(g[mon % 2 == 0]).agg(["size", "mean"])
+    j = o.join(v_, lsuffix="_o", rsuffix="_e", how="inner"); j = j[(j["size_o"] >= 40) & (j["size_e"] >= 40)]
+    c_person = float(j["mean_o"].corr(j["mean_e"]))
+    d_all = float(d.mean())
+    pq = j[["mean_o", "mean_e"]].mean(axis=1)
+    lo_, hi_ = float(pq.quantile(0.1)), float(pq.quantile(0.9))
+    # 展示でいちばん速かった艇は、本番でもいちばん速い?
+    e2 = ent[ent["ex_st"].notna() & ent["st"].between(0, 0.6) & (ent["st_flag"] != "F")].copy()
+    e2["exr"] = e2.groupby("race_id")["ex_st"].rank(method="min")
+    e2["str_"] = e2.groupby("race_id")["st"].rank(method="min")
+    p11 = float((e2.loc[e2["exr"] == 1, "str_"] == 1).mean())
+    # オッズ: 展示STいちばんの3・4号艇は、人気ほど来る?(レース単位)
+    er = ent[ent["ex_st"].notna()].copy()
+    er["exr"] = er.groupby("race_id")["ex_st"].rank(method="min")
+    parts = []
+    for k in (3, 4):
+        rk = er[er["lane"] == k].drop_duplicates("race_id").set_index("race_id")["exr"]
+        z = r[["race_id", "date", "late", "upset", "jcd"]].copy()
+        z["exr"] = r["race_id"].map(rk).values
+        z["w"] = (r["win_lane"] == k).astype(float).values
+        z["q"] = r[f"q_l{k}"].values
+        parts.append(z)
+    Z = pd.concat(parts, ignore_index=True)
+    m34 = measure(Z, Z["exr"] == 1, ref=Z["exr"] > 1, col="w", qcol="q")
+    m34.update({"ref_label": "展示STがいちばんではない", "subject": "その艇", "verb": "1着になる"})
+    v34 = verdicts(m34)
+    over = v34.get("edge") == -1
+    return {
+        "id": "exst", "title": "スタート展示のSTは信じていい?", "belief": "スタート展示でSTが速かった選手は、本番も速い。展示を見れば今日の調子が分かる",
+        "subject": "その選手", "verb": "3着に入る", "no_market": False, "unit": "走",
+        "lead": f"本番のSTは、展示より平均{d_all:.2f}秒遅い(展示はフライングしても罰がないので、みんな攻める)。"
+                f"では、今日の展示がその人のいつもより0.05秒以上速かったら? 本番のSTは{abs(sd_f - sd_u) * 1000:.0f}/1000秒しか変わらず、3着に入る回数も{_diff_words(mf, '3着に入る')}。"
+                f"今日の展示STは、本番の調子の目安にはほとんどならない。いっぽう『展示から本番へのずれ』は人ごとにほぼ決まっていて、時期を変えても{sim_words(c_person)}。"
+                + ("それなのに、展示STがいちばん速い3・4号艇は、オッズの予想ほど1着に来ていない。" if over else ""),
+        "conclusion": ["ほぼウソ。今日の展示STより、その人の『いつものずれ』", f"今日の展示がいつもより速くても、本番のSTはほとんど変わらない。見るべきは、展示から本番へ何秒ずれる人か(人ごとにほぼ決まっている)。"
+                       + ("展示STの速さに、みんな少し引っぱられすぎ" if over else "")],
+        "tables": [],
+        "measures": [("今日の展示が、いつもより0.05秒以上速い", mf, verdicts(mf)), ("今日の展示が、いつもより0.05秒以上遅い", msl, verdicts(msl)),
+                     ("展示STがいちばん速かった3・4号艇(1着)", m34, v34)],
+        "rules": ["スタート展示: 本番の前に、本番と同じようにスタートを試す。ここでのフライングは罰がないので、本番より攻めた数字が出やすい",
+                  "『いつもの展示』は、その選手の直前60回の展示STの平均(20回以上ある人だけ)。そこからのずれで『今日は速い・遅い』を決めた",
+                  "結果のカードの上2つは『その選手のふだんの3着内』とくらべている(コースの有利不利も差し引き)。3つめはレース単位で、オッズとくらべた"],
+        "faq": [("展示でいちばん速かった艇は、本番でもいちばん速い?", f"{fun_rate(p11)}({_n100(p11)}回/100)。でたらめなら6回に1回なので、少しは当たる。でもそれは『もともとスタートが速い人』が展示でも速いから"),
+                ("じゃあ展示STは見なくていい?", f"『人ごとのずれ』で直して見るのが正解。本番が展示より{lo_:.2f}秒遅いだけの人もいれば、{hi_:.2f}秒遅い人もいる(真ん中の8割)。ミカタの予想は、この『人ごとのずれ』を使って本番のSTを見積もっている"),
+                ("展示でフライングした人は?", "展示のフライングは罰がない。本番のSTも、本番でフライングする率も、ほかの人とほとんど同じだった")],
+        "use": ["今日の展示STが『いつもより速い・遅い』は気にしすぎない。その人のいつもの本番STと、展示から本番へのずれで見る",
+                "展示STがいちばん速い外の艇に飛びつかない。人気になっているぶん、配当とのバランスを見る"],
+        "mikata": "展示のSTって、見ていていちばんワクワクするところ。だからこそ、数字の正体を知っておくともっと楽しいよ",
+        "gen": "展示でピタッと決めると、こっちまで『今日は来る!』って思っちまうんだよなあ。……まあ、ほどほどにしとくか",
+        "challenge": "次のレースで、展示STがいちばん速い艇を予想してから展示を見よう。そのあと本番のSTと答え合わせ。ずれる人、ずれない人を見つけよう",
+        "numbers": {"d_all": d_all, "c_day": c_day, "c_person": c_person, "p11": p11, "st_dev": [sd_f, sd_u, sd_s], "q10_90": [lo_, hi_]},
+    }
+
+
+def _motor_renewals(ent):
+    """場ごとの新モーターの初日(その日の出走表で、モーター2連率がほぼ全部0%になった日)。"""
+    e = ent[["date", "jcd", "motor_2rate"]].copy()
+    e["m"] = pd.to_numeric(e["motor_2rate"], errors="coerce")
+    d = e.groupby(["jcd", "date"])["m"].agg(mean="mean", zero=lambda q: (q == 0).mean()).reset_index().sort_values(["jcd", "date"])
+    d["prev"] = d.groupby("jcd")["mean"].shift(1)
+    ren = d[(d["zero"] >= 0.95) & (d["prev"] > 20)][["jcd", "date"]].copy()
+    ren["rd"] = pd.to_datetime(ren["date"])
+    return ren
+
+
+def t_newmotor(ent, r):
+    """新モーター、2連率はいつから信じていい? 新モーターの直後は荒れる?"""
+    ren = _motor_renewals(ent).sort_values("rd")
+    x = _adj(ent).sort_values("dt")
+    x["m"] = pd.to_numeric(x["motor_2rate"], errors="coerce")
+    x = pd.merge_asof(x, ren[["jcd", "rd"]], left_on="dt", right_on="rd", by="jcd", direction="backward")
+    x["since"] = (x["dt"] - x["rd"]).dt.days
+    y = x[x["m"] > 0].copy()
+    y["pct"] = y.groupby(["jcd", "date"])["m"].rank(pct=True)
+    top, bot = y["pct"] >= 0.8, y["pct"] <= 0.2
+    pers = [("新モーターから8〜14日(2節目)", y["since"].between(7, 14)), ("15〜30日", y["since"].between(15, 30)), ("4か月より後", y["since"] > 120)]
+    ms = []
+    for nm, pm in pers:
+        m_ = measure(y, top & pm, ref=bot & pm)
+        m_["ref_label"] = "2連率が下位2割"
+        ms.append((f"{nm}: 2連率が上位2割のモーター", m_, verdicts(m_)))
+    zero1 = float((x.loc[x["since"].between(0, 6), "m"] == 0).mean())
+    # 新モーターの直後は荒れる?(場と季節をそろえて)
+    r2 = r.copy(); r2["dt"] = pd.to_datetime(r2["date"])
+    r2 = pd.merge_asof(r2.sort_values("dt"), ren[["jcd", "rd"]], left_on="dt", right_on="rd", by="jcd", direction="backward")
+    r2["since"] = (r2["dt"] - r2["rd"]).dt.days
+    mon = r2["dt"].dt.month
+    dev = r2["c1"] - r2.groupby(["jcd", mon])["c1"].transform("mean")
+    new_dev = float(dev[r2["since"].between(0, 30)].mean()) * 100
+    # 場ごとの、新モーターの時期(毎年だいたい何月)
+    ren["mon"] = ren["rd"].dt.month
+    tbl = []
+    for j, g in ren.groupby("jcd"):
+        last = g["rd"].max()
+        tbl.append([VENUES[int(j)], f"{int(g['mon'].mode().iloc[0])}月ごろ", last.strftime("%Y年%-m月%-d日")])
+    tbl.sort(key=lambda q: int(q[1].split("月")[0]))
+    d_early, d_mid, d_late = ((m_["in1"] - m_["in1_ref"]) * 100 for _, m_, _ in ms)
+    return {
+        "id": "newmotor", "title": "新モーター、2連率はいつから信じていい?", "belief": "新モーターになったばかりのころは、2連率なんて当てにならない。しばらくは荒れる",
+        "subject": "その選手", "verb": "3着に入る", "no_market": True,
+        "lead": f"どの場も1年に1回、モーターを全部入れかえる。最初の1週間は、出走表のモーター2連率が{fun_rate(zero1)}0%(まだ走っていない)。"
+                f"2節目(8〜14日)は、2連率が上位2割のモーターと下位2割の差が、100走で{abs(d_early):.0f}回ほど。"
+                f"2週間をすぎると{abs(d_mid):.0f}回、4か月より後は{abs(d_late):.0f}回。つまり、2週間たてば、もうベテランのモーターと同じくらい信じていい。"
+                f"新モーター直後の1か月、1号艇の勝ちは場と季節をそろえて{'ほぼ同じ' if abs(new_dev) < 1 else f'{new_dev:+.0f}回'}。荒れるわけではない。",
+        "conclusion": ["半分本当。2週間だけ待って", f"2節目までは2連率の差がほとんど出ない。2週間をすぎれば、上位と下位の差は100走で{abs(d_mid):.0f}回ほどになり、半年後と変わらない。新モーターだから荒れる、はない"],
+        "tables": [("場ごとの新モーターの時期(このデータで見つけた入れかえ日)", tbl, ["場", "毎年", "いちばん最近"])],
+        "measures": ms,
+        "rules": ["モーター2連率: そのモーターが2着までに入った割合。新モーターになると0%から数えなおす",
+                  "新モーターの初日は、出走表のモーター2連率がほぼ全部0%になった日として見つけた",
+                  "結果は『その選手のふだんの3着内』とくらべた差(コースの有利不利も差し引き)。2連率は同じ日・同じ場のモーターの中での順位で、上位2割・下位2割に分けた"],
+        "faq": [("2節目は、なぜ当てにならない?", "まだ1節ぶん(6〜8走)しか走っていないから。たまたま強い選手が乗ったモーターも上位に来てしまう"),
+                ("新モーターの最初の節は何を見る?", "2連率は0%なので、展示タイムと、選手のいつもの力。検証ラボ『モーター2連率は信じていい?』では、今日の展示のほうが2連率より効いていた"),
+                ("新モーターの時期は?", "結果の表のとおり。場ごとにだいたい毎年同じ月")],
+        "use": ["新モーターから2週間は、2連率より展示タイムと選手の力で考える", "2週間をすぎたら、2連率を素直に使ってよい"],
+        "mikata": "新モーターの初下ろしって、ちょっとお祭りみたい。どのモーターが『当たり』か、みんなで探す2週間がいちばん楽しいかも",
+        "gen": "新ペラ・新モーターの季節はな、整備士さんたちも大忙しなんだ。2週間で数字が落ちつくってのは、なるほどな",
+        "challenge": "新モーターになったばかりの場を1つ選んで、2週間ごとに上位のモーター番号をメモしよう。『当たり』が固まっていくのが見える",
+        "numbers": {"zero1": zero1, "new_dev": new_dev, "diffs": [d_early, d_mid, d_late], "renewals": int(len(ren))},
+    }
+
+
+def t_rokuyo(ent, r):
+    """大安は堅い? 仏滅は荒れる? 友引は?(六曜。旧暦は kyotei.koyomi で計算)"""
+    from kyotei.koyomi import ROKUYO, rokuyo
+    x = r.copy()
+    ds = pd.to_datetime(x["date"])
+    mp = {d: rokuyo(d.date()) for d in ds.drop_duplicates()}
+    x["rk"] = ds.map(mp)
+    x["pay"] = pd.to_numeric(x["tri_pay"], errors="coerce")
+    ma, mb = measure(x, x["rk"] == "大安", ref=x["rk"] != "大安"), measure(x, x["rk"] == "仏滅", ref=x["rk"] != "仏滅")
+    # 6つの六曜で、いちばん強い日とよわい日の差は偶然でも出る? 日ごとに六曜をシャッフルして確かめる(同じ日のレースはまとめて動かす)
+    day = x.assign(d=ds).groupby("d").agg(s=("c1", "sum"), n=("c1", "size"), l=("rk", "first")).reset_index()
+    def _rng(lbl):
+        g_ = day.assign(l=lbl).groupby("l")[["s", "n"]].sum()
+        v_ = g_["s"] / g_["n"]
+        return float(v_.max() - v_.min())
+    obs = _rng(day["l"].values)
+    rs = np.random.default_rng(0)
+    p_perm = float(np.mean([_rng(rs.permutation(day["l"].values)) >= obs for _ in range(1000)]))
+    halves = {k: x[x["late"] == k].groupby("rk")["c1"].mean() for k in (False, True)}
+    same_top = halves[False].idxmax() == halves[True].idxmax()
+    same_bot = halves[False].idxmin() == halves[True].idxmin()
+    odd = p_perm <= 0.05
+    mu = measure(x, x["rk"] == "仏滅", ref=x["rk"] != "仏滅", col="upset", qcol="_none")
+    mt = measure(x, x["rk"] == "友引", ref=x["rk"] != "友引", col="upset", qcol="_none")
+    for m_ in (ma, mb, mu, mt):
+        m_["ref_label"] = "ほかの日"
+    for m_ in (mu, mt):
+        m_["subject"], m_["verb"] = "万舟", "出る"
+    g = x.groupby("rk").agg(n=("c1", "size"), in1=("c1", "mean"), up=("upset", "mean"), pay=("pay", "median"))
+    order = ["先勝", "友引", "先負", "仏滅", "大安", "赤口"]
+    tbl = [[k, f"{_n100(g.loc[k, 'in1'])}回", f"{_n100(g.loc[k, 'up'])}回", f"{g.loc[k, 'pay']:,.0f}円", f"{int(g.loc[k, 'n']):,}"] for k in order if k in g.index]
+    vs = [verdicts(m_) for m_ in (ma, mb, mu, mt)]
+    lo, hi = g["in1"].idxmin(), g["in1"].idxmax()
+    mh = measure(x, x["rk"] == hi, ref=x["rk"] != hi); mh["ref_label"] = "ほかの日"
+    one_in = max(int(round(1 / max(p_perm, 0.001))), 2)
+    return {
+        "id": "rokuyo", "title": "大安は堅い? 仏滅は荒れる?", "belief": "大安の日は本命が来る。仏滅は荒れる。友引は……友を引くから、2着も同じ型の選手が来る",
+        "subject": "1号艇", "compare": "ほかの日",
+        "lead": f"カレンダーの六曜(大安・仏滅など)ごとに、2023年10月からの{len(x):,}レースを数えた。1号艇が勝つのは、大安で100レースに{_n100(ma['in1'])}回、仏滅で{_n100(mb['in1'])}回。"
+                f"万舟(3連単で30番人気より下)は、仏滅で{_n100(mu['in1'])}回、ほかの日で{_n100(mu['in1_ref'])}回。"
+                + (f"ところが、いちばん1号艇が強い{hi}(100レースで{g.loc[hi, 'in1'] * 100:.1f}回)と、いちばん弱い{lo}({g.loc[lo, 'in1'] * 100:.1f}回)の差は、"
+                   f"偶然なら{one_in}回に1回しか出ない大きさ。" + ("しかも前の2年も最近の1年も同じ顔ぶれ。" if same_top and same_bot else "") +
+                   "理由は見つからない(月の満ち欠け・節の何日目・レース番号をそろえても残る)。"
+                   if odd else f"いちばん1号艇が強いのは{hi}、弱いのは{lo}だけど、その差は偶然でも出る大きさ。"),
+        "conclusion": ([f"ほぼ同じ。でも{hi}だけ、ちょっと気になる", f"大安も仏滅も、ほかの日とほぼ同じ。ただ{hi}と{lo}の差(100レースで{abs(g.loc[hi, 'in1'] - g.loc[lo, 'in1']) * 100:.1f}回)は偶然では出にくい。"
+                        "ミカタはこれまで10個以上のオカルトを試したので、1つくらい偶然で当たることもある。来年も同じか、追試中"] if odd else
+                       ["ふだんと同じ。六曜は水面を気にしない", f"大安も仏滅も、1号艇の勝ちも万舟も、ほかの日と同じ。でも、大安の日にちょっといい気分で舟券を買うのは、それはそれで楽しい"]),
+        "tables": [("六曜ごとの成績(100レースあたりの回数。配当は3連単の真ん中の値)", tbl, ["六曜", "1号艇の1着", "万舟", "3連単の配当", "レース数"])],
+        "measures": ([(hi, mh, verdicts(mh))] if hi not in ("大安", "仏滅") else []) + [("大安", ma, vs[0]), ("仏滅", mb, vs[1]), ("仏滅の万舟", mu, vs[2]), ("友引の万舟", mt, vs[3])],
+        "rules": ["六曜: 先勝・友引・先負・仏滅・大安・赤口の6つ。旧暦の月と日の数で決まる(旧暦の1月1日は先勝、のように)",
+                  "旧暦は、月の満ち欠け(新月の日が1日)と太陽の動きから、ミカタが自分で計算した(市販のカレンダーと照らし合わせ済み)",
+                  "万舟: 3連単の払戻しが1万円以上の大穴。ここでは『3連単で30番人気より下』で数えた"],
+        "faq": [("なぜ大安と仏滅?", "大安は『大いに安し』で何をしてもよい日、仏滅は何事もよくない日、と昔から言われる。結婚式の日取りでいまも気にする人は多い"),
+                ("友引は?", f"友引の万舟は100レースで{_n100(mt['in1'])}回(ほかの日は{_n100(mt['in1_ref'])}回)。友を引っぱって大穴が来る、ということもなかった"),
+                ("赤口は?", "赤口は正午だけ吉、と言われる日。" + (f"なのに、六曜でいちばん1号艇が勝っていたのは{hi}。オカルトはわからない" if odd and hi == "赤口" else "ナイターの多い今の競艇には、ちょっと気の毒な日")),
+                ("偶然かどうか、どうやって確かめた?", "日ごとの六曜を1000回シャッフルして、同じくらいの差が出る回数を数えた。同じ日のレースはまとめて動かしている(その日の水面のくせを、六曜のせいにしないため)")],
+        "use": ["六曜で予想を変える必要はない。でも『今日は大安だから本命』と決めて遊ぶのは、立派な楽しみ方", "負けた日を仏滅のせいにするのは、数字的にはぬれぎぬ"],
+        "mikata": "六曜は水面には関係なかった。でも、大安の朝にちょっと背すじが伸びる感じ、わたしは好きだよ",
+        "gen": ("赤口が強いだって? ほらみろ、暦は生きてるんだよ! ……追試中? わかったわかった、来年まで黙っとく" if odd and hi == "赤口" else
+                "俺は大安の日しか遠征しないって決めてるんだ。……数字は関係ないって? いいんだよ、気分が大事なんだ"),
+        "challenge": "次の大安の日に、1号艇から1点だけ買ってみよう。仏滅の日には、思いきって万舟を1点。どっちが楽しかったか、自分の記録をつけよう",
+        "p_perm": p_perm, "same_halves": [bool(same_top), bool(same_bot)],
+        "numbers": {k: {"n": int(g.loc[k, "n"]), "in1": float(g.loc[k, "in1"]), "up": float(g.loc[k, "up"]), "pay": float(g.loc[k, "pay"])} for k in g.index},
+    }
+
+
+def t_name(ent, r):
+    """名前に『勝』が入る選手は勝つ? 水の字は水面と相性がいい?(名前は出走表に載る公開情報。人の名前は出さず、まとめた数字だけ)"""
+    x = _adj(ent)
+    x["age"] = pd.to_numeric(x["age"], errors="coerce")
+    x["ab"] = pd.cut(x["age"], [0, 25, 30, 35, 40, 45, 50, 55, 80])
+    x["cres"] = x["res"] - x.groupby("racer_class")["res"].transform("mean")                       # コースと級をそろえた3着内のずれ
+    x["cares"] = x["res"] - x.groupby(["racer_class", "ab"], observed=True)["res"].transform("mean")  # さらに年齢もそろえる
+    nm = x["racer_name"].astype(str)
+    groups = [("勝", "勝"), ("水の字(海・波・川・湖・沢など)", "[海波浪洋湊汐潮渚港湖河川水泳流澄渡沢池泉浜津]"), ("舟の字(舟・船・航・帆・艇)", "[舟船航帆艇]"),
+              ("龍・竜", "[龍竜]"), ("翔・飛", "[翔飛]")]
+    base_ = float(x["top3"].mean())
+    age_all = float(x.groupby("racer_id")["age"].mean().mean())
+    rs = np.random.default_rng(0)
+    ms, tbl, info = [], [], {}
+    for label, pat in groups:
+        mk = nm.str.contains(pat)
+        per = x[mk].groupby("racer_id").agg(n=("cares", "size"), v=("cares", "mean"), v0=("cres", "mean"), age=("age", "mean"))
+        if len(per) < 5:
+            continue
+        w = per["n"].values
+        v = float(np.average(per["v"], weights=w)); v0 = float(np.average(per["v0"], weights=w))
+        bt = [np.average(per["v"].values[i], weights=w[i]) for i in [rs.integers(0, len(per), len(per)) for _ in range(500)]]
+        ha = x[mk & ~x["late"]]["cares"].mean(); hb = x[mk & x["late"]]["cares"].mean()
+        m_ = {"n": int(mk.sum()), "in1": base_ + v, "in1_ref": base_, "upset": 0.0, "upset_ref": 0.0,
+              "in1_ci": [base_ + float(np.quantile(bt, 0.05)), base_ + float(np.quantile(bt, 0.95))], "half": [float(ha), float(hb)],
+              "ref_label": "名前に入っていない人"}
+        ms.append((f"名前に『{label.split('(')[0]}』({len(per)}人)", m_, verdicts(m_)))
+        dd = lambda q: "ほぼ同じ" if abs(q) < 0.005 else f"{abs(q) * 100:.1f}回{'多い' if q > 0 else '少ない'}"  # noqa: E731
+        tbl.append([label, f"{len(per)}人", f"{per['age'].mean():.0f}歳", dd(v0), dd(v)])
+        info[label] = {"people": int(len(per)), "age": float(per["age"].mean()), "class_adj": v0, "class_age_adj": v}
+    any_real = any(v_["real"] for _, _, v_ in ms)
+    sho = info.get("翔・飛", {})
+    return {
+        "id": "name", "title": "名前に『勝』が入る選手は、勝つ?", "belief": "名前に『勝』の字がある選手は勝負強い。水の字は水面と相性がいい。龍は水の神さまだから強い",
+        "subject": "その選手", "verb": "3着に入る", "no_market": True,
+        "lead": f"出走表の選手名を字で分けて、コースの有利不利と級(A1〜B2)をそろえて3着に入る回数をくらべた。"
+                f"『勝』の字が入る{info.get('勝', {}).get('people', 0)}人は、ほかの人と{_diff_words(ms[0][1], 'x') if ms else '-'}。水の字も、舟の字も、龍も、ほぼ同じ。"
+                + (f"ひとつおもしろいのは『翔・飛』。級をそろえると100走で{sho['class_adj'] * 100:.1f}回多いけれど、平均{sho['age']:.0f}歳と若い(全体は{age_all:.0f}歳)。"
+                   f"年齢もそろえると{sho['class_age_adj'] * 100:.1f}回で、偶然の範囲。名前の流行りが、世代を映していた。" if sho else ""),
+        "conclusion": (["ちょっと差がある。でも追試中", "名前で差が出たけれど、理屈はない。来年も同じか追いかける"] if any_real else
+                       ["ふだんと同じ。名前より、スタートとターン", "『勝』も水の字も龍も、ほかの人と同じだけ3着に入っている。『翔』が少し強く見えるのは、若い人に多い名前だから"]),
+        "tables": [("名前の字ごとのまとめ(100走あたり、3着に入る回数の差)", tbl, ["名前の字", "人数", "平均年齢", "級をそろえると", "年齢もそろえると"])],
+        "measures": ms,
+        "rules": ["名前は出走表に載る登録名(名字も入る。『川』の字の名字の人も水の字に入る)。この記事では、まとめた数字だけを出し、個人の名前は出さない",
+                  "くらべ方: コース(1〜6コース)の有利不利と級を差し引いた『3着に入る回数のずれ』を、名前にその字がある人とない人でくらべた",
+                  "人数が少ないので、『偶然かどうか』は人を入れかえて何度も引き直して確かめた(同じ人の何百走をまとめて動かす)"],
+        "faq": [("なぜ『翔』は若い人に多い?", "『翔太』は平成の30年間でいちばん多くつけられた男の子の名前(明治安田生命の名前調査)。『翔』の字は1990年代から人気で、いまの20〜30代に多い"),
+                ("じゃあ若い人は強い?", "同じ級の中なら、若い人ほど伸びざかりで少し上(検証ラボ『ボートレーサーは何歳がいちばん強い?』)。名前ではなく、年齢の話だった"),
+                ("自分の名前に『勝』があるけど?", "舟券の当たりやすさも、たぶん関係ない。でも勝の字の選手を応援すると、ちょっと気合いが入るよね")],
+        "use": ["名前で舟券を選ぶのは、数字的には意味がない。でも『推しの字』を決めて応援するのは、立派な楽しみ方",
+                "若い選手が多いレースは、級の数字より少し強めに見てもいい(年齢の記事を参照)"],
+        "mikata": "名前の字で強さは変わらなかった。でも『翔』の話みたいに、数字の裏から世代が見えてくるのは楽しいね",
+        "gen": "俺の名前には『勝』も『龍』もないけどな、40年負けずに通ってるぞ。……勝ってはいないけどな",
+        "challenge": "今日の出走表で、名前に水の字がある選手を探してみよう。見つけたら、その人だけ応援する『水の字レース』のはじまり",
+        "numbers": {"groups": info, "age_all": age_all},
+    }
+
+
 THEORIES = {t["id"]: t for t in []}
 BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke, "tenji": t_tenji, "flying": t_flying, "combo": t_combo,
             "rest": t_rest, "travel": t_travel, "weight": t_weight, "dayno": t_dayno, "twice": t_twice, "tilt": t_tilt,
@@ -1808,7 +2074,7 @@ BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in"
             "birthday": t_birthday, "blood": t_blood, "height": t_height, "furusato": t_furusato,
             "pressure": t_pressure, "humid": t_humid, "heat": t_heat,
             "lane6": t_lane6, "motor": t_motor, "entry": t_entry,
-            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind}
+            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name}
 
 
 # ---------------------------------------------------------------- 記事
@@ -1857,11 +2123,15 @@ def _n100(v, per=100):
 
 
 def _diff_words(m, verb, per=100):
-    d = (m["in1"] - m["in1_ref"]) * per
+    """差を、表示している回数どうしの差で(棒の横の数字と食い違わないように)。"""
+    a, b = m["in1"] * per, m["in1_ref"] * per
+    if min(a, b) >= 10:
+        d = round(a) - round(b)
+        return "ほぼ同じ" if d == 0 else f"{abs(d)}回{'多い' if d > 0 else '少ない'}"
+    d = round(a, 1) - round(b, 1)
     if abs(d) < 0.5:
         return "ほぼ同じ"
-    n = f"{abs(d):.1f}" if abs(d) < 10 and abs(d) != round(abs(d)) and abs(d) < 3 else f"{round(abs(d))}"
-    return f"{n}回{'多い' if d > 0 else '少ない'}"
+    return f"{abs(d):.1f}回{'多い' if d > 0 else '少ない'}"
 
 
 def measures_html(ms, subject="1号艇", verb="勝つ", no_market=False, compare="全体", ref_label=None, unit=None, per=100):
@@ -1898,10 +2168,10 @@ def measures_html(ms, subject="1号艇", verb="勝つ", no_market=False, compare
                 badges.append('<span class="bd warn">オッズの予想より少ない</span>')
             exp_ = m["in1"] / r_ * (m.get("market_ref") or 1.0)   # オッズの見込みを、いつものずれ(全体の平均)で直した回数
             odds = f'<p class="rc-odds">オッズから見込める回数 {n_(exp_)}回 → 実際 {n_(m["in1"])}回<small>(オッズのいつものずれを直した値)</small></p>'
-        cards += (f'<div class="rc"><p class="rc-h">{e(name)}<small>{m["n"]:,}{unit}</small></p>'
+        cards += (f'<div class="rc"><p class="rc-h">{e(name)}<small>{m["n"]:,}{e(m.get("unit", unit))}</small></p>'
                   f'<div class="rc-row"><span>{e(refl)}</span><div class="bar"><i style="width:{w1:.0f}%"></i></div><b>{n_(m["in1_ref"])}回</b></div>'
                   f'<div class="rc-row this {tone}"><span>この条件</span><div class="bar"><i style="width:{w2:.0f}%"></i></div><b>{n_(m["in1"])}回</b></div>'
-                  f'<p class="rc-d {tone}">{per}{unit}で{e(subject)}が{e(verb)}のは <b>{e(_diff_words(m, verb, per))}</b></p>'
+                  f'<p class="rc-d {tone}">{per}{e(m.get("unit", unit))}で{e(m.get("subject", subject))}が{e(m.get("verb", verb))}のは <b>{e(_diff_words(m, m.get("verb", verb), per))}</b></p>'
                   f'{odds}<div class="rc-b">{"".join(badges)}</div></div>')
     return f'<div class="rcs">{cards}</div>'
 
