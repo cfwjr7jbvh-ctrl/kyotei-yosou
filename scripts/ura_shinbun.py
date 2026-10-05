@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from kyotei import mag, nerai  # noqa: E402
 from kyotei import racer_card as rc  # noqa: E402
 from kyotei.card_render import gull_svg, radar_svg  # noqa: E402
+from kyotei.xtext import sim_words  # noqa: E402
 
 LANE_BG = ["#ffffff", "#17191c", "#e3141b", "#0b5fb4", "#f5d00a", "#12904a"]
 LANE_FG = ["#102230", "#ffffff", "#ffffff", "#ffffff", "#102230", "#ffffff"]
@@ -662,7 +663,7 @@ def scene_lines() -> list[str]:
                    f"進入が動いた{x['moved']:.0%}(予選{b['moved']:.0%})、まくり・まくり差しの決着{x['makuri']:.0%}(予選{b['makuri']:.0%})")
     rs = occult_data().get("racer_scene", {}).get("st_big", {})
     if rs.get("r") is not None:
-        out.append(f"選手ごとの「大一番でSTを上げてくる度合い」は時期を変えると入れ替わりやすい(似ている度合い{rs['r']:.2f})。場面の違いは全員に共通、と見るのがよさそう")
+        out.append(f"選手ごとの「大一番でSTを上げてくる度合い」は、時期を変えると{sim_words(rs['r'])}。場面の違いは全員に共通、と見るのがよさそう")
     return out
 
 
@@ -693,12 +694,12 @@ def jinx_lines() -> list[str]:
         return []
     import json as _json
     t = _json.loads(p.read_text(encoding="utf-8"))["traits"]
-    # 「似ている度合い」= 前半と後半の相関。1.00なら顔ぶれがそっくり、0なら無関係(読者には相関という言葉を使わない)
-    out = [f"{label}:時期を変えると顔ぶれが入れ替わる(似ている度合い{t[k]['r']:.2f}、1.00でそっくり)。過去に強かった選手が次も強いとは限らない"
+    # 前半と後半の相関を、数字ではなく言葉で(sim_words)。読者には数字を見せない
+    out = [f"{label}:時期を変えると{sim_words(t[k]['r'])}。過去に強かった選手が次も強いとは限らない"
            for k, label in JINX if k in t and "r" in t[k]]
-    real = "、".join(f"{label}{t[k]['r']:.2f}" for k, label in REAL if k in t and "r" in t[k])
+    real = "、".join(label for k, label in REAL if k in t and "r" in t[k])
     if real:
-        out.append(f"(くらべると、本物の型は {real} と高く、同じ選手に何度も出る。この記事の注目選手の「型」はこちら側だけで選んでいます)")
+        out.append(f"(くらべると、本物の型({real})は時期を変えてもほぼ同じ顔ぶれで、同じ選手に何度も出る。この記事の注目選手の「型」はこちら側だけで選んでいます)")
     return out
 
 
@@ -764,11 +765,11 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
             body += "<p>選手の「○○に強い」は本物?</p><ul>" + "".join(f"<li>{e(x)}</li>" for x in jinx) + "</ul>"
         if occ:
             body += "<p style='margin-top:6px'>よく聞くオカルト</p><ul>" + "".join(f"<li>{e(x)}</li>" for x in occ) + "</ul>"
-        body += ("<p style='margin-top:6px'>「似ている度合い」は、同じ選手を奇数月と偶数月に分けて、片方で強い選手がもう片方でも強いか(1.00でそっくり、0で無関係)。"
+        body += ("<p style='margin-top:6px'>調べ方は、同じ選手を奇数月と偶数月に分けて、片方で強かった選手がもう片方でも強いかを見る(顔ぶれが同じなら本物の型)。"
                  "データでは差が出なくても、信じて買うのも競艇の楽しみ。こういう見方もあるよ、ということで</p>")
         corners.append(("ジンクス・オカルト検証", body))
         txt += ["■ジンクス・オカルト検証", "(選手の「○○に強い」は本物?)"] + [f"・{x}" for x in jinx] + ["(よく聞くオカルト)"] + [f"・{x}" for x in occ] + \
-               ["※「似ている度合い」は、同じ選手を奇数月と偶数月に分けて、片方で強い選手がもう片方でも強いか(1.00でそっくり、0で無関係)。",
+               ["※調べ方は、同じ選手を奇数月と偶数月に分けて、片方で強かった選手がもう片方でも強いかを見る(顔ぶれが同じなら本物の型)。",
                 "データでは差が出なくても、信じて買うのも競艇の楽しみ。こういう見方もあるよ、ということで"]
     # 選手同士の相性: 対戦の多い組(よく当たるライバル)を、両方の先着数で並べる(負けた側だけを強調しない)
     h2h = rc.head_to_head(d, [c["id"] for c in sel], min_meet=10)
