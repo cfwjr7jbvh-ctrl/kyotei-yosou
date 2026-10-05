@@ -621,7 +621,7 @@ def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: l
                          "熱くも冷たくもない、人気どおりでした。\n\nでも、信じて買うのも競艇の楽しみ。みんなの推し出目は?")
         if x["key"] == "home":
             extra.append(f"「地元の選手は強い」は本当でした。ただし小さめ。\n\n同じ選手で比べると、地元の3着内率は平均{x['value'] * 100:+.1f}ポイント。\n"
-                         "一方で「誰が○○巧者か」は、時期を変えるとほぼ入れ替わる(偶然の幅が大きい)。\n\nみんなは地元選手、買う派?")
+                         "一方で「誰が○○巧者か」は、時期を変えると顔ぶれが入れ替わる(参考程度)。\n\nみんなは地元選手、買う派?")
     out = []
     for i, p in enumerate((p1, p2, p3, *extra), 1):
         warn = "  ※長すぎます(Xの上限280)" if mag.xlen(p) > 280 else ""
@@ -662,7 +662,7 @@ def scene_lines() -> list[str]:
                    f"進入が動いた{x['moved']:.0%}(予選{b['moved']:.0%})、まくり・まくり差しの決着{x['makuri']:.0%}(予選{b['makuri']:.0%})")
     rs = occult_data().get("racer_scene", {}).get("st_big", {})
     if rs.get("r") is not None:
-        out.append(f"選手ごとの「大一番でSTを上げてくる度合い」は相関{rs['r']:.2f}とそこまで安定しない。場面の違いは全員に共通、と見るのがよさそう")
+        out.append(f"選手ごとの「大一番でSTを上げてくる度合い」は時期を変えると入れ替わりやすい(似ている度合い{rs['r']:.2f})。場面の違いは全員に共通、と見るのがよさそう")
     return out
 
 
@@ -693,10 +693,12 @@ def jinx_lines() -> list[str]:
         return []
     import json as _json
     t = _json.loads(p.read_text(encoding="utf-8"))["traits"]
-    out = [f"{label}:相関{t[k]['r']:.2f} → ほぼ偶然。過去に強かった選手が、次も強いとは言えない" for k, label in JINX if k in t and "r" in t[k]]
+    # 「似ている度合い」= 前半と後半の相関。1.00なら顔ぶれがそっくり、0なら無関係(読者には相関という言葉を使わない)
+    out = [f"{label}:時期を変えると顔ぶれが入れ替わる(似ている度合い{t[k]['r']:.2f}、1.00でそっくり)。過去に強かった選手が次も強いとは限らない"
+           for k, label in JINX if k in t and "r" in t[k]]
     real = "、".join(f"{label}{t[k]['r']:.2f}" for k, label in REAL if k in t and "r" in t[k])
     if real:
-        out.append(f"(くらべると、本物の型は {real} と高い。この記事の注目選手の「型」はこちら側だけで選んでいます)")
+        out.append(f"(くらべると、本物の型は {real} と高く、同じ選手に何度も出る。この記事の注目選手の「型」はこちら側だけで選んでいます)")
     return out
 
 
@@ -762,12 +764,12 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
             body += "<p>選手の「○○に強い」は本物?</p><ul>" + "".join(f"<li>{e(x)}</li>" for x in jinx) + "</ul>"
         if occ:
             body += "<p style='margin-top:6px'>よく聞くオカルト</p><ul>" + "".join(f"<li>{e(x)}</li>" for x in occ) + "</ul>"
-        body += ("<p style='margin-top:6px'>相関は、同じ選手を奇数月と偶数月に分けて、片方で強い選手がもう片方でも強いか(1に近いほど本物)。"
-                 "データ的には偶然でも、信じて買うのも競艇の楽しみ。こういう見方もあるよ、ということで</p>")
+        body += ("<p style='margin-top:6px'>「似ている度合い」は、同じ選手を奇数月と偶数月に分けて、片方で強い選手がもう片方でも強いか(1.00でそっくり、0で無関係)。"
+                 "データでは差が出なくても、信じて買うのも競艇の楽しみ。こういう見方もあるよ、ということで</p>")
         corners.append(("ジンクス・オカルト検証", body))
         txt += ["■ジンクス・オカルト検証", "(選手の「○○に強い」は本物?)"] + [f"・{x}" for x in jinx] + ["(よく聞くオカルト)"] + [f"・{x}" for x in occ] + \
-               ["※相関は、同じ選手を奇数月と偶数月に分けて、片方で強い選手がもう片方でも強いか(1に近いほど本物)。",
-                "データ的には偶然でも、信じて買うのも競艇の楽しみ。こういう見方もあるよ、ということで"]
+               ["※「似ている度合い」は、同じ選手を奇数月と偶数月に分けて、片方で強い選手がもう片方でも強いか(1.00でそっくり、0で無関係)。",
+                "データでは差が出なくても、信じて買うのも競艇の楽しみ。こういう見方もあるよ、ということで"]
     # 選手同士の相性: 対戦の多い組(よく当たるライバル)を、両方の先着数で並べる(負けた側だけを強調しない)
     h2h = rc.head_to_head(d, [c["id"] for c in sel], min_meet=10)
     name = {c["id"]: c["name"] for c in sel}

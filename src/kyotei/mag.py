@@ -199,7 +199,7 @@ def issue_lead(sel: list[dict], picks, trend: dict | None, venue: str | None, na
         paras.append("顔ぶれを型で数えると、" + "、".join(f"{k}{v}人" for k, v in attack) + "。"
                      "出走表が出たら、どの型の選手がどのコースに入ったかを見てほしい。それだけで、1マークの絵が少し見えてくる。")
     paras.append("ここに載せるのは、時期を変えても同じ選手に出ると確かめた「本物の型」だけだ。"
-                 "「勝負駆けに強い」「○○巧者」のような、よく聞くけれど偶然の幅が大きい話は、後半のジンクス検証にまとめた。")
+                 "「勝負駆けに強い」「○○巧者」のような、よく聞くけれど時期で入れ替わりやすい話は、後半のジンクス検証にまとめた。")
     return paras
 
 
@@ -508,7 +508,7 @@ def chart(wt: dict) -> str:
         rows.append(f'<div class="wk-row"><div class="wk-l">{lane_tile(crs - 1)}<span>{lab}</span></div><div class="wk-r">{cells}</div></div>')
     return ('<section class="chart" id="chart"><h3>狙い目の早見表 コースが決まったらチェック</h3>'
             '<p>出走表と展示の進入が出たら、そのコースに入った選手がこの表にいるかを見てほしい。進入したコースごとの成績(過去3年)で、その大会の出場選手の上位3人。'
-            '順位は、偶然の分を差し引いた見込みで付けている(数字は実際の成績)。</p>'
+            '順位は、レース数の少なさを差し引いた見込みで付けている(数字は実際の成績)。</p>'
             f'<div class="wk">{"".join(rows)}</div></section>')
 
 

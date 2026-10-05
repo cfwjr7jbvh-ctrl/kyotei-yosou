@@ -347,14 +347,14 @@ function cardHTML(c, race, lane) {
     <h4>決まり手</h4><table class="cd-t">${kimRow("逃げ(1コース)", k.nige, `逃げ率 ${Math.round(k.nige.w / Math.max(1, k.nige.n) * 100)}%`)}
       ${kimRow("差し", k.sashi, "2コース以遠")}${kimRow("まくり", k.makuri, "2コース以遠")}${kimRow("まくり差し", k.mz, "3コース以遠")}</table>
     <h4>コース別</h4><table class="cd-t cd-c"><tr><th>コース</th><th>走数</th><th>1着</th><th>3着内</th><th>平均ST</th></tr>${crs}</table>
-    <h4>場ごとの成績<small>3着内率の普段との差。参考(偶然の幅が大きい)</small></h4><div class="vchips">${ven}</div>
+    <h4>場ごとの成績<small>3着内率の普段との差。参考程度(時期で入れ替わりやすい)</small></h4><div class="vchips">${ven}</div>
     <h4>こんなとき</h4><table class="cd-t">
       <tr><th>前づけ</th><td>${c.front.rate == null ? "-" : Math.round(c.front.rate * 100) + "%"}</td><td><small>2枠以上で枠より内へ(${c.front.n}走)</small></td></tr>
       <tr><th>荒れ水面</th><td>${pp(c.rough.res)}</td><td><small>波5cm・風5m以上(${c.rough.n}走)</small></td></tr>
       <tr><th>勝負駆け</th><td>${pp(c.kake.res)}</td><td><small>予選最終日(${c.kake.n}走)</small></td></tr>
       <tr><th>大一番</th><td>${pp(c.big.res)}</td><td><small>準優・優勝戦(${c.big.n}走、出場選手の平均 ${pp(c.big.pop)})</small></td></tr>
       <tr><th>展示が下位</th><td>${pp(c.exlate.res)}</td><td><small>展示タイム4位以下(${c.exlate.n}走、全選手の平均 ${pp(c.exlate.pop)})</small></td></tr></table>
-    <p class="cd-note">「こんなとき」の数字は、3着内率が本人の普段と比べて何ポイント上下するか(回数が少ないほど普段の値に寄せて計算)。前づけ以外は、同じ選手でも時期を変えると入れ替わることが多い参考の数字です(前づけ・展示が下位はそこそこ本物、荒れ水面・勝負駆け・大一番・場はほぼ偶然)</p>
+    <p class="cd-note">「こんなとき」の数字は、3着内率が本人の普段と比べて何ポイント上下するか(回数が少ないほど普段の値に寄せて計算)。前づけ・展示が下位は時期を変えても出やすい数字、荒れ水面・勝負駆け・大一番・場は時期で入れ替わりやすいので参考程度に</p>
     <h4>最近の調子と今節</h4><table class="cd-t">
       <tr><th>勝率</th><td>${gr.prev ?? "-"} → <b>${gr.pts90 ?? "-"}</b></td><td><small>前の1年 → 直近90日(${gr.n90}走)</small></td></tr>
       ${gr.index != null ? `<tr><th>成長指数</th><td><b>${gr.index >= 0 ? "+" : "−"}${Math.abs(gr.index).toFixed(2)}</b></td><td><small>この先3か月の勝率の伸びの見込み(伸びの4割ほどが残る傾向から)</small></td></tr>` : ""}

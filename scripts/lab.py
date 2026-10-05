@@ -89,23 +89,23 @@ def verdicts(m: dict) -> dict:
     """3つの物差しの答えを、ふだんの言葉で。統計の言い方(区間・相関)は読者に見せない。"""
     d = m["in1"] - m["in1_ref"]
     real = abs(d) >= 0.03 and not (m["in1_ci"][0] <= m["in1_ref"] <= m["in1_ci"][1])
-    out = {"exists": ("本当にある(ふだんより" + ("多い" if d > 0 else "少ない") + ")") if real else "気のせい(たまたまの範囲)", "real": real}
+    out = {"exists": ("本当にある(ふだんより" + ("多い" if d > 0 else "少ない") + ")") if real else "ふだんと同じ(差は出なかった)", "real": real}
     if "market_ratio" in m:
         lo, hi = m["market_ci"]
         ref = m.get("market_ref", 1.0)
         if lo <= ref <= hi:
-            out["known"], out["edge"] = "みんな知っている(ほかのレースと同じだけオッズに織り込み済み)", 0
-        elif lo > ref and m.get("n_odds", 0) < 500:  # レース数が少ないうちは「気になる」までにとどめる(8つ調べれば1つは偶然で出る)
+            out["known"], out["edge"] = "みんな知っている(オッズに織り込み済み)", 0
+        elif lo > ref and m.get("n_odds", 0) < 500:  # レース数が少ないうちは「追試中」にとどめる(8つ調べれば1つは偶然で出る)
             out["known"], out["edge"] = "オッズの見立てを上回って来ているが、まだレース数が少ない(追試中)", 0
         elif lo > ref:
             out["known"], out["edge"] = ("ほかのレースより、オッズの見立てを上回って来る。でも、ひかれる分(25%)を埋めるほどではない" if lo < 1.3 else "知られているより来る"), 1
         else:
-            out["known"], out["edge"] = "思われているほど来ない", -1
+            out["known"], out["edge"] = "オッズの見立てよりひかえめ", -1
     else:
         out["known"], out["edge"] = "オッズのデータがまだ足りない", None
     if "half" in m:
         a, b = m["half"]
-        out["stable"] = "前の2年も最近の1年も同じ" if a * b > 0 and abs(a) >= 0.015 and abs(b) >= 0.015 else "年によって変わる(あてにならない)"
+        out["stable"] = "前の2年も最近の1年も同じ" if a * b > 0 and abs(a) >= 0.015 and abs(b) >= 0.015 else "年によって顔ぶれが変わる(毎年見直す)"
     return out
 
 
@@ -115,11 +115,11 @@ def conclusion(t: dict) -> tuple[str, str]:
     real = any(v.get("real") for v in vs)
     edge = [v.get("edge") for v in vs if v.get("edge") is not None]
     if not real:
-        return "気のせい", "ふだんと比べて差がない。たまたまの範囲"
+        return "ふだんと同じ", "差は出なかった。前後のレースより、そのレースの6人と水面を見るのがいちばん"
     if any(e == 1 for e in edge):
-        return "本当。しかも知られていない", "オッズの見立てより来ている。ただし、ひかれる分を埋めるほどではないので、追いかけて確かめる"
+        return "本当。しかも見立て超え", "オッズの見立てより来ている。ひかれる分を埋めるほどではないが、追いかける価値あり(毎週更新)"
     if all(e == 0 for e in edge) and edge:
-        return "本当。でも、みんな知っている", "差はある。ただしオッズに織り込み済みなので、そのぶん配当は安い"
+        return "本当。オッズにも織り込み済み", "差はしっかりある。みんな見ているぶん配当は堅め。2着・3着の並びで楽しむ回"
     return "本当", "差はある。オッズとの関係はデータを集めて確かめる"
 
 
@@ -187,7 +187,7 @@ def t_kikaku(ent, r):
         "lead": f"レース名ごとの1号艇の1着率は、特別選抜戦{dict((x[0], x[1]['in1']) for x in measures).get('特別選抜戦', 0):.0%}、"
                 f"ドリーム戦{dict((x[0], x[1]['in1']) for x in measures).get('ドリーム戦', 0):.0%}、一般戦{dict((x[0], x[1]['in1']) for x in measures).get('一般戦', 0):.0%}。"
                 f"堅いのは本当。ただし、どれもオッズの見立てどおりに来ていて、みんな知っている。"
-                f"目立ったのは{best[0]}({ratio_words(best[1]['market_ratio'])}、{best[1]['n_odds']}レース)だが、まだたまたまの範囲。",
+                f"目立つのは{best[0]}({ratio_words(best[1]['market_ratio'])}、{best[1]['n_odds']}レース)。レース数がまだ少ないので追試中。",
         "tables": [],  # 結果の表と同じ中身なので出さない
         "measures": measures,
         "use": ["企画レースは「インが堅い」より「堅いことが知られている」レース。1号艇を買うなら配当は安い、を前提に考える",
@@ -267,12 +267,12 @@ def per100(v):
 
 def mark(v):
     """表に入れる短い判定。"""
-    ex = "○ 本当" if v.get("real") else "△ たまたま"
+    ex = "○ 本当" if v.get("real") else "– ふだん並み"
     e_ = v.get("edge")
     kn = "○ みんな知ってる" if e_ == 0 and "追試中" not in v.get("known", "") else ("！ 見立て超え(追試中)" if "追試中" in v.get("known", "") else
-                                                                       ("！ 見立て超え" if e_ == 1 else ("× 来ない" if e_ == -1 else "- データ不足")))
+                                                                       ("！ 見立て超え" if e_ == 1 else ("ひかえめ" if e_ == -1 else "- 集計中")))
     st = v.get("stable")
-    sb = "-" if st is None else ("○ 同じ" if st.startswith("前の2年") else "× 変わる")
+    sb = "-" if st is None else ("○ 同じ" if st.startswith("前の2年") else "年で変わる")
     return ex, kn, sb
 
 
@@ -315,14 +315,14 @@ def page(t: dict, asof: str) -> str:
 <main class="mag">
 <section class="opener"><span class="label">検証する説</span><p class="belief">{e(t['belief'])}</p></section>
 <section class="stamp"><span class="label">ミカタの結論</span><div class="st-box"><b>{e(con[0])}</b><p>{e(con[1])}</p></div></section>
-<section><span class="label">3つの物差し</span><div class="gauge"><div><b>① 本当にある?</b><span>「ふだん」と比べて差があるか。同じ数のレースをサイコロで決めても出るくらいの差なら「たまたま」</span></div>
+<section><span class="label">3つの物差し</span><div class="gauge"><div><b>① 本当にある?</b><span>「ふだん」と比べて差があるか。同じ数のレースをサイコロで決めても出るくらいの差なら「ふだん並み」</span></div>
 <div><b>② みんな知ってる?</b><span>オッズは「みんなの予想」。1号艇はどのレースでもオッズの見立てより少し多く来るので、その「全レースの平均」と同じなら、知られている=配当は安い</span></div>
 <div><b>③ 来年も同じ?</b><span>前の2年と最近の1年で、同じ向きに出るか。出なければ一時のもの</span></div></div></section>
 <section><span class="label">結果</span>{measures_html(t['measures'])}{tables}</section>
 <section class="side"><h3>予想への活かし方</h3><ul>{use}</ul></section>
 <blockquote class="ft-quote">{gull_svg(64, bg="#ffffff", cls="q")}<p><small>ミカタのひと言</small>{e(t['mikata'])}</p></blockquote>
 <section class="method"><h3>データについて</h3><p>公式の成績データ(番組表・競走成績)と、締切時のオッズ(集めたレース分)を自分たちで集計。「オッズの見立て」は、締切時のオッズから、ひかれる分(控除)を除いて逆算した1号艇の勝つ見込み。
-「たまたまの範囲」は、同じ数のレースを何度も引き直したときに出るブレの幅(統計でいう90%区間)で判定。この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
+「ふだん並み」かどうかは、同じ数のレースを何度も引き直したときに出るブレの幅(統計でいう90%区間)で判定。この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
 <footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ検証ラボ ・ 毎週1本。競艇をいろんな角度から。買い目は売りません。</span></footer></main></body></html>"""
 
 
@@ -330,7 +330,7 @@ def note_text(t: dict) -> str:
     con = conclusion(t)
     out = [f"【タイトル案】", f"1. {t['title']}|{t['belief'][:24]}…をデータで検証", f"2. 検証ラボ:{t['title']} 3つの物差しで確かめた", "",
            "■検証する説", t["belief"], "", f"■ミカタの結論:{con[0]}", con[1], "", "■くわしく", t["lead"], "", "■3つの物差し",
-           "①本当にある?(ふだんと比べて、たまたまでは出ない差か) ②みんな知ってる?(オッズの見立てどおりなら知られている=配当は安い) ③来年も同じ?(前の2年と最近の1年で同じ向きか)", ""]
+           "①本当にある?(ふだんと比べて、はっきり差があるか) ②みんな知ってる?(オッズの見立てどおりなら知られている=配当は安い) ③来年も同じ?(前の2年と最近の1年で同じ向きか)", ""]
     for name, m, v in t["measures"]:
         ex, kn, sb = mark(v)
         out.append(f"・{name}({m['n']:,}レース): 100レースで1号艇が勝つのは{per100(m['in1'])}(ふだんは{per100(m['in1_ref'])})→ {ex}。"
