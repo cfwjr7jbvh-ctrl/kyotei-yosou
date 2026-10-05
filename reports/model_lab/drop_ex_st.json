@@ -1,0 +1,15 @@
+{
+ "name": "drop_ex_st",
+ "note": "展示STから作った特徴量を外す: ['ex_st', 'st_pred', 'st_pred_w', 'ex_st_flying', 'st_pred_diff', 'st_pred_rank', 'in_st_pred', 'out_st_pred', 'st_pred_adv_in', 'st_pred_adv_out']",
+ "races": 33528,
+ "base_logloss": 1.2131,
+ "cand_logloss": 1.2124,
+ "delta": -0.00067,
+ "lo90": -0.00125,
+ "hi90": -9e-05,
+ "verdict": "改善(偶然ではなさそう)",
+ "made": "2026-10-06 01:02",
+ "base_feats": 147,
+ "cand_feats": 137,
+ "added": []
+}

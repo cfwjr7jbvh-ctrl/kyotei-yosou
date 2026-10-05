@@ -463,7 +463,14 @@ def exp_wx_body(df):
     return compare("weather_body_feats", df, base, base + [c for c in df.columns if c.startswith("wx_")] + ["w_dev", "rest_days", "f_since"], "天気+からだの両方")
 
 
-EXPERIMENTS = {"wx": exp_wx, "body": exp_body, "wx_body": exp_wx_body, "rl_variants": exp_race_level_variants, "embed_asof": exp_embed_asof, "recent": exp_recent, "pairwise": exp_pairwise, "formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
+def exp_exst(df):
+    """J11: 今日の展示STは本番の調子とほぼ無関係(検証ラボ exst)。展示STから作った特徴量を外しても損しないか。"""
+    base = base_feats(df)
+    exf = [c for c in base if "ex_st" in c or "st_pred" in c]
+    return compare("drop_ex_st", df, base, [c for c in base if c not in exf], f"展示STから作った特徴量を外す: {exf}")
+
+
+EXPERIMENTS = {"exst": exp_exst, "wx": exp_wx, "body": exp_body, "wx_body": exp_wx_body, "rl_variants": exp_race_level_variants, "embed_asof": exp_embed_asof, "recent": exp_recent, "pairwise": exp_pairwise, "formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
                "drop_noise": exp_drop_noise, "race_level": exp_race_level}
 
 
