@@ -10,7 +10,7 @@
  "n_tests": 19934,
  "n_over100_disc": 166,
  "n_over100_both": 15,
- "corr_disc_conf": 0.4501616210601835,
+ "corr_disc_conf": 0.45016162106018337,
  "bands": [
   {
    "disc": [
