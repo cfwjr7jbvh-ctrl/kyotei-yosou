@@ -1202,12 +1202,160 @@ def t_furusato(ent, r):
     }
 
 
+_WX = None
+
+
+def _wx():
+    """過去の天気(data/weather/archive.csv.gz)を (場, 時刻) で引けるように。暑さ指数(WBGT)は気温・湿度・日射・風からの近似式。"""
+    global _WX
+    if _WX is None:
+        w = pd.read_csv(ROOT / "data/weather/archive.csv.gz")
+        w["time"] = pd.to_datetime(w["time"])
+        ta, rh, sr, ws = w["temperature_2m"], w["relative_humidity_2m"], w["shortwave_radiation"] / 1000, w["wind_speed_10m"]
+        # 小野・登内(2014)の近似式(環境省の暑さ指数の推定に使われている形)
+        w["wbgt"] = 0.735 * ta + 0.0374 * rh + 0.00292 * ta * rh + 7.619 * sr - 4.557 * sr ** 2 - 0.0572 * ws - 4.064
+        w = w.sort_values(["jcd", "time"])
+        w["p_anom"] = w["surface_pressure"] - w.groupby(["jcd", w["time"].dt.month])["surface_pressure"].transform("mean")
+        w["p_3h"] = w.groupby("jcd")["surface_pressure"].diff(3)          # 3時間の気圧の変化(下がっている途中か)
+        _WX = w.set_index(["jcd", "time"])
+    return _WX
+
+
+def _with_wx(df, cols=("wbgt", "p_anom", "p_3h", "relative_humidity_2m", "surface_pressure", "temperature_2m")):
+    """df(date・jcd・deadline を持つ)に、締切の時刻(時で切り捨て)の天気を付ける。"""
+    w = _wx()
+    hh = df["deadline"].astype(str).str.extract(r"(\d{1,2}):(\d{2})")
+    t = pd.to_datetime(df["date"].astype(str)) + pd.to_timedelta(pd.to_numeric(hh[0], errors="coerce"), unit="h")
+    key = pd.MultiIndex.from_arrays([df["jcd"].astype(int), t])
+    out = df.copy()
+    for c in cols:
+        out[c] = w[c].reindex(key).values
+    return out
+
+
+def _races_wx(ent, r):
+    dl = ent.drop_duplicates("race_id").set_index("race_id")["deadline"]
+    x = r.copy(); x["deadline"] = x["race_id"].map(dl)
+    return _with_wx(x)
+
+
+def t_pressure(ent, r):
+    """低気圧の日は荒れる? 気圧に弱い選手はいる?(気象病)"""
+    x = _races_wx(ent, r)
+    lowp, highp = x["p_anom"] <= -8, x["p_anom"] >= 8
+    falling = x["p_3h"] <= -2
+    ml, mh, mf = measure(x, lowp), measure(x, highp), measure(x, falling)
+    ul, uh, ua = float(x[lowp]["upset"].mean()), float(x[highp]["upset"].mean()), float(x["upset"].mean())
+    e = _with_wx(_adj(ent))
+    pe = _gap(e, e["p_anom"] <= -6, e["p_anom"].abs() <= 3, 8, by="day")
+    me = measure(e, e["p_anom"] <= -8, ref=e["p_anom"].abs() <= 3)
+    ms = [("ふだんよりかなり低い気圧(-8hPa以下)", ml, verdicts(ml)), ("ふだんよりかなり高い気圧(+8hPa以上)", mh, verdicts(mh)), ("3時間で2hPa以上下がっている途中", mf, verdicts(mf))]
+    return {
+        "id": "pressure", "title": "低気圧の日は荒れる? 頭が痛い選手は?", "belief": "低気圧の日はエンジンが回らないし、体もだるい。だから荒れる",
+        "lead": f"その場・その月のふだんの気圧より8hPa以上低い日、1号艇が勝つのは100レースで{per100(ml['in1'])}(全体{per100(ml['in1_ref'])})、高い日は{per100(mh['in1'])}。"
+                f"30番人気以下が来た割合は、低い日{ul:.1%}・高い日{uh:.1%}・全体{ua:.1%}。",
+        "conclusion": ([f"低気圧の日は1号艇が{'少し弱い' if ml['in1'] < ml['in1_ref'] else '少し強い'}", f"低い日{per100(ml['in1'])}・全体{per100(ml['in1_ref'])}。ただ、低気圧の日は風も強いことが多い"]
+                       if verdicts(ml)["real"] else ["ふだんと同じ。気圧だけでは荒れない", f"低い日{per100(ml['in1'])}・高い日{per100(mh['in1'])}・全体{per100(ml['in1_ref'])}。荒れるのは気圧より風のせい"]),
+        "tables": [], "measures": ms,
+        "rules": ["気圧はレース場のおおよその位置の、締切の時刻の値(過去の気象データの再解析。場の気圧計の記録ではない)",
+                  "『ふだん』は、その場のその月の平均気圧。季節と標高の差を除くため"],
+        "faq": [("低気圧に弱い選手(気象病)はいる?", f"選手ごとに、気圧が低い日の上積みは本人のふだんより{(me['in1'] - me['in1_ref']) * 100:+.1f}ポイント。人ごとの差は{_person(pe)}"),
+                ("エンジンは気圧で変わる?", "空気がうすいと出力は下がる。でも6艇とも同じ空気なので、順位にはあまり出ない。差がつくのは、それに合わせた調整のうまさ")],
+        "use": ["低気圧の日は、まず風を見る。風が弱ければ、ふだんどおりに", "頭が痛い日は、無理せず家で見るのもあり"],
+        "mikata": "気圧そのものは、レースをあまり動かさなかった。でも低気圧の日にスタンドで食べる熱いうどんは、たぶん最高",
+        "gen": "低気圧の日は膝が痛むんだよ。だから俺は内を買う。膝が教えてくれるのさ",
+        "challenge": "天気予報で気圧の谷が来る日を見つけて、その日の1マークの攻防が荒れるかどうか見てみよう",
+        "numbers": {"in1_low": ml["in1"], "in1_high": mh["in1"], "upset_low": ul, "upset_high": uh, "person_low": pe[0]},
+    }
+
+
+def t_humid(ent, r):
+    """湿気の多い日は、インが強い?(エンジンの出力と空気)"""
+    x = _races_wx(ent, r)
+    x["wind"] = pd.to_numeric(x["wind"], errors="coerce")
+    hum = x["relative_humidity_2m"]
+    wet, dry, mid = hum >= 75, hum <= 55, hum.between(56, 74)
+    mw, md = measure(x, wet), measure(x, dry)
+    calm = x["wind"] <= 3
+    mcw, mcd = measure(x, wet & calm, ref=calm), measure(x, dry & calm, ref=calm)
+    # 場×月の差を除いた「湿−乾」、場ごとに同じ向きか
+    xv = x[hum.notna()].copy()
+    xv["c1vm"] = xv["c1"] - xv.groupby(["jcd", pd.to_datetime(xv["date"]).dt.month])["c1"].transform("mean")
+    gap_vm = float(xv[xv["relative_humidity_2m"] >= 75]["c1vm"].mean() - xv[xv["relative_humidity_2m"] <= 55]["c1vm"].mean())
+    d = xv.assign(hb=np.where(xv["relative_humidity_2m"] >= 75, "w", np.where(xv["relative_humidity_2m"] <= 55, "d", "m"))).groupby(["jcd", "hb"])["c1"].mean().unstack()
+    n_pos, n_v = int(((d["w"] - d["d"]) > 0).sum()), int(d[["w", "d"]].dropna().shape[0])
+    temps = []
+    for lo, hi in ((0, 12), (12, 20), (20, 27), (27, 45)):
+        m_ = calm & x["temperature_2m"].between(lo, hi)
+        temps.append(f"{lo}〜{hi}℃で{per100(float(x[m_ & dry]['c1'].mean()))}→{per100(float(x[m_ & wet]['c1'].mean()))}")
+    e = _with_wx(_adj(ent))
+    ph = _gap(e, e["relative_humidity_2m"] >= 75, e["relative_humidity_2m"] <= 55, 10, by="day")
+    ms = [("湿度75%以上", mw, verdicts(mw)), ("湿度55%以下(乾いた空気)", md, verdicts(md)), ("風3m以下 × 湿度75%以上", mcw, verdicts(mcw)), ("風3m以下 × 湿度55%以下", mcd, verdicts(mcd))]
+    return {
+        "id": "humid", "title": "湿気の多い日は、インが強い", "belief": "湿気が多いとエンジンが回らない。伸びがなくなって、外からのまくりが届かない",
+        "lead": f"湿度75%以上の時間に1号艇が勝つのは100レースで{per100(mw['in1'])}、湿度55%以下の乾いた空気だと{per100(md['in1'])}。"
+                f"同じ場・同じ月の中でくらべても{gap_vm * 100:+.1f}ポイントの差があり、{n_v}場のうち{n_pos}場で同じ向き。"
+                f"風が弱い日だけ、気温をそろえて見ても同じだった({'、'.join(temps)})。",
+        "conclusion": ["本当。湿気の日はインが強い(オッズも知っている)", f"乾いた空気{per100(md['in1'])}→湿った空気{per100(mw['in1'])}。場・季節・風・気温をそろえても残る。湿った空気はうすくて、エンジンの力が少し落ちるので、外から届きにくい。オッズもそれをちゃんと映している"],
+        "tables": [], "measures": ms,
+        "rules": ["湿度は、レース場のおおよその位置の締切の時刻の値(過去の気象データの再解析。場の観測値ではない)",
+                  "湿った空気は、乾いた空気より少し軽い(水蒸気は軽い)。そのぶん酸素がうすく、エンジンの出力が少し下がる",
+                  "冬の乾いた日は風も強いので、風の弱い日だけ・同じ気温どうしでもくらべた"],
+        "faq": [("オッズは知ってる?", f"知っている。湿った日も乾いた日も、1号艇のオッズの見立てとのずれは全体の平均と同じ({ratio_words(mw.get('market_ratio'))}・{ratio_words(md.get('market_ratio'))})。展示タイムなどを通して、湿気の影響はオッズに映っているみたい"),
+                ("湿気に強い選手はいる?", f"選手ごとの「湿った日−乾いた日」は、{_person(ph)}。選手より、空気そのものの話"),
+                ("どこで見ればいい?", "天気予報の湿度。朝の予報でだいたい分かる。ミカタは毎朝、全場の予報を集めている")],
+        "use": ["湿度は『なぜ今日はインが強いのか』を読むための材料。配当はそのぶん堅いので、2着・3着で工夫する", "乾いた冬の日は、外のまくり屋の一発を頭に入れておく"],
+        "mikata": "肌で感じるジメジメが、1マークの攻防まで変えていた。空気って、ちゃんとレースの一部なんだね",
+        "gen": "だろ? 梅雨どきのエンジンは重てえんだよ。俺の体も重てえけどな",
+        "challenge": "今日の天気予報で湿度を見てから現地へ。ジメジメの日は1号艇、カラッとした日は外を応援してみよう",
+        "numbers": {"in1_wet": mw["in1"], "in1_dry": md["in1"], "gap_venue_month": gap_vm, "venues_same_dir": n_pos, "venues": n_v,
+                    "ratio_wet": mw.get("market_ratio"), "ratio_dry": md.get("market_ratio")},
+    }
+
+
+def t_heat(ent, r):
+    """暑さ指数(WBGT)が危険な日、選手はどうなる?"""
+    e = _with_wx(_adj(ent))
+    w = e["wbgt"]
+    danger, warn, cool = w >= 31, w.between(28, 31), w < 21
+    md, mw_ = measure(e, danger, ref=cool), measure(e, warn, ref=cool)
+    old, young = e["age"] >= 50, e["age"] <= 29
+    mo, my = measure(e, danger & old, ref=old & cool), measure(e, danger & young, ref=young & cool)
+    wq = e.groupby("racer_id")["weight_now"].transform("mean")
+    big = wq >= wq.quantile(0.67)
+    mb = measure(e, danger & big, ref=big & cool)
+    pe = _gap(e, w >= 28, w < 21, 10, by="day")
+    st = e[e["st"].between(0, 0.5) & e["st_flag"].isna()]
+    std_, stc = float(st[st["wbgt"] >= 31]["st"].mean()), float(st[st["wbgt"] < 21]["st"].mean())
+    ms = [("暑さ指数31以上(危険)", md, verdicts(md)), ("28〜31(厳重警戒)", mw_, verdicts(mw_)), ("50歳以上 × 危険な暑さ", mo, verdicts(mo)),
+          ("29歳以下 × 危険な暑さ", my, verdicts(my)), ("体重の重い選手 × 危険な暑さ", mb, verdicts(mb))]
+    return {
+        "id": "heat", "title": "危険な暑さの日、選手は?", "belief": "真夏の昼は選手もバテる。ベテランや体の大きい選手は特にきつい",
+        "subject": "その選手", "verb": "3着以内に入る", "no_market": True, "compare": "同じ人たちの、涼しい日(暑さ指数21未満)(本人のふだんにそろえてある)",
+        "lead": f"暑さ指数(WBGT)31以上の危険な暑さの時間、選手は本人のふだんとくらべて涼しい日より{_pp(md)}ポイント。50歳以上は{_pp(mo)}、29歳以下は{_pp(my)}、"
+                f"体重の重い選手は{_pp(mb)}。平均STは危険な暑さで{std_:.3f}、涼しい日で{stc:.3f}。",
+        "conclusion": (["暑さで成績は落ちない。プロのからだはすごい", f"危険な暑さでも{_pp(md)}ポイント。ベテラン{_pp(mo)}・若手{_pp(my)}・重い選手{_pp(mb)}"]
+                       if not any(v["real"] and m["in1"] < m["in1_ref"] for _, m, v in ms) else ["暑さは効く。特に効く人がいる", f"危険な暑さで{_pp(md)}、ベテラン{_pp(mo)}・重い選手{_pp(mb)}ポイント"]),
+        "tables": [], "measures": ms,
+        "rules": ["暑さ指数(WBGT)は、気温・湿度・日射・風からの近似式で計算した推定値(小野・登内の式)。実際の観測値ではない",
+                  "31以上は『危険』、28〜31は『厳重警戒』(環境省の区分)。レースは日中の暑い時間にも行われる"],
+        "faq": [("暑さに弱い選手はいる?", f"選手ごとの「暑い日−涼しい日」は、{_person(pe)}"),
+                ("スタートは鈍る?", f"危険な暑さの平均STは{std_:.3f}、涼しい日は{stc:.3f}。ほとんど変わらない")],
+        "use": ["暑さで選手を割り引く必要はほとんどない", "暑いのは見ているこっち。水分と日陰を忘れずに"],
+        "mikata": "選手は暑さに強かった。危ないのは、むしろスタンドで夢中になっているわたしたちのほう。水を飲もうね",
+        "gen": "真夏の昼間にビール片手に見るレース。これが最高なんだよ。……水も飲めって? 分かってるよ",
+        "challenge": "真夏の現地観戦は、暑さ指数の予報を見てから。日陰の席を先に確保するのが、いちばんの勝ち",
+        "numbers": {"danger": md["in1"] - md["in1_ref"], "old": mo["in1"] - mo["in1_ref"], "young": my["in1"] - my["in1_ref"], "big": mb["in1"] - mb["in1_ref"], "st_hot": std_, "st_cool": stc},
+    }
+
+
 THEORIES = {t["id"]: t for t in []}
 BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke, "tenji": t_tenji, "flying": t_flying, "combo": t_combo,
             "rest": t_rest, "travel": t_travel, "weight": t_weight, "dayno": t_dayno, "twice": t_twice, "tilt": t_tilt,
             "moon": t_moon, "manshu": t_manshu, "lucky7": t_lucky7,
             "rain": t_rain, "age": t_age, "zorome": t_zorome, "payday": t_payday,
-            "birthday": t_birthday, "blood": t_blood, "height": t_height, "furusato": t_furusato}
+            "birthday": t_birthday, "blood": t_blood, "height": t_height, "furusato": t_furusato,
+            "pressure": t_pressure, "humid": t_humid, "heat": t_heat}
 
 
 # ---------------------------------------------------------------- 記事
