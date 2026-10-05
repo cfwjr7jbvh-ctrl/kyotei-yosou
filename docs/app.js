@@ -454,27 +454,30 @@ function anModel(r, x) {
     b.stv = b.s ? b.s.st : 0.17;
     b.dash = b.c >= 4;
     b.v = b.dash ? 18 : 15;        // ラインを切るときの速さ(m/秒)。ダッシュ勢は全速、スロー勢は加速の途中
-    b.r = 6 + (b.c - 1) * 3.2;     // ターンの半径(m)。内ほど小さく
-    b.ex = 1; b.d = (b.c - 1) * 0.12; b.cx = AN.markX - 22; b.vt = 1;
+    // ターンの形: 本物は全艇がブイのすぐそばで小さく回る(半径4〜9m)。外の艇ほど「少し遅れて・少し外・少し先(ブイを過ぎたところ)」で回る
+    b.r = 4.5 + (b.c - 1) * 1.6;   // ターンの半径(m)
+    b.ax = (b.c - 1) * 1.8;        // 回り始めの中心のずれ(m)。ブイより先で回る=遅れて回る
+    b.d = (b.c - 1) * 0.1;         // ターン入口に着く遅れ(秒)
+    b.vt = 1; b.drift = 1.5;       // 出口で外へ流れる量(m)
     b.rank = order.indexOf(b.lane);
   }
   const in1 = byC[1];
   if (type === "逃げ" || ca === 1) {
-    A.r = 5.5; A.d = -0.15; A.vt = 1.15;
+    A.r = 4.5; A.ax = 0; A.d = -0.15; A.vt = 1.15; A.drift = 1;     // 先に回って、小さく
     const B = boats.find((b) => b.lane === order[1]);
-    if (B && B.c === 2) { B.r = 4.5; B.d = 0.3; } else if (B) { B.r = 8; B.d = 0.2; }
+    if (B && B.c === 2) { B.r = 4.2; B.ax = 2.5; B.d = 0.3; } else if (B) { B.r = 6; B.ax = 3; B.d = 0.2; }
   } else if (type === "まくり") {
-    A.r = 9 + ca * 0.6; A.d = -0.5; A.cx = AN.markX - 40; A.vt = 1.35;  // 全速で外から
-    for (const b of boats) if (b.c < ca) { b.r = 11 + b.c * 2.2; b.ex = 1.25; b.d = 0.25 + b.c * 0.08; }
+    A.r = 8; A.ax = 4; A.d = -0.45; A.vt = 1.4; A.drift = 3;         // 全速のまま外から、先に回り切る
+    for (const b of boats) if (b.c < ca) { b.r = 4 + b.c * 1.4; b.ax = b.c * 1.6; b.d = 0.35 + b.c * 0.08; b.vt = 0.8; }  // 引き波で遅れる
     const F = byC[ca + 1];
-    if (F) { F.r = 12 + ca * 1.5; F.d = 0; }
+    if (F) { F.r = 9.5; F.ax = 6; F.d = 0.1; }
   } else if (type === "まくり差し") {
-    A.r = 5; A.d = 0.15; A.cx = AN.markX - 30; A.vt = 1.1;
-    if (in1 && in1 !== A) { in1.r = 9; in1.ex = 1.2; in1.d = -0.1; }
-    for (const b of boats) if (b.c > 1 && b.c < ca) { b.r = 12 + b.c * 1.6; b.ex = 1.15; b.d = 0.08; }
+    A.r = 4.5; A.ax = 3.5; A.d = 0.1; A.vt = 1.15;                   // 内の艇の間を割って、遅めに小さく
+    if (in1 && in1 !== A) { in1.r = 6.5; in1.ax = 0.5; in1.d = -0.1; in1.drift = 3; }  // 1号艇は少し膨らむ
+    for (const b of boats) if (b.c > 1 && b.c < ca) { b.r = 7 + b.c * 0.8; b.ax = 1 + b.c * 1.2; b.d = 0.15; b.vt = 0.85; }
   } else {  // 差し(抜き・恵まれなどもこの形で見せる)
-    if (in1 && in1 !== A) { in1.r = 10; in1.ex = 1.2; in1.d = 0; }
-    A.r = 4.2; A.d = 0.25;
+    if (in1 && in1 !== A) { in1.r = 7; in1.ax = 0.5; in1.d = -0.05; in1.drift = 3.5; }  // 1号艇のターンが膨らむ
+    A.r = 3.8; A.ax = 2.5; A.d = 0.25; A.vt = 1.1; A.drift = 0.5;    // その内側を、遅れて小さく差す
   }
   // 本物の時間(大時計の0秒が基準)で各艇の節目を決め、表示の時間へは「スリットだけスロー」の時計で写す
   const stMax = Math.min(stMin + 0.25, Math.max(...boats.map((b) => b.stv)));
@@ -488,15 +491,19 @@ function anModel(r, x) {
     const y0 = AN.laneY(b.c);
     const run = b.v * (b.stv - SIM0);                            // 本物の速さで、0秒の2秒前にいた場所
     const p0 = [-run, y0], p1 = [0, y0], p2 = [14, y0 + (b.c - 1) * -0.15];
-    const e = [AN.markX, AN.markY + b.r], xo = [AN.markX, AN.markY - b.r];
+    // 1マークへ: 外の艇ほど内へ絞りながら、ブイのそば(半径 r、中心はブイより ax 先)へ入る
+    const cx = AN.markX + b.ax, e = [cx, AN.markY + b.r];
+    const ctrl = [AN.markX - 18 - (b.c - 1) * 2, AN.markY + b.r + (y0 - AN.markY - b.r) * 0.25];
+    // ターン: 小さく回って(減速)、出口は外へ少し流れる(ドリフト)。半円ではなく、出口が広がる形
     const arc = Array.from({ length: 31 }, (_, k) => {
-      const th = Math.PI / 2 - (Math.PI * k) / 30;
-      return [AN.markX + b.r * b.ex * Math.cos(th), AN.markY + b.r * Math.sin(th)];
+      const f = k / 30, th = Math.PI / 2 - Math.PI * f, rr = b.r + b.drift * f * f;
+      return [cx + rr * Math.cos(th), AN.markY + rr * Math.sin(th)];
     });
-    const fin = [AN.markX - 24 - b.rank * 9, AN.markY - 3 - Math.min(b.r, 14) * 0.55 - (b.rank % 2) * 1.6];
-    b.path = anPath([[p0, p1], [p1, p2], qb(p2, [b.cx, e[1] + (b.c - 1) * 0.6], e), arc, qb(xo, [AN.markX - 30, xo[1]], fin)]);
+    const xo = arc[30];
+    const fin = [AN.markX - 22 - b.rank * 8, xo[1] - 0.8 - (b.rank % 2) * 0.9];
+    b.path = anPath([[p0, p1], [p1, p2], qb(p2, ctrl, e), arc, qb(xo, [AN.markX - 26, xo[1] - 0.4], fin)]);
     const tLine = b.stv, tIn = tLine + (b.path.at[2] - b.path.at[0]) / 18.5 + b.d;   // 直線は秒速18.5m
-    const vTurn = (9 + 0.16 * b.r) * b.vt, tOut = tIn + (b.path.at[3] - b.path.at[2]) / vTurn;
+    const vTurn = (7.5 + 0.35 * b.r) * b.vt, tOut = tIn + (b.path.at[3] - b.path.at[2]) / vTurn;  // ターン中は減速(半径が小さいほど遅い)
     const tFin = tOut + (b.path.at[4] - b.path.at[3]) / 17;
     b.T = [disp(SIM0), disp(tLine), disp(tIn), disp(tOut), disp(tFin)];  // 表示の秒: 出発・スリット・ターン入口・出口・決着
     // 表示の秒 → 進んだ距離。スローの切れ目(w1, w2)でも節目を打ち、スローの間は本物どおりゆっくり進む
