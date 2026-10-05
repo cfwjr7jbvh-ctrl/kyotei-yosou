@@ -2964,7 +2964,7 @@ def page(t: dict, asof: str) -> str:
         rows = "".join(f'<div class="hk {w}">{gull_svg(44, bg="#ffffff", cls="hk-g", who="gen" if w == "g" else "mikata")}<p><small>{"ゲンさん" if w == "g" else "ミカタ"}</small>{e(x)}</p></div>'
                        for w, x in lines)
         hook_html = (f'<section class="hook pr"><span class="label">ゲンさんの説</span><div class="hks">{rows}</div>'
-                     f'<p class="who">ゲンさん=験かつぎ歴40年の大先輩。ストップウォッチ片手に展示を見る目は確か</p></section>')
+                     f'<p class="who">ゲンさん=ゲンかつぎ歴40年の大先輩。ストップウォッチ片手に展示を見る目は確か</p></section>')
     # オカルト枠は表紙で答えを言わない(問いだけ)。答えは掛け合いのすぐ下。実用の説は表紙で結論まで言う
     deck = (f"「{hook['x'][0]}」――関係ないのは分かってる。でも、ワンチャン大いなる力が働いてるかも? ギャンブラーの気持ちを、{count_words(t)}のデータで確かめた。" if hook
             else con[1])
@@ -3042,7 +3042,7 @@ def note_text(t: dict) -> str:
                f"■ミカタの結論:{con[0]}", key_line(t), con[1], ""]
         if t.get("rules"):
             out += ["■まず、ルールをざっくり"] + [f"{i + 1}. {x}" for i, x in enumerate(t["rules"])] + [""]
-        out += ["■ゲンさんの説(験かつぎ歴40年の大先輩)"] + [f"{who(w)}「{x}」" for w, x in practical_lines(t, con)] + [""]
+        out += ["■ゲンさんの説(ゲンかつぎ歴40年の大先輩)"] + [f"{who(w)}「{x}」" for w, x in practical_lines(t, con)] + [""]
         if t["use"][1:]:
             out += ["■ほかの使いどころ"] + [f"・{x}" for x in t["use"][1:]] + [""]
         out += ["■今日のお題", t.get("challenge", ""), "", "(有料にするなら、ここから先)", "■くわしく", t["lead"], ""]
@@ -3090,10 +3090,10 @@ def x_text(t: dict) -> str:
     con = conclusion(t)
     gen, kl = t.get("gen", ""), key_line(t)
     hk = _hook(t)
-    if hk:   # オカルト枠: ゲンさんの験 → ミカタ → 結論と数字 → 読み手の験かつぎを聞く
+    if hk:   # オカルト枠: ゲンさんのゲンかつぎ → ミカタ → 結論と数字 → 読み手のゲンかつぎを聞く
         gx, mx = hk["x"]
         h2 = f"【検証ラボ】{t['title']}\n\nゲンさん「{gx}」\nミカタ「{mx}」\n\n"
-        ask = "あなたの験かつぎも教えて。次に数えます"
+        ask = "あなたのゲンかつぎも教えて。次に数えます"
         cands = [h2 + f"結論:{con[0]}\n{kl}\n\nゲンさん「{gen}」\n\n{ask}",
                  h2 + f"結論:{con[0]}\n{kl}\n\n{ask}",
                  h2 + f"結論:{con[0]}\n\n{ask}",

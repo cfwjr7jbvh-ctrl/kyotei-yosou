@@ -64,7 +64,7 @@ def _emb(tag: str, size: int) -> str:
 def gull_svg(size: int = 104, ring: str = "#c8141c", bg: str = "#eef1e4", cls: str = "gull", who: str = "mikata") -> str:
     """カモメのアイコン(輪の中の顔)。公式のキャラとは無関係の自作。カード画像・下書き・アプリで共通。
 
-    who="mikata": 記者のミカタ(赤い輪、鉛筆は別のパターン)。who="gen": ゲンさん(ハンチング帽、青い輪。験かつぎの大先輩)。
+    who="mikata": 記者のミカタ(赤い輪、鉛筆は別のパターン)。who="gen": ゲンさん(ハンチング帽、青い輪。ゲンかつぎの大先輩)。
     """
     if who == "gen" and ring == "#c8141c":
         ring = GEN_RING
@@ -87,7 +87,7 @@ def gull_svg(size: int = 104, ring: str = "#c8141c", bg: str = "#eef1e4", cls: s
                  f'<circle cx="188" cy="44" r="4.5" fill="{ring}"/>'
                  '<path d="M 186 97 Q 190 100 194 98" stroke="#14212c" stroke-width="2.2" stroke-linecap="round" fill="none"/>')
     uid = f"g{size}{cls}{who[0]}"
-    label = "カモメの記者ミカタ" if who == "mikata" else "験かつぎの大先輩ゲンさん"
+    label = "カモメの記者ミカタ" if who == "mikata" else "ゲンかつぎの大先輩ゲンさん"
     return (f'<svg class="{cls}" viewBox="0 0 300 300" width="{size}" height="{size}" role="img" aria-label="{label}">'
             f'<defs><clipPath id="{uid}"><circle cx="150" cy="150" r="121"/></clipPath></defs>'
             f'<circle cx="150" cy="150" r="150" fill="{bg}"/>'

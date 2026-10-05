@@ -60,7 +60,7 @@ def build(day: dt.date, data: dict) -> dict | None:
         for tid, n in by.items():
             idx[tid].append((r, n))
     cal = _calendar(day)
-    # 記事の型(2026-10-06 決定): タイトルで今日いちばんの見どころ → ミカタのひと言 → 悩ましいレース → 集まったレース → 索引 → 最後にゲンさんの験(オカルト枠)
+    # 記事の型(2026-10-06 決定): タイトルで今日いちばんの見どころ → ミカタのひと言 → 悩ましいレース → 集まったレース → 索引 → 最後にゲンさんのゲンかつぎ(オカルト枠)
     def race_name(r):
         return f"{r['venue']}{r['rno']}R({r.get('deadline') or '-'})"
 
@@ -119,7 +119,7 @@ def build(day: dt.date, data: dict) -> dict | None:
 <section><span class="label">今日の悩ましいレース</span><p>インに有利な理論と不利な理論が、同じレースでぶつかっている。どっちに乗る?</p>{sec_conf}</section>
 <section><span class="label">理論がいちばん集まったレース</span>{sec_rich}</section>
 <section><span class="label">理論別の索引</span>{sec_idx}</section>
-<section><span class="label">おまけ: ゲンさんの験(オカルト枠)</span>
+<section><span class="label">おまけ: ゲンさんのゲンかつぎ(オカルト枠)</span>
 <p class="dlg"><b class="g">ゲンさん</b>「関係ねえのは分かってる。でもワンチャン、大いなる力が働いてるかもしれねえだろ?」 <b class="m">ミカタ</b>「乗るかどうかは、気分しだいだね」</p><ul>{cal_html or "<li>今日は特別な暦の日ではない。……ふつうの日こそ、データの出番</li>"}</ul>
 <p>名前・モーター番号のオカルト: {e(occ_txt or "今日は見当たらない")}</p></section>
 <blockquote class="ft-quote">{gull_svg(64, bg="#ffffff", cls="q")}<p><small>ミカタのひと言</small>理論は『正解』じゃなくて『見方』。いくつかの理論がぶつかるレースほど、自分の予想を立てる楽しさがあるよ</p></blockquote>
@@ -136,7 +136,7 @@ def build(day: dt.date, data: dict) -> dict | None:
     for tid, nm in INDEX:
         if tid in idx:
             lines.append(f"・{nm}: " + "、".join(race_name(r) for r, n in idx[tid][:8]))
-    lines += ["", "■おまけ: ゲンさんの験(オカルト枠)"] + [f"・{x}" for x in cal] + ([f"・名前・モーター番号: {occ_txt}"] if occ_txt else [])
+    lines += ["", "■おまけ: ゲンさんのゲンかつぎ(オカルト枠)"] + [f"・{x}" for x in cal] + ([f"・名前・モーター番号: {occ_txt}"] if occ_txt else [])
     lines += ["", "この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。"]
     # X
     if conf:
