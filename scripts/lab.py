@@ -901,10 +901,152 @@ def t_lucky7(ent, r):
     }
 
 
+def t_rain(ent, r):
+    """雨の日はインが強い? 雨に強い選手はいる?"""
+    x = r.copy()
+    w = x["weather"].astype(str)
+    rain, snow, fine = w == "雨", w == "雪", w == "晴"
+    mr, ms_, mf = measure(x, rain, ref=fine), measure(x, snow, ref=fine), measure(x, w == "曇り", ref=fine)
+    ur, uf = float(x[rain]["upset"].mean()), float(x[fine]["upset"].mean())
+    e = _adj(ent)
+    wmap = r.set_index("race_id")["weather"].astype(str)
+    ew = e["race_id"].map(wmap)
+    pr = _gap(e, ew == "雨", ew == "晴", 10, by="day")
+    ms = [("雨の日", mr, verdicts(mr)), ("雪の日", ms_, verdicts(ms_)), ("曇りの日", mf, verdicts(mf))]
+    return {
+        "id": "rain", "title": "雨の日はインが強い?", "belief": "雨だと水面が重くなって、まくりが決まりにくい。だからインが強い。雨に強い選手もいる",
+        "compare": "晴れの日",
+        "lead": f"1号艇が勝つのは、雨の日に100レースで{per100(mr['in1'])}、晴れの日は{per100(mr['in1_ref'])}、雪の日は{per100(ms_['in1'])}。"
+                f"3連単で30番人気以下が来た割合は、雨{ur:.1%}・晴れ{uf:.1%}。",
+        "conclusion": (["ふだんと同じ。雨でもインは変わらない", f"雨{per100(mr['in1'])}・晴れ{per100(mr['in1_ref'])}。雨の日に強い選手も、時期を変えると{sim_words(pr[0])}"]
+                       if not verdicts(mr)["real"] else [f"雨の日は1号艇が{'強い' if mr['in1'] > mr['in1_ref'] else '弱い'}", f"雨{per100(mr['in1'])}・晴れ{per100(mr['in1_ref'])}"]),
+        "tables": [], "measures": ms,
+        "rules": ["天候は公式の成績データの記録(レース時点)。雨の強さまでは分からない", "雨より、風と波のほうがレースを大きく動かす(『風とイン』の回)"],
+        "faq": [("雨巧者はいる?", f"選手ごとの「雨の日−晴れの日」の差は、{_person(pr)}"),
+                ("じゃあ雨の日は何を見る?", "風と波。雨そのものより、雨といっしょに吹く風のほうが効く")],
+        "use": ["雨だからインを厚く、はしなくていい", "雨の日は風向きと風速を先に確認"],
+        "mikata": "雨は関係なかった。でも雨のしぶきの中を走るボート、かっこいいよね",
+        "gen": "雨の日のレースは客が少ねえ。静かなスタンドで見るのが最高なんだよ。それで十分だ",
+        "challenge": "次の雨の日、カッパを着て現地へ。晴れの日とスタンドの景色を見くらべてみよう",
+        "numbers": {"in1_rain": mr["in1"], "in1_fine": mr["in1_ref"], "upset_rain": ur, "upset_fine": uf, "person_rain": pr[0]},
+    }
+
+
+def t_age(ent, r):
+    """何歳がいちばん強い? 年齢と成長・衰え(同じ選手の1年あたりの変化)。"""
+    x = _adj(ent)
+    base_ = float(x["top3"].mean())
+    x["c1"] = base_ + x["res"]          # コースの有利不利だけ差し引いた3着内率(本人の強さは残す)
+    bins = [(18, 24, "24歳以下"), (25, 29, "25〜29歳"), (30, 34, "30〜34歳"), (35, 39, "35〜39歳"), (40, 44, "40〜44歳"),
+            (45, 49, "45〜49歳"), (50, 54, "50〜54歳"), (55, 80, "55歳以上")]
+    # 同じ選手の「1年あたりの変化」: 3年間の上積み(コース差し引き)を時間で回帰した傾き(100走以上)
+    t = (x["dt"] - pd.Timestamp("2025-01-01")).dt.days / 365.25
+    g = pd.DataFrame({"r": x["racer_id"], "t": t, "y": x["res"], "age": x["age"]})
+    g["tm"] = g.groupby("r")["t"].transform("mean"); g["ym"] = g.groupby("r")["y"].transform("mean")
+    g["cov"] = (g["t"] - g["tm"]) * (g["y"] - g["ym"]); g["var"] = (g["t"] - g["tm"]) ** 2
+    sl = g.groupby("r").agg(n=("y", "size"), cov=("cov", "sum"), var=("var", "sum"), age=("age", "median"))
+    sl = sl[(sl["n"] >= 100) & (sl["var"] > 0)]
+    sl["slope"] = sl["cov"] / sl["var"]
+    rows, tbl = [], []
+    for lo, hi, nm in bins:
+        m_ = (x["age"] >= lo) & (x["age"] <= hi)
+        s_ = sl[(sl["age"] >= lo) & (sl["age"] <= hi)]["slope"]
+        a1 = float((x.loc[m_].drop_duplicates("racer_id")["racer_class"] == "A1").mean())
+        rows.append({"nm": nm, "c1": float(x.loc[m_, "c1"].mean()), "a1": a1, "slope": float(s_.mean()) if len(s_) else float("nan"), "ns": int(len(s_))})
+        tbl.append({"venue": nm, "rno": "", "n": int(m_.sum()), "in1": float(x.loc[m_, "c1"].mean())})
+    best = max(rows, key=lambda q: q["c1"]); a1best = max(rows, key=lambda q: q["a1"])
+    young, old = rows[0], rows[-1]
+    peak = max(rows, key=lambda q: q["slope"])
+    turn = next((q["nm"] for q in rows if q["slope"] < 0), None)
+    ms = []
+    for lo, hi, nm in ((18, 24, "24歳以下"), (35, 39, "35〜39歳"), (55, 80, "55歳以上")):
+        m_ = (x["age"] >= lo) & (x["age"] <= hi)
+        mm = measure(x, m_)
+        ms.append((nm, mm, verdicts(mm)))
+    slope_txt = "、".join(f"{q['nm']} {q['slope'] * 100:+.1f}" for q in rows if q["slope"] == q["slope"])
+    return {
+        "id": "age", "title": "ボートレーサーは何歳がいちばん強い?", "belief": "ボートは体重が軽くて反射神経がいい若手が有利。でも経験のベテランも強い。結局どっち?",
+        "subject": "その年齢の選手", "verb": "3着以内に入る", "no_market": True, "compare": "全選手(コースの有利不利は差し引き)",
+        "lead": f"コースの有利不利を差し引いた3着内率は{best['nm']}がいちばん高く{best['c1']:.0%}、A1級の割合も{a1best['nm']}が{a1best['a1']:.0%}でいちばん多い。"
+                f"同じ選手が1年でどれだけ変わるかを見ると、24歳以下は1年に{young['slope'] * 100:+.1f}ポイント、55歳以上は{old['slope'] * 100:+.1f}ポイント。"
+                + (f"伸びがマイナスに変わるのは{turn}から。" if turn else ""),
+        "conclusion": [f"いちばん強いのは{best['nm']}。伸び盛りは{peak['nm']}",
+                       f"若手は1年に{young['slope'] * 100:+.1f}ポイントずつ伸び、30代半ばでほぼ横ばい、そこからゆっくり下がる(55歳以上で1年に{old['slope'] * 100:+.1f})。"],
+        "tables": [("年齢ごとの3着内率(コースの有利不利を差し引き)", tbl, "3着内率")],
+        "measures": ms,
+        "rules": ["年齢は出走表の年齢。3着内率はコースの有利不利をそろえた値",
+                  "1年あたりの変化は、同じ選手の3年間(100走以上)の成績を時間で並べたときの傾き。年齢は3年間の真ん中あたり",
+                  "弱い選手ほど早く引退するので、年齢が上の選手は『残っている強い人』が多い(生き残りの偏り)"],
+        "faq": [("年齢ごとの1年あたりの変化は?", f"(ポイント/年){slope_txt}"),
+                ("若手は狙い目?", f"24歳以下は1年に{young['slope'] * 100:+.1f}ポイント伸びている。出走表の勝率は過去の数字なので、伸び盛りの若手は勝率より強いことが多い(『上り調子』の型)"),
+                ("ベテランはもう厳しい?", f"55歳以上は1年に{old['slope'] * 100:+.1f}ポイント。下がり方はゆっくりで、スタートや前づけなど、経験で戦う選手も多い")],
+        "use": ["勝率が同じなら、若手を少し上に(勝率はこれから上がる)", "ベテランは『型』を見る。前づけ・スタート職人は経験の型"],
+        "mikata": "若手はぐんぐん伸びて、ベテランは技で残る。どの年代にも見どころがあるね",
+        "gen": "俺と同い年の選手が今日も走ってる。それだけで買う理由になるんだよ",
+        "challenge": "今日の出走表で、いちばん若い選手といちばんベテランの選手を見つけて、どっちが先にゴールするか見てみよう",
+        "numbers": {"best_age": best["nm"], "peak_growth": peak["nm"], "turn": turn, "slopes": {q["nm"]: q["slope"] for q in rows}},
+    }
+
+
+def t_zorome(ent, r):
+    """ゾロ目の日は荒れる?(オカルト枠)"""
+    x = r.copy()
+    dd = pd.to_datetime(x["date"])
+    zoro = dd.dt.month == dd.dt.day
+    fri13 = (dd.dt.day == 13) & (dd.dt.dayofweek == 4)
+    mz, mf = measure(x, zoro), measure(x, fri13)
+    uz, uf, ua = float(x[zoro]["upset"].mean()), float(x[fri13]["upset"].mean()), float(x["upset"].mean())
+    nd = int(dd[zoro].dt.date.nunique()); nf = int(dd[fri13].dt.date.nunique())
+    ms = [("ゾロ目の日(1/1、2/2…12/12)", mz, verdicts(mz)), ("13日の金曜日", mf, verdicts(mf))]
+    return {
+        "id": "zorome", "title": "ゾロ目の日と13日の金曜日", "belief": "11月11日みたいなゾロ目の日は何かが起きる。13日の金曜日は大荒れだ",
+        "lead": f"ゾロ目の日({nd}日分)に1号艇が勝つのは100レースで{per100(mz['in1'])}、13日の金曜日({nf}日分)は{per100(mf['in1'])}、全体は{per100(mz['in1_ref'])}。"
+                f"30番人気以下の3連単が来た割合は、ゾロ目の日{uz:.1%}・13日の金曜日{uf:.1%}・全体{ua:.1%}。",
+        "conclusion": (["ふだんと同じ。カレンダーは関係なかった", "ゾロ目の日も13日の金曜日も、ふだんどおりのレースだった"]
+                       if not (verdicts(mz)["real"] or verdicts(mf)["real"]) else ["差があった……かも", "日数が少ないので、たまたまの幅も大きい"]),
+        "tables": [], "measures": ms,
+        "rules": ["日付だけで分けた。13日の金曜日は3年で数日しかないので、たまたまの幅が大きい"],
+        "faq": [("ゾロ目の日に1-1-1は?", "同じ艇が2回来ることはないので、ゾロ目の出目は3連単にはない。2連複のゾロ目もない。ゾロ目の日に買えるのは、気持ちだけ")],
+        "use": ["カレンダーで予想は変えなくていい。……でも記念日に推しの艇番を買うのは、とても良い"],
+        "mikata": "カレンダーは関係なかった。でも『今日はゾロ目の日だから』って理由で現地に行くのは、最高の理由だと思う",
+        "gen": "11月11日は1-1……は買えねえのか。じゃあ1-2-3でいい。ゾロ目気分で買うのが大事なんだよ",
+        "challenge": "次のゾロ目の日(11月11日)に、自分の『記念日の出目』を決めて1点だけ買ってみよう",
+        "numbers": {"days_zoro": nd, "days_fri13": nf, "upset_zoro": uz, "upset_fri13": uf, "upset_all": ua},
+    }
+
+
+def t_payday(ent, r):
+    """給料日と週末、オッズはゆがむ?"""
+    x = r.copy()
+    dd = pd.to_datetime(x["date"])
+    pay = dd.dt.day.isin([24, 25, 26]); end = dd.dt.day.isin([1, 2, 3, 4, 5]) | (dd.dt.day >= 28)
+    wkend = dd.dt.dayofweek >= 5
+    mp, me, mw, mwd = measure(x, pay), measure(x, dd.dt.day.between(15, 20)), measure(x, wkend), measure(x, ~wkend)
+    ms = [("給料日あたり(24〜26日)", mp, verdicts(mp)), ("月の半ば(15〜20日)", me, verdicts(me)), ("土日", mw, verdicts(mw)), ("平日", mwd, verdicts(mwd))]
+    rw, rd = mw.get("market_ratio"), mwd.get("market_ratio")
+    return {
+        "id": "payday", "title": "給料日と週末、オッズはゆがむ?", "belief": "給料日や週末は、ふだん買わない人が本命を買う。だから本命の配当がしぶくなる",
+        "lead": f"1号艇の『オッズの見立て』と実際の差は、給料日あたりで{ratio_words(mp.get('market_ratio'))}、月の半ばで{ratio_words(me.get('market_ratio'))}、"
+                f"土日で{ratio_words(rw)}、平日で{ratio_words(rd)}。",
+        "conclusion": (["ふだんと同じ。オッズはしっかりしている", "給料日も週末も、1号艇のオッズの見立てはいつもとほとんど同じ。売れる量が増えても、ゆがみは小さい"]
+                       if all(v.get("edge") in (0, None) for _, _, v in ms) else ["日によって少し違う", "くわしくは下の表"]),
+        "tables": [], "measures": ms,
+        "rules": ["オッズは締切の少し前に集めたもの(集めたレースの分だけ)。『見立て』は、ひかれる分(控除)を除いて逆算した1号艇の勝つ見込み",
+                  "1号艇はどの日でも見立てより少し多く来る(全レースの平均)。その平均とくらべて、ずれが大きいかを見る"],
+        "faq": [("週末は本命が売れすぎる?", "週末も平日も、本命のずれ方はほぼ同じ。ネット投票が中心なので、ふだんから買っている人の割合が大きいのかも")],
+        "use": ["日付や曜日でオッズの読み方は変えなくていい"],
+        "mikata": "オッズは思ったよりしっかりしていた。みんなの予想の集まりって、すごいんだね",
+        "gen": "給料日に競艇場に行くのは、俺の数少ない楽しみなんだよ。オッズなんて関係ねえ",
+        "challenge": "給料日の夜、ナイターで1レースだけ『ごほうびの1点』を決めてみよう",
+        "numbers": {"ratio_pay": mp.get("market_ratio"), "ratio_mid": me.get("market_ratio"), "ratio_weekend": rw, "ratio_weekday": rd},
+    }
+
+
 THEORIES = {t["id"]: t for t in []}
 BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke, "tenji": t_tenji, "flying": t_flying, "combo": t_combo,
             "rest": t_rest, "travel": t_travel, "weight": t_weight, "dayno": t_dayno, "twice": t_twice, "tilt": t_tilt,
-            "moon": t_moon, "manshu": t_manshu, "lucky7": t_lucky7}
+            "moon": t_moon, "manshu": t_manshu, "lucky7": t_lucky7,
+            "rain": t_rain, "age": t_age, "zorome": t_zorome, "payday": t_payday}
 
 
 # ---------------------------------------------------------------- 記事
