@@ -1,9 +1,8 @@
 """「型」の紋章。選手カードのタグの横・画像・新聞に付ける、うち独自の小さなマーク。
 
 本人の顔(写真・似顔絵)はパブリシティ権の問題があるので使わない。代わりに「型」を絵にして、推しの型を集める楽しさを出す。
-第4案(2026-10-05 ユーザー指定: 舟の動きで表す・かわいい寄り): 角丸の色タイルに、上から見た小さな舟(白、墨の縁取り)と、
-その型らしい動き(スリット・ターン・航跡・ブイ)を1場面で描く。ほかの舟は薄く、主役の舟は白。
-型ごとに色が決まっていて、集めると並べたくなる。文字は入れない(名前はキャプションで)。viewBox 0 0 100 100。
+第5案(2026-10-05 ユーザー「ゼロベースで分かりやすく」): 色の丸に、型を表す漢字1〜2文字を大きく(家紋の「文字紋」の考え方)。
+絵で説明するより、日本語の読者には文字がいちばん速い。小さくても読める。色は型ごとに固定。viewBox 0 0 100 100。
 """
 from __future__ import annotations
 
@@ -18,6 +17,9 @@ SHORT = {"スタート職人": "ST職人", "展示STを信じていい": "展示
          "まくり差しの職人": "まく差", "外からでも届く": "外伸び", "前づけの仕掛け人": "前づけ", "展示は控えめ、本番で化ける": "化け", "上り調子": "上昇",
          "舟券に絡む安定感": "安定"}
 ALIAS = {"急成長中": "上り調子"}
+# 丸の中の文字(1文字が基本。2文字は小さめ)
+KANJI = {"スタート職人": "ST", "展示STを信じていい": "展", "本番で踏み込む": "踏", "イン逃げ番長": "逃", "差し職人": "差", "まくり屋": "捲",
+         "まくり差しの職人": "捲差", "外からでも届く": "外", "前づけの仕掛け人": "前", "展示は控えめ、本番で化ける": "化", "上り調子": "昇", "舟券に絡む安定感": "安"}
 
 
 def boat(x: float, y: float, rot: float = 0, scale: float = 1.0, faint: bool = False, fill: str = W) -> str:
@@ -88,36 +90,40 @@ _ART = {
 
 
 def emblem_svg(tag: str, size: int = 40, cls: str = "emb", ring: bool = True) -> str:
-    """型の紋章。知らないタグなら空文字。"""
+    """型の紋章(文字紋)。知らないタグなら空文字。"""
     tag = ALIAS.get(tag, tag)
-    art = _ART.get(tag)
-    if not art:
+    if tag not in COLORS:
         return ""
-    c = COLORS.get(tag, INK)
+    c, k = COLORS[tag], KANJI[tag]
+    fs = 58 if len(k) == 1 else (44 if k == "ST" else 34)
+    y = 70 if len(k) == 1 else (66 if k == "ST" else 62)
+    font = "Dela Gothic One, 'Zen Kaku Gothic New', sans-serif"
     return (f'<svg class="{cls}" viewBox="0 0 100 100" width="{size}" height="{size}" role="img" aria-label="{tag}の紋章">'
-            f'<rect x="2" y="2" width="96" height="96" rx="24" fill="{c}" stroke="{INK}" stroke-width="3"/>'
-            + (f'<rect x="8" y="8" width="84" height="84" rx="19" fill="none" stroke="{W}" stroke-opacity=".28" stroke-width="2"/>' if ring else "")
-            + art + "</svg>")
+            f'<circle cx="50" cy="50" r="47" fill="{c}" stroke="{INK}" stroke-width="4"/>'
+            + (f'<circle cx="50" cy="50" r="41" fill="none" stroke="{W}" stroke-opacity=".35" stroke-width="2"/>' if ring else "")
+            + f'<text x="50" y="{y}" font-family="{font}" font-size="{fs}" fill="{W}" text-anchor="middle">{k}</text></svg>')
 
 
 def sheet_html() -> str:
     """12個を並べた見本(確認用)。小さい表示も並べる。"""
-    cells = "".join(f'<div class="cell">{emblem_svg(t, 128)}<b>{t}</b></div>' for t in _ART)
-    small = "".join(emblem_svg(t, 28) for t in _ART)
+    cells = "".join(f'<div class="cell">{emblem_svg(t, 128)}<b>{t}</b></div>' for t in COLORS)
+    small = "".join(emblem_svg(t, 28) for t in COLORS)
     return ('<!doctype html><html lang="ja"><head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@700&display=swap">'
             '<style>body{margin:0;background:#f4efdf;font-family:"Zen Kaku Gothic New",sans-serif;padding:24px}h1{font:400 26px "Dela Gothic One",sans-serif;margin:0 0 16px}'
             '.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}.cell{background:#fff;border:3px solid #14212c;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:8px}'
             '.cell b{font-size:13.5px;text-align:center}.small{margin-top:18px;display:flex;gap:6px;align-items:center;background:#fff;padding:10px;border:3px solid #14212c}.small span{font-size:13px;margin-right:6px}</style></head><body>'
-            '<h1>ミカタの「型」の紋章 12種(第4案: 舟の動きで)</h1>'
+            '<h1>ミカタの「型」の紋章 12種(第5案: 文字紋)</h1>'
             f'<div class="grid">{cells}</div><div class="small"><span>タグの横の大きさ(28px):</span>{small}</div></body></html>')
 
 
 def js_module() -> str:
     """アプリ用(docs/emblems.js)。window.emblem(tag, size) で同じ絵を出す。"""
     import json
-    data = {t: {"c": COLORS[t], "a": _ART[t]} for t in _ART}
+    data = {t: {"c": COLORS[t], "k": KANJI[t]} for t in COLORS}
     return ("// 自動生成: python -c 'from kyotei.emblem import js_module; print(js_module())' > docs/emblems.js\n"
             f"const EMBLEMS = {json.dumps(data, ensure_ascii=False)};\nconst EMBLEM_ALIAS = {json.dumps(ALIAS, ensure_ascii=False)};\n"
             "function emblem(tag, size = 22) {\n  tag = EMBLEM_ALIAS[tag] || tag;\n  const d = EMBLEMS[tag];\n  if (!d) return \"\";\n"
+            "  const fs = d.k.length === 1 ? 58 : d.k === \"ST\" ? 44 : 34, y = d.k.length === 1 ? 70 : d.k === \"ST\" ? 66 : 62;\n"
             "  return `<svg class=\"emb\" viewBox=\"0 0 100 100\" width=\"${size}\" height=\"${size}\" role=\"img\" aria-label=\"${tag}の紋章\">"
-            "<rect x=\"2\" y=\"2\" width=\"96\" height=\"96\" rx=\"24\" fill=\"${d.c}\" stroke=\"#14212c\" stroke-width=\"3\"/>${d.a}</svg>`;\n}\n")
+            "<circle cx=\"50\" cy=\"50\" r=\"47\" fill=\"${d.c}\" stroke=\"#14212c\" stroke-width=\"4\"/>"
+            "<text x=\"50\" y=\"${y}\" font-family=\"Dela Gothic One, 'Zen Kaku Gothic New', sans-serif\" font-size=\"${fs}\" fill=\"#fff\" text-anchor=\"middle\">${d.k}</text></svg>`;\n}\n")
