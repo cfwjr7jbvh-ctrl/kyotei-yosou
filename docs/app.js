@@ -614,7 +614,7 @@ function setupAnims(root) {
     const i = Math.min(state.anSel[el.dataset.id] || 0, r ? r.tenkai.scenarios.length - 1 : 0);
     el._i = i;
     el.querySelectorAll(".an-chip").forEach((c) => c.setAttribute("aria-pressed", c.dataset.i === String(i)));
-    if (r) anDraw(el, anModel(r, r.tenkai.scenarios[i]), AN.T[5] + 0.01);  // まず決着の形を出しておく
+    if (r) { const md = anModel(r, r.tenkai.scenarios[i]); anDraw(el, md, md.T[5] + 0.01); }  // まず決着の形を出しておく
     if (anObs && !anReduce()) anObs.observe(el);
   });
 }
@@ -645,6 +645,21 @@ function resultHTML(r) {
   return `<div class="result">結果 ${tri(r.result.tri_combo)}<span class="pay">${r.result.tri_pay.toLocaleString()}円</span>${r.result.kimarite ? `<span class="kim">${esc(r.result.kimarite)}</span>` : ""}</div>`;
 }
 
+// 理論ぶつけ: 検証ラボの理論のうち、このレースに当てはまるもの(買い目ではない。札でデータの強さを示す)
+function theoriesHTML(r) {
+  const ns = r.theories || [];
+  if (!ns.length) return "";
+  const sm = r.th_sum || {};
+  const lanes = (ls) => (ls || []).map((l) => `<span class="lane l${l}">${l}</span>`).join("");
+  const item = (n) => `<li class="th ${esc(n.kind)}"><div class="th-h"><b>${esc(n.title)}</b>${lanes(n.lanes)}<span class="th-b">${esc(n.badge)}</span></div>
+    <p>${esc(n.text)}</p>${n.gen ? `<p class="th-gen">ゲンさん「${esc(n.gen)}」</p>` : ""}${n.lab_title ? `<p class="th-lab">検証ラボ『${esc(n.lab_title)}』</p>` : ""}</li>`;
+  const head = sm.conflict
+    ? `<p class="th-conf">悩ましいレース: インに追い風(${esc((sm.plus || []).join("・"))})と、向かい風(${esc((sm.minus || []).join("・"))})がぶつかっている</p>` : "";
+  const first = ns.slice(0, 4).map(item).join("");
+  const rest = ns.slice(4).map(item).join("");
+  return `<div class="theories"><h3>理論ぶつけ<small>当てはまる理論${ns.length}つ。買い目ではなく、考え方のヒント</small></h3>${head}<ul>${first}</ul>${rest ? `<details><summary>ほかに${ns.length - 4}つ</summary><ul>${rest}</ul></details>` : ""}</div>`;
+}
+
 function stageHTML(r) {
   return r.stage === "late"
     ? `<div class="stage late">展示を反映した直前予想(${esc(r.updated_at)})</div>`
@@ -652,7 +667,7 @@ function stageHTML(r) {
 }
 
 // 見る順: AIのひと言 → 荒れ度 → 結果 → 本命 → 期待値の買い目 → AIの狙い目 → 展開予測(アニメ・シナリオ・スリット) → 各艇 → ほかの候補 → 公式サイト
-const bodyHTML = (r) => stageHTML(r) + aiLine(r) + arashiHTML(r) + resultHTML(r) + honmeiHTML(r) + evHTML(r) + pickHTML(r) + tenkaiHTML(r) + boatsHTML(r) + combosHTML(r) + officialHTML(r);
+const bodyHTML = (r) => stageHTML(r) + aiLine(r) + arashiHTML(r) + theoriesHTML(r) + resultHTML(r) + honmeiHTML(r) + evHTML(r) + pickHTML(r) + tenkaiHTML(r) + boatsHTML(r) + combosHTML(r) + officialHTML(r);
 
 function clockHTML(r) {
   const left = minsLeft(r);
@@ -687,7 +702,7 @@ function rowHTML(r) {
   const right = r.result ? tri(r.result.tri_combo) : (r.top && r.top[0] ? tri(r.top[0].combo) : "");
   return `<details class="row" data-id="${r.race_id}"${state.open.has(r.race_id) ? " open" : ""}>
     <summary><span class="t">${esc(r.deadline || "")}<span class="subw" data-id="${r.race_id}">${subHTML(r)}</span></span>
-      <span class="vr"><b>${esc(r.venue)}</b><span class="n">${r.rno}R</span>${r.stage === "late" ? `<span class="late" title="直前予想"></span>` : ""}${!r.result && arashiLevel(r) >= 5 ? `<span class="are">荒れ</span>` : ""}</span>
+      <span class="vr"><b>${esc(r.venue)}</b><span class="n">${r.rno}R</span>${r.stage === "late" ? `<span class="late" title="直前予想"></span>` : ""}${!r.result && arashiLevel(r) >= 5 ? `<span class="are">荒れ</span>` : ""}${!r.result && r.th_sum && r.th_sum.conflict ? `<span class="nayam" title="理論がぶつかる悩ましいレース">悩</span>` : ""}</span>
       <span class="hits">${hitBadge(r)}</span>${right}</summary>
     <div class="body">${bodyHTML(r)}</div></details>`;
 }

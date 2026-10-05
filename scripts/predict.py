@@ -26,6 +26,7 @@ from kyotei.betting import COMBOS, blend, entropy, market_probs, model_tri_probs
 from kyotei.data import load_history  # noqa: E402
 from kyotei.parse_lzh import parse_program, parse_result  # noqa: E402
 from kyotei.publish import read_json, write_check, write_json  # noqa: E402
+from kyotei import theories  # noqa: E402
 from kyotei.scrape import fetch, fetch_many, parse_beforeinfo, parse_odds3t, parse_pcexpect, parse_raceresult  # noqa: E402
 from kyotei.arashi import IN_LOSE_MIN, arashi  # noqa: E402
 from kyotei.notify import notify_bets  # noqa: E402
@@ -68,7 +69,7 @@ def predict_win(bundle, stage, df):
 
 
 def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=None, blend_ab=None,
-                 bet_filter=None, s23=None, bet_rule=None):
+                 bet_filter=None, s23=None, bet_rule=None, th_ctx=None):
     rdf = rdf.sort_values("lane")
     w = np.full(6, 1e-6)
     w[rdf["lane"].values - 1] = p_win
@@ -121,6 +122,13 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
     if market is not None:
         out["market_top"] = [{"combo": COMBOS[i], "prob": round(float(market[i]), 4)}
                              for i in np.argsort(-market)[:3]]
+    if th_ctx is not None:  # 理論ぶつけ(検証ラボの理論のうち、このレースに当てはまるもの。買い目ではない)
+        try:
+            notes = theories.race_theories(rdf, {**th_ctx, "late": stage == "late", "calendar": False})
+            out["theories"] = notes
+            out["th_sum"] = theories.summarize(notes)
+        except Exception as ex:  # noqa: BLE001  理論の失敗で予想を止めない
+            print("theories failed:", out["race_id"], ex)
     return out
 
 
@@ -201,7 +209,23 @@ def build_today(day: dt.date):
     if wt is not None:
         wt.to_pickle(CACHE / f"wind_{day.isoformat()}.pkl")
     df.to_pickle(CACHE / f"features_{day.isoformat()}.pkl")
+    try:  # 理論ぶつけ用: 今期の事故率の目安(その日より前の成績から)
+        pd.to_pickle(theories.accident_table(ent, day), CACHE / f"acc_{day.isoformat()}.pkl")
+    except Exception as ex:  # noqa: BLE001
+        print("accident table failed:", ex)
     return df
+
+
+def theory_ctx(day: dt.date) -> dict:
+    """理論ぶつけの文脈(事故率の表・天気予報)。無ければ空で動く。"""
+    acc = {}
+    ap = CACHE / f"acc_{day.isoformat()}.pkl"
+    if ap.exists():
+        try:
+            acc = pd.read_pickle(ap)
+        except Exception:  # noqa: BLE001
+            acc = {}
+    return {"day": day, "acc": acc, "wind": theories.forecast_wind(day)}
 
 
 def merge_live(day: dt.date, prev_path: str):
@@ -241,9 +265,10 @@ def morning(day: dt.date):
     p, stack, (s2, s3, extra) = predict_win(bundle, "early", df)
     df["p"], df["s2"], df["s3"] = p, s2, s3
     out = {"date": day.isoformat(), "model_built_at": bundle.get("built_at"), "races": []}
+    tctx = theory_ctx(day)
     for rid, rdf in df.groupby("race_id", sort=True):
         out["races"].append(race_payload(rdf, rdf["p"].values, stack, "early",
-                                         s23=(rdf["s2"].values, rdf["s3"].values, extra)))
+                                         s23=(rdf["s2"].values, rdf["s3"].values, extra), th_ctx=tctx))
     out["races"].sort(key=lambda r: (r["deadline"] or "", r["jcd"]))
     write_json(DAYS / f"{day.isoformat()}.json", out)
     update_index()
@@ -348,6 +373,7 @@ def attach_results(data: dict, t: dt.datetime, hd: str, limit: int = 40) -> int:
 
 def live(day: dt.date, ahead_min: int = 35):
     fp = CACHE / f"features_{day.isoformat()}.pkl"
+    tctx = theory_ctx(day)
     jp = DAYS / f"{day.isoformat()}.json"
     if not fp.exists() or not jp.exists():
         print("朝の予想がまだありません")
@@ -443,7 +469,7 @@ def live(day: dt.date, ahead_min: int = 35):
         t1 = time.time()
         p, stack, s23 = predict_win(bundle, "late", rdf)
         new = race_payload(rdf, p, stack, "late", odds, bundle.get("blend"), bundle.get("bet_filter"), s23=s23,
-                           bet_rule=bundle.get("bet_rule"))
+                           bet_rule=bundle.get("bet_rule"), th_ctx=tctx)
         perf["sec_predict"] += time.time() - t1
         # 展示前(朝予想)の1着率を残し、アプリで「展示を見てどう変わったか」を出せるようにする
         before = {b["lane"]: b.get("p_win_early", b.get("p_win") if race.get("stage") != "late" else None)

@@ -438,3 +438,29 @@ details.row[open]>summary{border-bottom:1px solid var(--rule)}
 
 .cd-f{margin:8px 0;padding:8px 10px;border-left:4px solid var(--mark);background:var(--soft);font-size:13px;line-height:1.6}
 .cd-f b{color:var(--mark)}
+/* 理論ぶつけ */
+.row .vr .nayam{font-size:11px;font-weight:700;color:#7a5200;background:#fff4d6;border:1px solid #c98a00;border-radius:4px;padding:1px 4px;margin-left:6px;vertical-align:2px}
+.theories{margin:10px 0 14px;background:var(--deck);border:1px solid var(--rule);border-radius:10px;padding:10px 12px}
+.theories h3{margin:0 0 6px;font-size:15px}
+.theories h3 small{display:block;font-size:11.5px;font-weight:400;color:var(--mute);margin-top:2px}
+.theories ul{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.theories .th{border-left:4px solid var(--rule);padding:4px 0 4px 10px}
+.theories .th.edge{border-color:#c98a00}
+.theories .th.real,.theories .th.known,.theories .th.trial{border-color:#2e8b57}
+.theories .th.occult{border-color:#8a5cc8}
+.theories .th-h{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:14px}
+.theories .th-h .lane{width:20px;height:20px;font-size:13px;border-radius:4px}
+.theories .th-b{font-size:11px;padding:2px 7px;border-radius:999px;border:1px solid var(--rule);color:var(--mute);margin-left:auto}
+.theories .th.edge .th-b{background:#fff4d6;border-color:#c98a00;color:#7a5200}
+.theories .th.real .th-b,.theories .th.known .th-b,.theories .th.trial .th-b{background:#e7f6ec;border-color:#2e8b57;color:#1e6b3f}
+.theories .th.occult .th-b{background:#f1e9fb;border-color:#8a5cc8;color:#5a3590}
+.theories p{margin:4px 0 0;font-size:13px;line-height:1.6}
+.theories .th-gen{color:#0b5fb4}
+.theories .th-lab{font-size:11.5px;color:var(--mute)}
+.theories .th-conf{margin:0 0 8px;font-size:13px;font-weight:700;color:#7a5200;background:#fff4d6;border-radius:6px;padding:6px 8px}
+.theories details summary{margin-top:8px;font-size:12.5px;color:var(--mute);cursor:pointer}
+@media (prefers-color-scheme: dark){
+  .theories .th.edge .th-b,.theories .th-conf,.row .vr .nayam{background:#3a2f12;color:#f0c75e}
+  .theories .th.real .th-b,.theories .th.known .th-b,.theories .th.trial .th-b{background:#123322;color:#7fd6a4}
+  .theories .th.occult .th-b{background:#2a1f3d;color:#c7a6ef}
+}

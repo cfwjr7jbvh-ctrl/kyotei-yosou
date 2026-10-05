@@ -200,6 +200,23 @@ def main():
                                          "pages": pages_, "pdf": f"{key}_pdf.json" if pages_ else None, "asof": t.get("asof", "")})
         items.append({"key": key, "title": f"検証ラボ: {t['title']}", "grade": "LAB", "venue": "", "jcd": 0,
                       "hd": (t.get("made") or "2026-01-01").replace("-", ""), "n": 0, "picks": [], "images": 0})
+    # 毎日の「今日の理論ぶつけ」(朝の予想に付いた理論のノートから。買い目は出さない)
+    try:
+        import theory_daily
+        from kyotei.publish import read_json
+        dp = ROOT / f"docs/data/days/{today.isoformat()}.json"
+        if dp.exists():
+            t = theory_daily.build(today, read_json(dp))
+            if t:
+                key = f"theory_{today.strftime('%Y%m%d')}"
+                pages_ = save_pages(out, key, t["html"], a.no_images)
+                write_json(out / f"{key}.json", {"key": key, "title": t["title"], "grade": "毎日", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"),
+                                                 "html": t["html"], "note": t["note"], "x": t["x"], "picks": [], "images": [], "n": 0, "missing": [],
+                                                 "pages": pages_, "pdf": f"{key}_pdf.json" if pages_ else None, "asof": today.isoformat()})
+                items.insert(0, {"key": key, "title": t["title"], "grade": "毎日", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"), "n": 0, "picks": [], "images": 0})
+                print("theory daily:", t["n_races"], "races", t["n_conf"], "conflicts")
+    except Exception as ex:  # noqa: BLE001  毎日の記事の失敗で、ほかの記事を止めない
+        print("theory daily failed:", ex)
     write_json(out / "index.json", {"asof": dt.datetime.now(JST).strftime("%Y-%m-%d %H:%M"), "today": today.isoformat(),
                                     "days_before": a.days_before, "items": items})
     print(f"ura: {len(items)} 節 → {out}")
