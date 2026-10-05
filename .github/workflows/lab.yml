@@ -1,0 +1,32 @@
+name: 検証ラボ(毎週1本)
+
+# 世の中の「◯◯理論」を1つ、3つの物差し(あるか・知られているか・続くか)で検証して reports/lab/<id>.json に残す。
+# 記事タブへの掲載は ura_auto.yml(毎朝)がこのファイルから紙面・note・X を作る。
+on:
+  workflow_dispatch:
+    inputs:
+      theory:
+        description: "理論の id(空なら、まだ作っていないものを1本)"
+        default: ""
+  schedule:
+    - cron: "50 22 * * 1"   # 月曜 7:50 JST
+
+permissions:
+  contents: write
+
+jobs:
+  lab:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - run: |
+          if [ -n "${{ inputs.theory }}" ]; then python scripts/lab.py --theory "${{ inputs.theory }}" --out "$RUNNER_TEMP/lab"; else python scripts/lab.py --next --out "$RUNNER_TEMP/lab"; fi
+      - name: コミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/commit_files.sh "[CI Skip] report: 検証ラボ" reports/lab/*

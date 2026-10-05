@@ -990,6 +990,7 @@ async function copyText(text, btn) {
 }
 function uraMeta(it) {
   const hd = `${+it.hd.slice(4, 6)}/${+it.hd.slice(6)}`;
+  if (it.grade === "LAB") return `毎週の検証 ・ ${hd} ・ 無料記事向け`;
   return `${esc(it.venue)} ${hd}〜 ・ 出場${it.n}人 ・ 注目${(it.picks || []).length}人`;
 }
 async function xStatsHTML() {

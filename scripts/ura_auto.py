@@ -129,6 +129,17 @@ def main():
         items.append({"key": s["key"], "title": title, "grade": s["grade"], "venue": venue, "jcd": s["jcd"], "hd": s["hd"],
                       "n": len(r["sel"]), "picks": [p["name"] for p in pick_rows], "images": len(images)})
         print(s["key"], title, f"{len(r['sel'])}人", f"画像{len(images)}枚", "見つからない:", r["missing"] or "なし")
+    # 検証ラボ(reports/lab/*.json、毎週1本)も記事タブに
+    import lab as labmod
+    for p in sorted((ROOT / "reports/lab").glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True)[:6]:
+        t = json.loads(p.read_text(encoding="utf-8"))
+        key = f"lab_{t['id']}"
+        write_json(out / f"{key}.json", {"key": key, "title": f"検証ラボ: {t['title']}", "grade": "LAB", "venue": "", "jcd": 0,
+                                         "hd": (t.get("made") or "2026-01-01").replace("-", ""), "html": labmod.page(t, t.get("asof", "")),
+                                         "note": labmod.note_text(t), "x": labmod.x_text(t), "picks": [], "images": [], "n": 0, "missing": [],
+                                         "asof": t.get("asof", "")})
+        items.append({"key": key, "title": f"検証ラボ: {t['title']}", "grade": "LAB", "venue": "", "jcd": 0,
+                      "hd": (t.get("made") or "2026-01-01").replace("-", ""), "n": 0, "picks": [], "images": 0})
     write_json(out / "index.json", {"asof": dt.datetime.now(JST).strftime("%Y-%m-%d %H:%M"), "today": today.isoformat(),
                                     "days_before": a.days_before, "items": items})
     print(f"ura: {len(items)} 節 → {out}")
