@@ -1042,11 +1042,172 @@ def t_payday(ent, r):
     }
 
 
+def _profiles():
+    """公式の期別成績から、選手ごとの生年月日・性別・身長・血液型・出身地(最新の期)。個人の値は記事に出さない。"""
+    import parse_racers
+    rows = []
+    for f in sorted((ROOT / "data/racers").glob("fan*.txt")):
+        for ln in f.read_text(encoding="utf-8").splitlines():
+            q = parse_racers.parse_line(ln, f.stem[3:])
+            if q:
+                rows.append(q)
+    df = pd.DataFrame(rows)
+    return df.sort_values("period").groupby("racer_id").tail(1).set_index("racer_id")
+
+
+ZODIAC = [((1, 20), "やぎ座"), ((2, 19), "みずがめ座"), ((3, 21), "うお座"), ((4, 20), "おひつじ座"), ((5, 21), "おうし座"), ((6, 22), "ふたご座"),
+          ((7, 23), "かに座"), ((8, 23), "しし座"), ((9, 23), "おとめ座"), ((10, 24), "てんびん座"), ((11, 23), "さそり座"), ((12, 22), "いて座"), ((12, 32), "やぎ座")]
+
+
+def _zodiac(b):
+    if not isinstance(b, str):
+        return None
+    m, d = int(b[5:7]), int(b[8:10])
+    for (mm, dd), nm in ZODIAC:
+        if (m, d) < (mm, dd):
+            return nm
+    return "やぎ座"
+
+
+def t_birthday(ent, r):
+    """誕生日の週は強い?"""
+    pr = _profiles()
+    x = _adj(ent)
+    b = pd.to_datetime(x["racer_id"].map(pr["birth"]), errors="coerce")
+    x = x[b.notna()].copy(); b = b[b.notna()]
+    this = pd.to_datetime(dict(year=x["dt"].dt.year, month=b.dt.month, day=b.dt.day.clip(upper=28)), errors="coerce")
+    diff = (x["dt"] - this).dt.days
+    diff = diff.where(diff.abs() <= 183, diff - np.sign(diff) * 365)
+    bw, bd = diff.abs() <= 3, diff == 0
+    mw, md = measure(x, bw), measure(x, bd)
+    ms = [("誕生日の前後3日", mw, verdicts(mw)), ("誕生日の当日", md, verdicts(md))]
+    return {
+        "id": "birthday", "title": "誕生日の選手は強い?", "belief": "誕生日に走る選手は気合いが入る。ファンの声援もある。だから来る",
+        "subject": "その選手", "verb": "3着以内に入る", "no_market": True, "compare": SAME,
+        "lead": f"誕生日の前後3日に走った選手は、本人のふだんとくらべて{_pp(mw)}ポイント。誕生日の当日({md['n']:,}走)は{_pp(md)}。",
+        "conclusion": (["ふだんと同じ。誕生日もいつもどおり", f"前後3日{_pp(mw)}、当日{_pp(md)}ポイント。プロは誕生日でも平常心"]
+                       if not (verdicts(mw)["real"] or verdicts(md)["real"]) else [f"誕生日は{'強い' if md['in1'] > md['in1_ref'] else '弱い'}……かも", f"当日{_pp(md)}ポイント(走数が少ないので幅は大きい)"]),
+        "tables": [], "measures": ms,
+        "rules": ["生年月日は公式の『レーサー期別成績』から。個人の誕生日はここには載せない",
+                  "当日の走数は少ないので、たまたまの幅が大きい"],
+        "faq": [("誕生日に勝つと、ニュースになるのは?", "めずらしいから記憶に残る。勝った日だけが話題になるので、『誕生日は強い』と感じやすい")],
+        "use": ["誕生日で予想は変えなくていい。でも推しの誕生日に現地で応援するのは、それだけで最高の1日"],
+        "mikata": "誕生日もいつもどおり走るのがプロ。でも、おめでとうの声は届いてると思う",
+        "gen": "誕生日に1着取った選手を見たことがある。あれは忘れられねえ。だから俺は買うんだよ",
+        "challenge": "推しの誕生日を調べて(公式の選手ページに載っている)、その週の出走予定を見てみよう",
+        "numbers": {"week": mw["in1"] - mw["in1_ref"], "day": md["in1"] - md["in1_ref"], "n_day": md["n"]},
+    }
+
+
+def t_blood(ent, r):
+    """血液型と星座(オカルト枠)。"""
+    pr = _profiles()
+    x = _adj(ent)
+    base_ = float(x["top3"].mean())
+    x["c1"] = base_ + x["res"]            # 本人の強さを残した(コースだけ差し引いた)数字。型の「強さ」をくらべるので
+    x["blood"] = x["racer_id"].map(pr["blood"]); x["zod"] = x["racer_id"].map(pr["birth"].map(_zodiac))
+    st = x[x["st"].between(0, 0.5) & x["st_flag"].isna()].groupby("blood")["st"].mean()
+    ms = [(f"{b}型", measure(x, x["blood"] == b), None) for b in ("A", "B", "O", "AB")]
+    ms = [(n, m, verdicts(m)) for n, m, _ in ms]
+    zs = x.groupby("zod")["c1"].agg(["mean", "size"]).sort_values("mean", ascending=False)
+    a1 = pr.groupby("blood")["class"].apply(lambda s_: float((s_ == "A1").mean()))
+    top, bot = zs.index[0], zs.index[-1]
+    spread = float(zs["mean"].max() - zs["mean"].min())
+    btxt = "、".join(f"{b}型 {per100(m['in1'])}" for b, m in ((n[:-1], m) for n, m, _ in ms))
+    return {
+        "id": "blood", "title": "血液型と星座で、強い選手は分かる?", "belief": "A型は几帳面でスタートが正確、B型はまくり屋、O型は大らかで差し……星座だって関係あるはずだ",
+        "subject": "その血液型の選手", "verb": "3着以内に入る", "no_market": True, "compare": "全選手(コースの有利不利は差し引き)",
+        "lead": f"コースの有利不利を差し引いた3着内率は、{btxt}。平均STは A型{st.get('A', np.nan):.3f}・B型{st.get('B', np.nan):.3f}・O型{st.get('O', np.nan):.3f}・AB型{st.get('AB', np.nan):.3f}。"
+                f"星座ではいちばん高い{top}といちばん低い{bot}の差が{spread * 100:.1f}ポイント。",
+        "conclusion": (["ふだんと同じ。血液型も星座も関係なかった", "どの血液型も、どの星座も、ほとんど同じ数字。スタートの正確さも変わらない"]
+                       if not any(v["real"] for _, _, v in ms) else ["少し差があった……けど", "血液型ごとの人数のかたよりで出る程度の差"]),
+        "tables": [("星座ごとの3着内率(コースを差し引き)", [{"venue": z, "rno": "", "n": int(zs.loc[z, "size"]), "in1": float(zs.loc[z, "mean"])} for z in zs.index], "3着内率")],
+        "measures": ms,
+        "rules": ["血液型・生年月日は公式の『レーサー期別成績』から。個人の血液型はここには載せない(集計だけ)",
+                  "選手の強さを残したまま、コースの有利不利だけそろえてくらべた"],
+        "faq": [("A1級の割合は?", "、".join(f"{b}型 {a1.get(b, np.nan):.0%}" for b in ("A", "B", "O", "AB")) + "。ここも、ほぼ同じ"),
+                ("星座で3.8ポイントも差があるのは?", f"12個に分けると、たまたまでもこのくらいの差は出る(1つの星座あたり選手は150人ほど)。強い選手が何人か入るだけで動く。いちばん上の{top}もいちばん下の{bot}も、来年は入れ替わっているはず"),
+                ("じゃあ占いは意味ない?", "成績を当てる道具にはならない。でも、推しの星座の運勢を見てから現地に行くのは、ぜんぜんありだと思う")],
+        "use": ["血液型や星座で予想は変えなくていい", "……でも今日の運勢が1位の星座の選手を1人だけ応援する、くらいなら楽しい"],
+        "mikata": "血液型も星座も、ボートの上ではみんな同じだった。でも占いを見てから出かける朝って、ちょっとわくわくするよね",
+        "gen": "俺はO型だから大らかに穴を買う。それでいいじゃねえか。血液型で外れたことにすりゃ、気も楽だしな",
+        "challenge": "今朝の星占いで1位の星座を見て、その星座の選手を出走表から探してみよう(選手の誕生日は公式の選手ページに)",
+        "numbers": {"blood": {n: m["in1"] for n, m, _ in ms}, "st": {k: float(v) for k, v in st.items()}, "zodiac_spread": spread},
+    }
+
+
+def t_height(ent, r):
+    """背の高さは有利? 不利?"""
+    pr = _profiles()
+    x = _adj(ent)
+    base_ = float(x["top3"].mean())
+    x["c1"] = base_ + x["res"]
+    h = x["racer_id"].map(pr["height"]); sex = x["racer_id"].map(pr["sex"])
+    x = x[(sex == "男") & h.notna()].copy(); h = h.loc[x.index]
+    lo, hi = h.quantile(.2), h.quantile(.8)
+    short, tall, mid = h <= lo, h >= hi, h.between(lo + 1, hi - 1)
+    msh, mta = measure(x, short, ref=mid), measure(x, tall, ref=mid)
+    st = x[x["st"].between(0, 0.5) & x["st_flag"].isna()]
+    sts, stt = float(st[short.loc[st.index]]["st"].mean()), float(st[tall.loc[st.index]]["st"].mean())
+    ms = [(f"背が低め(男子{int(lo)}cm以下)", msh, verdicts(msh)), (f"背が高め(男子{int(hi)}cm以上)", mta, verdicts(mta))]
+    return {
+        "id": "height", "title": "背が高い選手は不利?", "belief": "ボートは小さいほうが風の抵抗も少なくて有利。背が高いと不利だ",
+        "subject": "その選手", "verb": "3着以内に入る", "no_market": True, "compare": "真ん中の背の高さの選手(コースの有利不利は差し引き)",
+        "lead": f"男子選手で、背が低め({int(lo)}cm以下)は{per100(msh['in1'])}、高め({int(hi)}cm以上)は{per100(mta['in1'])}、真ん中は{per100(msh['in1_ref'])}。"
+                f"平均STは低め{sts:.3f}・高め{stt:.3f}。",
+        "conclusion": (["ふだんと同じ。背の高さは関係なかった", "体重には最低体重の決まりがあるので、背の高さの差はレースではあまり出ない"]
+                       if not (verdicts(msh)["real"] or verdicts(mta)["real"]) else [f"背が{'低い' if msh['in1'] > mta['in1'] else '高い'}ほうが少し有利", f"低め{per100(msh['in1'])}・高め{per100(mta['in1'])}"]),
+        "tables": [], "measures": ms,
+        "rules": ["身長は公式の『レーサー期別成績』から。男女で体格がちがうので男子選手だけでくらべた",
+                  "体重には最低体重(足りない分はおもりを積む)の決まりがある"],
+        "faq": [("体重のほうが大事?", "体重は『夏は重い選手が不利って本当?』の回へ。当日の体重がふだんより重い日は、はっきり成績が下がっていた")],
+        "use": ["背の高さで予想は変えなくていい"],
+        "mikata": "背の高さは関係なかった。小さな体で大きなボートを操るのも、大きな体で小さく構えるのも、どっちもかっこいい",
+        "gen": "背の高いやつがボートに伏せる姿、あれは美しいんだよ。数字じゃねえんだ",
+        "challenge": "ピットに戻ってくる選手を見て、背の高さとボートの上での構え方をくらべてみよう",
+        "numbers": {"short": msh["in1"], "tall": mta["in1"], "mid": msh["in1_ref"], "st_short": sts, "st_tall": stt},
+    }
+
+
+def t_furusato(ent, r):
+    """生まれ故郷の場で走ると強い?(支部の地元とは別に)"""
+    pr = _profiles()
+    x = _adj(ent)
+    pref_of_jcd = {1: "群馬", 2: "埼玉", 3: "東京", 4: "東京", 5: "東京", 6: "静岡", 7: "愛知", 8: "愛知", 9: "三重", 10: "福井", 11: "滋賀",
+                   12: "大阪", 13: "兵庫", 14: "徳島", 15: "香川", 16: "岡山", 17: "広島", 18: "山口", 19: "山口", 20: "福岡", 21: "福岡",
+                   22: "福岡", 23: "佐賀", 24: "長崎"}
+    vp = x["jcd"].map(pref_of_jcd)
+    home = x["racer_id"].map(pr["hometown"])
+    furu = (home == vp)
+    branch_home = x["branch"] == vp
+    m_both, m_furu, m_br = measure(x, furu & branch_home), measure(x, furu & ~branch_home), measure(x, branch_home & ~furu)
+    ms = [("生まれ故郷で、しかも所属支部の地元", m_both, verdicts(m_both)), ("生まれ故郷だけど、所属支部は別の県", m_furu, verdicts(m_furu)),
+          ("所属支部の地元だけど、生まれは別の県", m_br, verdicts(m_br))]
+    return {
+        "id": "furusato", "title": "生まれ故郷の水面では燃える?", "belief": "地元が強いのは支部だからじゃない。生まれ育った故郷の水面だからだ",
+        "subject": "その選手", "verb": "3着以内に入る", "no_market": True, "compare": SAME,
+        "lead": f"本人のふだんとくらべて、生まれ故郷かつ所属支部の地元で走ると{_pp(m_both)}ポイント。故郷だけど別の支部に所属している選手が故郷で走ると{_pp(m_furu)}、"
+                f"支部の地元だけど生まれは別の県なら{_pp(m_br)}。",
+        "conclusion": [("故郷はちょっとだけ燃える" if m_furu["in1"] > m_furu["in1_ref"] else "故郷より、ふだん走る水面"),
+                       f"故郷だけ{_pp(m_furu)}・支部の地元だけ{_pp(m_br)}・両方{_pp(m_both)}ポイント。差は小さい"],
+        "tables": [], "measures": ms,
+        "rules": ["出身地は公式の『レーサー期別成績』の出身地(都道府県)。県にレース場があるときだけ数えた",
+                  "支部は、ふだん所属して練習している地域。結婚や引っ越しで、生まれと支部がちがう選手もいる"],
+        "faq": [("地元が強いのは、水面に慣れているから?", "支部の地元(ふだん練習する水面)と、生まれ故郷を分けると、どちらが効いているかが少し見える。上の3行をくらべてみて")],
+        "use": ["故郷に帰ってきた選手は、少しだけ気にかける。でもモーターと展示が先"],
+        "mikata": "故郷に帰ってきた選手を見ると、なんだか応援したくなる。数字の差は小さくても、物語は大きいよね",
+        "gen": "故郷の水面で走るやつの背中は、いつもよりでかく見えるんだよ",
+        "challenge": "出走表の選手名から公式の選手ページを開いて、出身地が開催場の県の選手を探してみよう",
+        "numbers": {"both": m_both["in1"] - m_both["in1_ref"], "furusato_only": m_furu["in1"] - m_furu["in1_ref"], "branch_only": m_br["in1"] - m_br["in1_ref"]},
+    }
+
+
 THEORIES = {t["id"]: t for t in []}
 BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke, "tenji": t_tenji, "flying": t_flying, "combo": t_combo,
             "rest": t_rest, "travel": t_travel, "weight": t_weight, "dayno": t_dayno, "twice": t_twice, "tilt": t_tilt,
             "moon": t_moon, "manshu": t_manshu, "lucky7": t_lucky7,
-            "rain": t_rain, "age": t_age, "zorome": t_zorome, "payday": t_payday}
+            "rain": t_rain, "age": t_age, "zorome": t_zorome, "payday": t_payday,
+            "birthday": t_birthday, "blood": t_blood, "height": t_height, "furusato": t_furusato}
 
 
 # ---------------------------------------------------------------- 記事

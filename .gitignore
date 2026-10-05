@@ -4,3 +4,4 @@ models/
 .venv/
 data/notify/
 out/
+data/racers/racers.csv
