@@ -1,0 +1,32 @@
+name: 天気予報をためる
+
+# 24場の1時間ごとの天気予報(風速・風向・突風・気温・降水・気圧)を毎朝と昼に取り、data/weather に追記する(Open-Meteo、無料)
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "10 21 * * *"   # 6:10 JST
+    - cron: "10 2 * * *"    # 11:10 JST(昼の予報の更新)
+
+permissions:
+  contents: write
+
+concurrency:
+  group: weather
+  cancel-in-progress: false
+
+jobs:
+  weather:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q requests pandas numpy
+      - run: python scripts/fetch_weather.py --days 2
+      - name: コミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/commit_files.sh "[CI Skip] data: 天気予報" data/weather/*
