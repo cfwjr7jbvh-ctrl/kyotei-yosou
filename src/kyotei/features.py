@@ -131,6 +131,7 @@ def add_history(df: pd.DataFrame) -> pd.DataFrame:
     df["rc_avgfin"] = _smoothed(df["rc_fin"], df["rc_has"], 3.5, 5)
     df["rc_avgst"] = _smoothed(df["rc_st"], df["rc_hst"], 0.16, 5)
     df["rc_fcount"] = df["rc_fl"].fillna(0)
+    df = add_f_since(df)
     # スタートの安定度(STのばらつき。小さいほど安定)
     msq = _smoothed(df["rc_st2"], df["rc_hst"], 0.16 ** 2 + 0.05 ** 2, 5)
     df["rc_stsd"] = np.sqrt(np.maximum(msq - df["rc_avgst"] ** 2, 1e-4))
@@ -269,6 +270,31 @@ class OnlineRating:
             self.r[rid] = self.r.get(rid, 0.0) + lr * grad[i]
             self.n[rid] = n + 1
         np.add.at(self.lane, lanes - 1, self.lane_lr * grad)
+
+
+def add_f_since(df: pd.DataFrame) -> pd.DataFrame:
+    """最後のフライングから何走目か(その走より前のデータだけ)。
+
+    検証(scripts/lab.py flying、2026-10-05): F直後10走はSTが平均+0.033秒・3着内率-8ポイント、11〜40走は+0.019秒・-3ポイント、
+    41走目以降はほぼ戻る。rc_fcount(180日のF・L回数)より「どれだけ最近か」が効くはず。
+    - f_since    : 最後のFから何走目か(Fが無ければ 200、200で頭打ち)
+    - f_recent   : exp(-f_since/15)(直後ほど1に近い、Fが無ければ0)
+    """
+    if "st_flag" not in df and "result_code" not in df:
+        return df
+    fl = pd.Series(False, index=df.index)
+    for c in ("st_flag", "result_code"):
+        if c in df:
+            fl |= df[c].astype(str) == "F"
+    order = df.sort_values(["racer_id", "date", "rno"] if "rno" in df else ["racer_id", "date"]).index
+    d = pd.DataFrame({"r": df.loc[order, "racer_id"].values, "f": fl.loc[order].values}, index=order)
+    d["k"] = d.groupby("r").cumcount()
+    last = d["k"].where(d["f"]).groupby(d["r"]).ffill()
+    last = last.groupby(d["r"]).shift(1)          # その走より前の行までの、最後のF
+    since = (d["k"] - last).clip(upper=200).fillna(200)
+    df["f_since"] = since.reindex(df.index).values
+    df["f_recent"] = np.where(df["f_since"] >= 200, 0.0, np.exp(-df["f_since"] / 15))
+    return df
 
 
 def add_rating(df: pd.DataFrame) -> pd.DataFrame:

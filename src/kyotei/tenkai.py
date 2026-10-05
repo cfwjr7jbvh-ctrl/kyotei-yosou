@@ -20,7 +20,7 @@ RATE_COLS = {1: ("sashi_rate", 0.024), 2: ("makuri_rate", 0.026), 3: ("makurizas
 TRAIT_COLS = {"nige": "nige_rate", "sashi": "sashi_rate", "makuri": "makuri_rate", "mz": "makurizashi_rate",
               "st": "rc_avgst", "st_sd": "rc_stsd", "st_pred": "st_pred", "front": "front_rate",
               "top3": "rc_top3", "rough": "rough_top3", "local": "rv_top3", "f": "rc_fcount",
-              "motor": "mtx_beat", "series": "sx_beat", "growth": "rating_growth_90"}
+              "motor": "mtx_beat", "series": "sx_beat", "growth": "rating_growth_90", "f_since": "f_since"}
 
 
 def _num(v):
