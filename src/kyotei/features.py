@@ -132,6 +132,7 @@ def add_history(df: pd.DataFrame) -> pd.DataFrame:
     df["rc_avgst"] = _smoothed(df["rc_st"], df["rc_hst"], 0.16, 5)
     df["rc_fcount"] = df["rc_fl"].fillna(0)
     df = add_f_since(df)
+    df = add_body_hist(df)
     # スタートの安定度(STのばらつき。小さいほど安定)
     msq = _smoothed(df["rc_st2"], df["rc_hst"], 0.16 ** 2 + 0.05 ** 2, 5)
     df["rc_stsd"] = np.sqrt(np.maximum(msq - df["rc_avgst"] ** 2, 1e-4))
@@ -297,6 +298,28 @@ def add_f_since(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def add_body_hist(df: pd.DataFrame) -> pd.DataFrame:
+    """からだの調子(その走より前のデータだけ)。
+
+    検証(scripts/lab.py weight・rest、model_lab body 2026-10-05: logloss -0.00105、90%区間が0をまたがない):
+    - rest_days : 前の走からの日数(同じ日の2走目は0)。休み明けは3着内-3.3ポイント、連戦は+2.6
+    - _w_avg30  : 直近30走の当日体重の平均(10走未満は空)。本番の体重との差 w_dev は直前情報が来てから add_late で作る
+    """
+    if "racer_id" not in df or "date" not in df:
+        return df
+    keys = ["racer_id", "date", "rno"] if "rno" in df else ["racer_id", "date"]
+    o = df.sort_values(keys).index
+    g = df.loc[o, "racer_id"]
+    dd = pd.to_datetime(df.loc[o, "date"])
+    df["rest_days"] = dd.groupby(g.values).diff().dt.days.reindex(df.index).values
+    if "weight_now" in df:
+        wn = pd.to_numeric(df.loc[o, "weight_now"], errors="coerce")
+        wn = wn.where(wn > 30)
+        avg = wn.groupby(g.values).transform(lambda s_: s_.shift(1).rolling(30, min_periods=10).mean())
+        df["_w_avg30"] = avg.reindex(df.index).values
+    return df
+
+
 def add_rating(df: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_values(["date", "race_id", "lane"]).reset_index(drop=True)
     rating = OnlineRating()
@@ -427,7 +450,7 @@ def add_matchups(df: pd.DataFrame, pos: pd.Series) -> pd.DataFrame:
 GRADE_WORDS = [("優勝", 6), ("準優", 5), ("ドリーム", 4), ("特選", 3), ("特賞", 3), ("選抜", 3),
                ("予選", 2), ("一般", 1)]
 LATE_ONLY = ("exhibit", "course", "wind", "wave", "ex_st", "tilt", "in_", "out_", "st_adv",
-             "st_pred", "weight_diff", "vw_", "mu_", "air_temp", "water_temp", "temp_")
+             "st_pred", "weight_diff", "w_dev", "vw_", "mu_", "air_temp", "water_temp", "temp_")
 
 
 def race_grade(s) -> int:
@@ -513,6 +536,8 @@ def add_late(df: pd.DataFrame) -> pd.DataFrame:
         df["ex_st_flying"] = (df["ex_st"] < 0).astype(float).where(df["ex_st"].notna())
     if "weight_now" in df:
         df["weight_diff"] = df["weight_now"] - df["weight"]
+        if "_w_avg30" in df:   # 当日体重と、その選手の直近30走の平均との差(重い日は3着内-4.3ポイント)
+            df["w_dev"] = df["weight_now"] - df["_w_avg30"]
     if "wind_dir" in df and "wind" in df:
         ang = (pd.to_numeric(df["wind_dir"], errors="coerce") - 1) * np.pi / 8
         df["wind_x"] = df["wind"] * np.cos(ang)
