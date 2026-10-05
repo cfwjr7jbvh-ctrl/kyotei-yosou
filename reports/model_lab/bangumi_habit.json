@@ -1,0 +1,19 @@
+{
+ "name": "bangumi_habit",
+ "note": "番組の癖(J1): 場×レース番号の過去のイン勝率・枠別勝率(前日まで)を足す",
+ "races": 33528,
+ "base_logloss": 1.2131,
+ "cand_logloss": 1.2125,
+ "delta": -0.00058,
+ "lo90": -0.00132,
+ "hi90": 0.00017,
+ "verdict": "差なし(偶然の範囲)",
+ "made": "2026-10-05 15:54",
+ "base_feats": 147,
+ "cand_feats": 150,
+ "added": [
+  "bg_in1",
+  "bg_lane",
+  "bg_lane_rel"
+ ]
+}

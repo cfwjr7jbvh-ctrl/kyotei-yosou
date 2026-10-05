@@ -1,0 +1,29 @@
+{
+ "name": "st_regressor",
+ "note": "本番STを回帰で予想(st_pred2)し、その隊形の特徴量を足す",
+ "races": 33528,
+ "base_logloss": 1.2131,
+ "cand_logloss": 1.2119,
+ "delta": -0.00122,
+ "lo90": -0.0022,
+ "hi90": -0.00025,
+ "verdict": "改善(偶然ではなさそう)",
+ "made": "2026-10-05 15:51",
+ "base_feats": 147,
+ "cand_feats": 156,
+ "added": [
+  "fm2_inside_faster",
+  "fm2_lead",
+  "fm2_rank",
+  "fm2_vs_in",
+  "fm2_vs_out",
+  "st_pred2",
+  "st_pred2_adv_in",
+  "st_pred2_adv_out",
+  "st_pred2_diff"
+ ],
+ "mae_ex": 0.11614078283309937,
+ "mae_avg": 0.05248919129371643,
+ "mae_st_pred": 0.05354534462094307,
+ "mae_reg": 0.05067441705922664
+}
