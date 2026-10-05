@@ -136,6 +136,7 @@ def main():
     ap.add_argument("--days-before", type=int, default=7)
     ap.add_argument("--n", type=int, default=8, help="注目選手の数")
     ap.add_argument("--no-images", action="store_true")
+    ap.add_argument("--no-all-images", action="store_true", help="出場全員のカード画像は作らない(注目選手だけ)")
     ap.add_argument("--only", default=None, help="この key の節だけ(試すとき)")
     ap.add_argument("--today", default=None, help="YYYY-MM-DD(試すとき)")
     a = ap.parse_args()
@@ -162,6 +163,11 @@ def main():
             pages = [("早見表_待ち受け.png", chart_image_html(title, venue, r["wt"]))] + \
                     [(f"{c['id']}_{c['name']}.png", card_image_html(c, s["jcd"], f"{s['grade']}{venue} 出場選手カード", used))
                      for c, *_x in picks]
+            n_main = len(pages)
+            if not a.no_all_images:  # 出場全員ぶん(推しを探す読者用。note の「推し名簿」に貼れる)
+                pick_ids = {c["id"] for c, *_x in picks}
+                pages += [(f"{c['id']}_{c['name']}.png", card_image_html(c, s["jcd"], f"{s['grade']}{venue} 出場選手カード", used))
+                          for c in r["sel"] if c["id"] not in pick_ids]
             try:
                 pngs = asyncio.run(render_png(pages))
             except Exception as e:  # 描画の道具が無いときは画像なしで続ける
@@ -170,7 +176,7 @@ def main():
             for k, ((name, _), png) in enumerate(zip(pages, pngs)):
                 f = f"{s['key']}_i{k}.json"
                 write_json(out / f, {"name": name, "png": base64.b64encode(png).decode()})
-                images.append({"file": f, "name": name})
+                images.append({"file": f, "name": name, **({"extra": True} if k >= n_main else {})})
         pick_rows = [{"id": c["id"], "name": c["name"], "tag": t["t"]} for c, t, *_x in picks]
         pages_ = save_pages(out, s["key"], r["html"], a.no_images)
         write_json(out / f"{s['key']}.json", {

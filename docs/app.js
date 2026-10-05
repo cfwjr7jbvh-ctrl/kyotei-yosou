@@ -1065,8 +1065,8 @@ async function renderUraOne(box, key) {
   <div class="ura-sec"><h3>X の投稿案</h3>${posts.map((p) =>
     `<div class="ura-post"><div class="n"><span>投稿${p.n}(${p.len}字)${p.warn ? " " + esc(p.warn) : ""}</span><button data-copy="${p.n}">コピー</button></div>${esc(p.body)}</div>`).join("")}
     ${tail ? `<p class="ura-note" style="margin-top:8px;white-space:pre-wrap">${esc(tail)}</p>` : ""}</div>
-  <div class="ura-sec"><h3>選手カードの画像(${d.images.length}枚)</h3><p>長押しかタップで保存。投稿1に注目1人目、投稿2に相性のいい選手。</p>
-    <div class="ura-btns"><button class="sub" id="ura-imgs-load">画像を読み込む</button></div><div class="ura-imgs" id="ura-imgs"></div></div>`;
+  <div class="ura-sec"><h3>選手カードの画像(${d.images.length}枚)</h3><p>長押しかタップで保存。投稿1に注目1人目、投稿2に相性のいい選手。出場全員ぶんは「推し名簿」用。</p>
+    <div class="ura-btns"><button class="sub" id="ura-imgs-load">早見表と注目選手(${d.images.filter((x) => !x.extra).length}枚)</button>${d.images.some((x) => x.extra) ? `<button class="sub" id="ura-imgs-all">出場全員(${d.images.filter((x) => x.extra).length}枚)</button>` : ""}</div><div class="ura-imgs" id="ura-imgs"></div></div>`;
   box.innerHTML = html;
   $("#ura-back").onclick = () => { URA.open = null; renderUra(); };
   $("#ura-open").onclick = () => {
@@ -1113,10 +1113,10 @@ async function renderUraOne(box, key) {
   if ($("#ura-share-img")) $("#ura-share-img").onclick = (e) => shareFiles(e.target, d.pages, "image/png", "png");
   if ($("#ura-share-pdf")) $("#ura-share-pdf").onclick = (e) => shareFiles(e.target, [{ file: d.pdf }], "application/pdf", "pdf");
   $$("[data-copy]", box).forEach((b) => b.onclick = () => copyText(posts.find((p) => p.n === b.dataset.copy).body, b));
-  $("#ura-imgs-load").onclick = async (e) => {
+  const loadImgs = async (e, list) => {
     e.target.disabled = true;
     const wrap = $("#ura-imgs");
-    for (const im of d.images) {
+    for (const im of list) {
       try {
         const x = await getJSON(`api/data/ura/${im.file}`);
         const src = "data:image/png;base64," + x.png;
@@ -1125,6 +1125,8 @@ async function renderUraOne(box, key) {
     }
     e.target.hidden = true;
   };
+  $("#ura-imgs-load").onclick = (e) => loadImgs(e, d.images.filter((x) => !x.extra));
+  if ($("#ura-imgs-all")) $("#ura-imgs-all").onclick = (e) => loadImgs(e, d.images.filter((x) => x.extra));
 }
 
 function renderVenues() {
