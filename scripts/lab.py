@@ -75,6 +75,9 @@ def measure(r: pd.DataFrame, mask: pd.Series, ref: pd.Series | None = None) -> d
         rng = np.random.default_rng(1)
         bt = [float((k := g.iloc[rng.integers(0, len(g), len(g))])["c1"].sum() / k["q1"].sum()) for _ in range(300)]
         m["market_ci"] = [float(np.quantile(bt, 0.05)), float(np.quantile(bt, 0.95))]
+        yo = y.dropna(subset=["q1"])  # 比べる相手(全体)の比。1号艇は人気のわりに来やすい(本命びいきの逆)ので、1.0 ではなくこれと比べる
+        if len(yo) >= 100:
+            m["market_ref"] = float(yo["c1"].mean() / yo["q1"].mean())
     a, b = x[~x["late"]], x[x["late"]]
     ya, yb = y[~y["late"]], y[y["late"]]
     if len(a) >= 50 and len(b) >= 50:
@@ -83,18 +86,52 @@ def measure(r: pd.DataFrame, mask: pd.Series, ref: pd.Series | None = None) -> d
 
 
 def verdicts(m: dict) -> dict:
+    """3つの物差しの答えを、ふだんの言葉で。統計の言い方(区間・相関)は読者に見せない。"""
     d = m["in1"] - m["in1_ref"]
-    out = {"exists": "ある" if abs(d) >= 0.03 and not (m["in1_ci"][0] <= m["in1_ref"] <= m["in1_ci"][1]) else "ほぼ差なし"}
+    real = abs(d) >= 0.03 and not (m["in1_ci"][0] <= m["in1_ref"] <= m["in1_ci"][1])
+    out = {"exists": ("本当にある(ふだんより" + ("多い" if d > 0 else "少ない") + ")") if real else "気のせい(たまたまの範囲)", "real": real}
     if "market_ratio" in m:
         lo, hi = m["market_ci"]
-        out["known"] = "人気どおり(織り込み済み)" if lo <= 1 <= hi else ("人気のわりに来る(ただし控除があるので、得になる水準=1.3以上ではない)" if lo > 1 < 1.3 else
-                                                              ("人気のわりに来る" if lo > 1 else "人気のわりに来ない"))
+        ref = m.get("market_ref", 1.0)
+        if lo <= ref <= hi:
+            out["known"], out["edge"] = "みんな知っている(ほかのレースと同じだけオッズに織り込み済み)", 0
+        elif lo > ref and m.get("n_odds", 0) < 500:  # レース数が少ないうちは「気になる」までにとどめる(8つ調べれば1つは偶然で出る)
+            out["known"], out["edge"] = "オッズの見立てを上回って来ているが、まだレース数が少ない(追試中)", 0
+        elif lo > ref:
+            out["known"], out["edge"] = ("ほかのレースより、オッズの見立てを上回って来る。でも、ひかれる分(25%)を埋めるほどではない" if lo < 1.3 else "知られているより来る"), 1
+        else:
+            out["known"], out["edge"] = "思われているほど来ない", -1
     else:
-        out["known"] = "オッズのデータが足りない"
+        out["known"], out["edge"] = "オッズのデータがまだ足りない", None
     if "half" in m:
         a, b = m["half"]
-        out["stable"] = "前半・後半とも同じ向き" if a * b > 0 and abs(a) >= 0.015 and abs(b) >= 0.015 else "時期で変わる(偶然の幅)"
+        out["stable"] = "前の2年も最近の1年も同じ" if a * b > 0 and abs(a) >= 0.015 and abs(b) >= 0.015 else "年によって変わる(あてにならない)"
     return out
+
+
+def conclusion(t: dict) -> tuple[str, str]:
+    """記事の冒頭に置く結論(ハンコ)。(見出し, ひとこと)。"""
+    vs = [v for _, _, v in t["measures"]]
+    real = any(v.get("real") for v in vs)
+    edge = [v.get("edge") for v in vs if v.get("edge") is not None]
+    if not real:
+        return "気のせい", "ふだんと比べて差がない。たまたまの範囲"
+    if any(e == 1 for e in edge):
+        return "本当。しかも知られていない", "オッズの見立てより来ている。ただし、ひかれる分を埋めるほどではないので、追いかけて確かめる"
+    if all(e == 0 for e in edge) and edge:
+        return "本当。でも、みんな知っている", "差はある。ただしオッズに織り込み済みなので、そのぶん配当は安い"
+    return "本当", "差はある。オッズとの関係はデータを集めて確かめる"
+
+
+def ratio_words(r, ref=None):
+    """オッズとの比を言葉で: 1.04 → 「オッズの見立てより +4%」。ref(全レースの比)があれば並べて書く。"""
+    if r is None or r != r:
+        return "-"
+    d = round((r - 1) * 100)
+    w = "オッズの見立てどおり" if d == 0 else f"オッズの見立てより {d:+d}%"
+    if ref is not None and ref == ref:
+        w += f"(全レースの平均は {round((ref - 1) * 100):+d}%)"
+    return w
 
 
 # ---------------------------------------------------------------- 理論
@@ -122,7 +159,7 @@ def t_bangumi(ent, r):
     return {
         "id": "bangumi", "title": "番組屋の癖は本物か", "belief": "「この場のこのレースはインが堅い」は番組を組む人の癖で、毎年同じ",
         "lead": f"場×レース番号ごとの1号艇の1着率は、いちばん堅い枠で{g['in1'].max():.0%}、いちばん荒れる枠で{g['in1'].min():.0%}。"
-                f"前半2年と後半1年で同じ枠が堅いか(相関)は{corr:.2f}。番組の癖はたしかにあり、年をまたいでも続いている。",
+                f"前の2年で堅かった枠は、最近の1年でもほぼ同じ顔ぶれ(似ている度合い{corr:.2f}、1.00でそっくり)。番組の癖はたしかにあり、年をまたいでも続いている。",
         "tables": [("1号艇が堅い枠(上位8)", rows), ("1号艇が荒れる枠(下位8)", rows2)],
         "measures": [("前半2年で堅かった枠8つ→後半1年", mh, verdicts(mh)), ("前半2年で荒れた枠8つ→後半1年", ms, verdicts(ms))],
         "use": ["出走表を見る前に、その場のその番号の「ふだんの堅さ」を頭に入れる。堅い枠で1号艇が弱そうなら、それ自体がニュース",
@@ -149,13 +186,13 @@ def t_kikaku(ent, r):
         "id": "kikaku", "title": "企画レースのインは信じていいか", "belief": "特別選抜戦やドリーム戦は強い選手が1号艇に来るので、インが堅い",
         "lead": f"レース名ごとの1号艇の1着率は、特別選抜戦{dict((x[0], x[1]['in1']) for x in measures).get('特別選抜戦', 0):.0%}、"
                 f"ドリーム戦{dict((x[0], x[1]['in1']) for x in measures).get('ドリーム戦', 0):.0%}、一般戦{dict((x[0], x[1]['in1']) for x in measures).get('一般戦', 0):.0%}。"
-                f"堅いのは本当。ただしオッズが見込んだ率との比はほとんどが1.0前後で、みんな知っている。"
-                f"目立ったのは{best[0]}の{best[1]['market_ratio']:.2f}({best[1]['n_odds']}レース)だが、まだ偶然の幅に収まる。",
-        "tables": [("レース名ごとの1号艇", rows)],
+                f"堅いのは本当。ただし、どれもオッズの見立てどおりに来ていて、みんな知っている。"
+                f"目立ったのは{best[0]}({ratio_words(best[1]['market_ratio'])}、{best[1]['n_odds']}レース)だが、まだたまたまの範囲。",
+        "tables": [],  # 結果の表と同じ中身なので出さない
         "measures": measures,
         "use": ["企画レースは「インが堅い」より「堅いことが知られている」レース。1号艇を買うなら配当は安い、を前提に考える",
                 "堅いレースこそ、2着・3着の並びで差がつく。差し型・まくり差し型の選手が2〜3号艇にいるかを見る",
-                "1.0を大きく超える企画レースが見つかったら追試する(ミカタは毎週ここを更新する)"],
+                "オッズの見立てを大きく超える企画レースが見つかったら追試する(ミカタは毎週ここを更新する)"],
         "mikata": "『堅い』と『おいしい』は別もの。堅いレースは、2着3着で遊ぶのがコツかも",
         "numbers": {},
     }
@@ -194,7 +231,7 @@ def t_a1in(ent, r):
     return {
         "id": "a1in", "title": "1号艇がA1なら堅いのか", "belief": "予選・一般戦で1号艇にA1級が入ったレースは堅い",
         "lead": f"予選・一般戦で1号艇がA1級のレース({a['n']:,}レース)の1号艇の1着率は{a['in1']:.0%}、B1級なら{b['in1']:.0%}。"
-                f"差は本物。ただしオッズが見込んだ率との比は{a.get('market_ratio', float('nan')):.2f}(A1)と{b.get('market_ratio', float('nan')):.2f}(B1)で、"
+                f"差は本物。ただしA1は{ratio_words(a.get('market_ratio'))}、B1は{ratio_words(b.get('market_ratio'))}で、どちらもオッズの見立てどおり。"
                 "級別はみんな見ている。",
         "tables": [],
         "measures": [("1号艇がA1", a, verdicts(a)), ("1号艇がB1", b, verdicts(b))],
@@ -224,26 +261,50 @@ def table_html(title, rows):
     return f'<h4>{e(title)}</h4><table class="scn lab cells">{head}{body}</table>'
 
 
+def per100(v):
+    return "-" if v is None or v != v else f"{round(v * 100)}回"
+
+
+def mark(v):
+    """表に入れる短い判定。"""
+    ex = "○ 本当" if v.get("real") else "△ たまたま"
+    e_ = v.get("edge")
+    kn = "○ みんな知ってる" if e_ == 0 and "追試中" not in v.get("known", "") else ("！ 見立て超え(追試中)" if "追試中" in v.get("known", "") else
+                                                                       ("！ 見立て超え" if e_ == 1 else ("× 来ない" if e_ == -1 else "- データ不足")))
+    st = v.get("stable")
+    sb = "-" if st is None else ("○ 同じ" if st.startswith("前の2年") else "× 変わる")
+    return ex, kn, sb
+
+
 def measures_html(ms):
+    ref = next((m["market_ref"] for _, m, _ in ms if "market_ref" in m), None)
+    ref_w = f"(全レースの平均は {round((ref - 1) * 100):+d}%)" if ref is not None else ""
     rows = ""
     for name, m, v in ms:
-        rows += (f"<tr><th>{e(name)}</th><td>{m['n']:,}</td><td><b>{pc(m['in1'])}</b><small>(全体{pc(m['in1_ref'])})</small></td>"
-                 f"<td>{m.get('market_ratio', float('nan')):.2f}<small>{e(v['known'])}</small></td><td>{e(v.get('stable', '-'))}</td></tr>")
-    return ('<div class="tw"><table class="scn lab"><tr><th>条件</th><th>レース数</th><th>①1号艇の1着率</th><th>②オッズとの比</th><th>③時期を変えても</th></tr>'
-            + rows + "</table></div>")
+        ex, kn, sb = mark(v)
+        r = m.get("market_ratio")
+        rw = "-" if r is None or r != r else f"{round((r - 1) * 100):+d}%"
+        rows += (f"<tr><th>{e(name)}<small>{m['n']:,}レース</small></th><td><b>{per100(m['in1'])}</b><small>{e(ex)}</small></td>"
+                 f"<td><b>{rw}</b><small>{e(kn)}</small></td><td>{e(sb)}</td></tr>")
+    legend = (f"<p class=\"legend\">①は「100レースで1号艇が勝つ回数」(ふだんは{per100(ms[0][1]['in1_ref'])})。②は「オッズの見立てより何%多く来たか」{e(ref_w)}。"
+              "全レースの平均と同じなら、みんな知っている=配当は安い。③は前の2年と最近の1年で同じ向きか。</p>")
+    return ('<div class="tw"><table class="scn lab"><tr><th>条件</th><th>①本当?</th><th>②知られてる?</th><th>③来年も?</th></tr>'
+            + rows + "</table></div>" + legend)
 
 
 def page(t: dict, asof: str) -> str:
     today = dt.date.today().strftime("%Y.%m.%d")
+    con = conclusion(t)
     tables = "".join(table_html(h, rows) for h, rows in t["tables"])
     use = "".join(f"<li>{e(x)}</li>" for x in t["use"])
     return f"""<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><title>ミカタ検証ラボ {e(t['title'])}</title>{mag.FONTS}<style>{mag.CSS}
 .mag section{{min-width:0}} .tw{{overflow-x:auto;-webkit-overflow-scrolling:touch}}
-.lab{{width:100%;margin:0;min-width:520px}} .lab td,.lab th{{text-align:left;white-space:normal}} .lab td b{{font:700 17px var(--num);color:var(--red)}} .lab small{{display:block;font-size:11px;color:var(--mute);white-space:normal}}
+.lab{{width:100%;margin:0;min-width:0}} .legend{{font-size:12.5px;color:var(--mute);line-height:1.6;margin:8px 0 0}} .lab td,.lab th{{text-align:left;white-space:normal}} .lab td b{{font:700 17px var(--num);color:var(--red)}} .lab small{{display:block;font-size:11px;color:var(--mute);white-space:normal}}
 .lab.cells{{min-width:0}} .lab.cells td,.lab.cells th{{white-space:nowrap}}
 .belief{{margin:0;font:700 clamp(16px,4.2vw,20px)/1.7 var(--serif);border-left:6px solid var(--yellow);padding:4px 0 4px 14px;background:rgba(255,225,0,.18)}}
 .gauge{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:8px}} .gauge div{{background:var(--card);border:2px solid var(--rule);padding:10px 12px}}
 .gauge b{{display:block;font:400 15px var(--head);color:var(--red)}} .gauge span{{font-size:13px}}
+.st-box{{background:var(--red);color:#fff;padding:14px 16px}} .st-box b{{display:block;font:400 clamp(20px,5.5vw,28px)/1.3 var(--head)}} .st-box p{{margin:6px 0 0;font-size:14px;line-height:1.6}}
 .mag h4{{margin:14px 0 6px;font:400 17px var(--head)}} .side ul{{font-size:14.5px}}
 </style></head><body>
 <header class="cover"><div class="lanebar"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cv-in">
@@ -253,24 +314,27 @@ def page(t: dict, asof: str) -> str:
 <div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ(カモメの記者)<br>公式の成績データ 2023-10〜{e(asof)} を独自に集計</span></div></div></header>
 <main class="mag">
 <section class="opener"><span class="label">検証する説</span><p class="belief">{e(t['belief'])}</p></section>
-<section><span class="label">3つの物差し</span><div class="gauge"><div><b>① あるか</b><span>その現象が本当に起きているか(率と、偶然の幅)</span></div>
-<div><b>② 知られているか</b><span>オッズが見込んだ率との比。1.0なら人気どおり=みんな知っている</span></div>
-<div><b>③ 続くか</b><span>前半2年と後半1年で同じ向きに出るか</span></div></div></section>
+<section class="stamp"><span class="label">ミカタの結論</span><div class="st-box"><b>{e(con[0])}</b><p>{e(con[1])}</p></div></section>
+<section><span class="label">3つの物差し</span><div class="gauge"><div><b>① 本当にある?</b><span>「ふだん」と比べて差があるか。同じ数のレースをサイコロで決めても出るくらいの差なら「たまたま」</span></div>
+<div><b>② みんな知ってる?</b><span>オッズは「みんなの予想」。1号艇はどのレースでもオッズの見立てより少し多く来るので、その「全レースの平均」と同じなら、知られている=配当は安い</span></div>
+<div><b>③ 来年も同じ?</b><span>前の2年と最近の1年で、同じ向きに出るか。出なければ一時のもの</span></div></div></section>
 <section><span class="label">結果</span>{measures_html(t['measures'])}{tables}</section>
 <section class="side"><h3>予想への活かし方</h3><ul>{use}</ul></section>
 <blockquote class="ft-quote">{gull_svg(64, bg="#ffffff", cls="q")}<p><small>ミカタのひと言</small>{e(t['mikata'])}</p></blockquote>
-<section class="method"><h3>データについて</h3><p>公式の成績データ(番組表・競走成績)と、締切時のオッズ(集めたレース分)を自分たちで集計。「オッズとの比」は、実際に1号艇が勝った割合を、オッズから見込まれる割合(控除を除いた市場の見立て)で割ったもの。
-偶然の幅は、日ごとにまとめて引き直した90%区間。この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
+<section class="method"><h3>データについて</h3><p>公式の成績データ(番組表・競走成績)と、締切時のオッズ(集めたレース分)を自分たちで集計。「オッズの見立て」は、締切時のオッズから、ひかれる分(控除)を除いて逆算した1号艇の勝つ見込み。
+「たまたまの範囲」は、同じ数のレースを何度も引き直したときに出るブレの幅(統計でいう90%区間)で判定。この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
 <footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ検証ラボ ・ 毎週1本。競艇をいろんな角度から。買い目は売りません。</span></footer></main></body></html>"""
 
 
 def note_text(t: dict) -> str:
+    con = conclusion(t)
     out = [f"【タイトル案】", f"1. {t['title']}|{t['belief'][:24]}…をデータで検証", f"2. 検証ラボ:{t['title']} 3つの物差しで確かめた", "",
-           "■検証する説", t["belief"], "", "■結論", t["lead"], "", "■3つの物差し",
-           "①その現象は本当にあるか ②みんな知っているか(オッズが見込んだ率との比、1.0=人気どおり) ③時期を変えても出るか", ""]
+           "■検証する説", t["belief"], "", f"■ミカタの結論:{con[0]}", con[1], "", "■くわしく", t["lead"], "", "■3つの物差し",
+           "①本当にある?(ふだんと比べて、たまたまでは出ない差か) ②みんな知ってる?(オッズの見立てどおりなら知られている=配当は安い) ③来年も同じ?(前の2年と最近の1年で同じ向きか)", ""]
     for name, m, v in t["measures"]:
-        out.append(f"・{name}:{m['n']:,}レース、1号艇の1着率{pc(m['in1'])}(全体{pc(m['in1_ref'])})→ {v['exists']}。"
-                   f"オッズとの比{m.get('market_ratio', float('nan')):.2f} → {v['known']}。{v.get('stable', '')}")
+        ex, kn, sb = mark(v)
+        out.append(f"・{name}({m['n']:,}レース): 100レースで1号艇が勝つのは{per100(m['in1'])}(ふだんは{per100(m['in1_ref'])})→ {ex}。"
+                   f"{ratio_words(m.get('market_ratio'), m.get('market_ref'))} → {kn}。来年も同じか: {sb}")
     for h, rows in t["tables"]:
         out += ["", f"■{h}"] + [f"・{x['venue']}{x['rno']}{'R' if x['rno'] != '' else ''} {pc(x['in1'])}({x['n']:,}レース)" for x in rows]
     out += ["", "■予想への活かし方"] + [f"・{x}" for x in t["use"]] + ["", f"ミカタのひと言:「{t['mikata']}」", "",
@@ -280,10 +344,11 @@ def note_text(t: dict) -> str:
 
 def x_text(t: dict) -> str:
     m = t["measures"][0][1]
-    body = (f"【検証ラボ】{t['title']}\n\n説:{t['belief']}\n\n調べたら:{t['lead'].split('。')[0]}。\n\n"
-            f"オッズとの比は{m.get('market_ratio', float('nan')):.2f}(1.0=人気どおり)。\n\nみんなはこの説、信じてた?")
+    con = conclusion(t)
+    body = (f"【検証ラボ】{t['title']}\n\n説:{t['belief']}\n\n結論:{con[0]}\n{t['lead'].split('。')[0]}。\n\n"
+            f"{ratio_words(m.get('market_ratio'))}。\n\nみんなはこの説、信じてた?")
     if xlen(body) > 280:
-        body = f"【検証ラボ】{t['title']}\n\n{t['lead'].split('。')[0]}。\n\nオッズとの比{m.get('market_ratio', float('nan')):.2f}(1.0=人気どおり)。\n\nみんなはこの説、信じてた?"
+        body = f"【検証ラボ】{t['title']}\n\n結論:{con[0]}\n{t['lead'].split('。')[0]}。\n\n{ratio_words(m.get('market_ratio'))}。\n\nみんなはこの説、信じてた?"
     return f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 紙面の上部のスクリーンショットか、表の部分"
 
 

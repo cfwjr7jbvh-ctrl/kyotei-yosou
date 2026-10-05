@@ -800,13 +800,13 @@ function evCheckHTML(d) {
   return `<div class="box"><h3>期待値で買った場合の検証<small>全期間</small></h3>
     <p>${ymd(a.period[0])} 〜 ${ymd(a.period[1])} のオッズのある ${a.races.toLocaleString()} レースを、そのレースより前のデータだけで学習したモデルで予想し直し、確定オッズで1点100円買った場合(本番より少し甘め: 本番は締切前のオッズで判断)。</p>
     <h4 class="tb">AIの狙い目と同じ買い方<small>期待値100%以上を高い順に3点まで</small></h4>
-    <div class="stats">${stat("回収率", pc0(pr.roi), pr.roi >= 1 ? "good" : "bad")}${stat("90%区間", ci0(pr.roi_ci90))}
+    <div class="stats">${stat("回収率", pc0(pr.roi), pr.roi >= 1 ? "good" : "bad")}${stat("ブレの幅", ci0(pr.roi_ci90))}
       ${stat("点数", pr.bets.toLocaleString())}${stat("的中", `${pr.hits}<small>本</small>`)}</div>
     <p class="tbn">${half(d.first_half, "前半")}・${half(d.second_half, "後半")}。期待値100%以上を全部買うと ${pc0(ev.roi)}(${ev.bets.toLocaleString()}点)</p>
     <h4 class="tb">期待値の帯ごと</h4>
-    <div class="scroll"><table class="tbl"><thead><tr><th>期待値</th><th>点数</th><th>的中</th><th>回収率</th><th>90%区間</th></tr></thead>
+    <div class="scroll"><table class="tbl"><thead><tr><th>期待値</th><th>点数</th><th>的中</th><th>回収率</th><th>ブレの幅</th></tr></thead>
     <tbody>${rows}</tbody></table></div>
-    <p class="tbn">90%区間は日ごとに引き直したブレの幅。期待値が高い組ほど当たりにくく、見積もりのずれも大きい。${bl ? `モデルとオッズを合わせた本当の期待値で100%を超えた組は、この期間で ${bl.bets.toLocaleString()}点だけ(「期待値のある買い目」がめったに出ないのはこのため)。` : ""}</p></div>`;
+    <p class="tbn">「ブレの幅」は、同じ買い方を続けても、たまたまでこのくらい上下するという目安(統計でいう90%区間)。期待値が高い組ほど当たりにくく、見積もりのずれも大きい。${bl ? `モデルとオッズを合わせた本当の期待値で100%を超えた組は、この期間で ${bl.bets.toLocaleString()}点だけ(「期待値のある買い目」がめったに出ないのはこのため)。` : ""}</p></div>`;
 }
 // 全期間の検証がまだ無いとき: 学習レポートの直近のテスト期間の分
 function evRecentHTML(e) {
@@ -890,7 +890,7 @@ function demeHTML() {
     <p>${esc(d.period[0])} 〜 ${esc(d.period[1])} の公式の結果から、その出目を毎回100円ずつ買い続けた場合の成績。</p>
     ${sel}<div class="dm-q"><input type="text" inputmode="text" value="${esc(DEME.q)}" placeholder="例 3-256-256 / 1-2-全 / BOX135" aria-label="出目・フォーメーション"></div>
     ${body}
-    <p class="note dm-note">注意: 回収率100%超えの出目があっても、たまたまの可能性が高いです。約${(sc.n_tests || 0).toLocaleString()}通り(出目×条件)を総当たりした検証では、前半2年で100〜120%だった買い方の後半1年の平均は${band ? Math.round(band.conf_mean * 100) : "-"}%、信頼区間の下限まで100%を超えたものは${sc.passed ?? 0}件でした。</p>
+    <p class="note dm-note">注意: 回収率100%超えの出目があっても、たまたまの可能性が高いです。約${(sc.n_tests || 0).toLocaleString()}通り(出目×条件)を総当たりした検証では、前半2年で100〜120%だった買い方の後半1年の平均は${band ? Math.round(band.conf_mean * 100) : "-"}%、ブレの幅の下限まで100%を超えたものは${sc.passed ?? 0}件でした。</p>
     ${wrows ? `<h4 class="tb">出目ウォッチ<small>${esc(w.since)} の検証で前半・後半とも100%超え → その後のレースで追跡</small></h4>
       <div class="scroll"><table class="tbl dm"><thead><tr><th class="l">条件・出目</th><th>検証時(前半→後半)</th><th>その後の回収率</th></tr></thead><tbody>${wrows}</tbody></table></div>` : ""}`;
 }
