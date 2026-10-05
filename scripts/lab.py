@@ -237,7 +237,7 @@ def page(t: dict, asof: str) -> str:
     today = dt.date.today().strftime("%Y.%m.%d")
     tables = "".join(table_html(h, rows) for h, rows in t["tables"])
     use = "".join(f"<li>{e(x)}</li>" for x in t["use"])
-    return f"""<title>ミカタ検証ラボ {e(t['title'])}</title>{mag.FONTS}<style>{mag.CSS}
+    return f"""<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><title>ミカタ検証ラボ {e(t['title'])}</title>{mag.FONTS}<style>{mag.CSS}
 .mag section{{min-width:0}} .tw{{overflow-x:auto;-webkit-overflow-scrolling:touch}}
 .lab{{width:100%;margin:0;min-width:520px}} .lab td,.lab th{{text-align:left;white-space:normal}} .lab td b{{font:700 17px var(--num);color:var(--red)}} .lab small{{display:block;font-size:11px;color:var(--mute);white-space:normal}}
 .lab.cells{{min-width:0}} .lab.cells td,.lab.cells th{{white-space:nowrap}}
@@ -245,7 +245,7 @@ def page(t: dict, asof: str) -> str:
 .gauge{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:8px}} .gauge div{{background:var(--card);border:2px solid var(--rule);padding:10px 12px}}
 .gauge b{{display:block;font:400 15px var(--head);color:var(--red)}} .gauge span{{font-size:13px}}
 .mag h4{{margin:14px 0 6px;font:400 17px var(--head)}} .side ul{{font-size:14.5px}}
-</style>
+</style></head><body>
 <header class="cover"><div class="lanebar"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cv-in">
 <div class="cv-top"><div class="brand">ミカタ検証ラボ<small>「◯◯理論」を同じ物差しで試す</small></div><div class="issue"><b>LAB</b><br>{e(today)}</div></div>
 <p class="cv-kicker">今週の理論</p><h1 class="cv-h">{e(t['title'])}</h1>
@@ -261,7 +261,7 @@ def page(t: dict, asof: str) -> str:
 <blockquote class="ft-quote">{gull_svg(64, bg="#ffffff", cls="q")}<p><small>ミカタのひと言</small>{e(t['mikata'])}</p></blockquote>
 <section class="method"><h3>データについて</h3><p>公式の成績データ(番組表・競走成績)と、締切時のオッズ(集めたレース分)を自分たちで集計。「オッズとの比」は、実際に1号艇が勝った割合を、オッズから見込まれる割合(控除を除いた市場の見立て)で割ったもの。
 偶然の幅は、日ごとにまとめて引き直した90%区間。この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
-<footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ検証ラボ ・ 毎週1本。競艇をいろんな角度から。買い目は売りません。</span></footer></main>"""
+<footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ検証ラボ ・ 毎週1本。競艇をいろんな角度から。買い目は売りません。</span></footer></main></body></html>"""
 
 
 def note_text(t: dict) -> str:

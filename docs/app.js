@@ -1058,7 +1058,7 @@ async function renderUraOne(box, key) {
   box.innerHTML = html;
   $("#ura-back").onclick = () => { URA.open = null; renderUra(); };
   $("#ura-open").onclick = () => {
-    const url = URL.createObjectURL(new Blob([d.html], { type: "text/html" }));
+    const url = URL.createObjectURL(new Blob(["\ufeff", d.html], { type: "text/html;charset=utf-8" }));
     window.open(url, "_blank");
   };
   $("#ura-inline").onclick = (e) => {

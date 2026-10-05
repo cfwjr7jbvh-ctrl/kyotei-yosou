@@ -39,8 +39,7 @@ export async function onRequestGet({ params, env }) {
   if (!obj || obj.enc !== 1) return new Response("not found", { status: 404 });
   const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64d(obj.iv) }, aes, b64d(obj.ct));
   const art = JSON.parse(new TextDecoder().decode(pt));
-  const html = `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex,nofollow">${art.html}
+  const html = `${art.html.startsWith("<!doctype") ? art.html.replace(/<\/body><\/html>\s*$/, "") : `<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex,nofollow">${art.html}`}
 <div style="max-width:960px;margin:0 auto;padding:0 16px 32px;font:13px/1.6 system-ui,sans-serif;color:#5e5848">この記事はミカタ新聞の読者から共有されたページです。買い目は売っていません。舟券は20歳になってから。</div></body></html>`;
   return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "private, max-age=300", "X-Robots-Tag": "noindex" } });
 }

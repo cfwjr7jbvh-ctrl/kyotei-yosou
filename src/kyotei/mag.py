@@ -255,11 +255,14 @@ def diagram(cat: str) -> str:
         slit = '<path d="M150 44V160" stroke="#e60012" stroke-width="2.5" stroke-dasharray="5 4"/>'
         boats = "".join(f'<rect x="{124 if i == 2 else 100}" y="{48 + 18 * i}" width="28" height="12" rx="6" fill="{LANE_BG[i]}" stroke="#111" stroke-width="2"/>'
                         for i in range(6))
-        return (f'<figure class="dg"><svg viewBox="0 0 {W} {H}" role="img" aria-label="スタートで一艇だけ前に出る図">{lanes}{slit}{boats}'
-                f'<text x="158" y="40" font-size="12" font-weight="700" fill="#e60012">スリット</text></svg>'
+        stand = '<rect x="0" y="158" width="300" height="12" fill="#111"/><text x="150" y="167.5" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">スタンド(観客席)</text>'
+        return (f'<figure class="dg"><svg viewBox="0 0 {W} {H}" role="img" aria-label="スタートで一艇だけ前に出る図"><g transform="translate({W} 0) scale(-1 1)">{lanes}{slit}{boats}</g>'
+                f'<text x="{W - 158}" y="40" font-size="12" font-weight="700" fill="#e60012" text-anchor="end">スリット</text>{stand}</svg>'
                 f'<figcaption>スリットで一艇だけ前に出る。ここから主導権が生まれる(模式図)</figcaption></figure>')
-    return (f'<figure class="dg"><svg viewBox="0 0 {W} {H}" role="img" aria-label="{e(label)}">{defs}{lanes}{mark}{paths}'
-            f'<text x="44" y="68" font-size="11" font-weight="700" fill="#111">1マーク</text></svg><figcaption>{e(label)}(模式図)</figcaption></figure>')
+    stand = '<rect x="0" y="158" width="300" height="12" fill="#111"/><text x="150" y="167.5" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">スタンド(観客席)</text>'
+    return (f'<figure class="dg"><svg viewBox="0 0 {W} {H}" role="img" aria-label="{e(label)}">{defs}<g transform="translate({W} 0) scale(-1 1)">{lanes}{mark}{paths}</g>'
+            f'<text x="{W - 44}" y="68" font-size="11" font-weight="700" fill="#111" text-anchor="middle">1マーク</text>{stand}</svg>'
+            f'<figcaption>{e(label)}(スタンドから見た模式図。艇は左から右へ走り、1マークを左に回る)</figcaption></figure>')
 
 
 # ---------------------------------------------------------------- 紙面
@@ -546,8 +549,8 @@ def page(title: str, venue: str | None, picks, sel: list[dict], wt: dict, trend:
     sides_html = "".join(f'<section class="side"><h3>{e(h)}</h3>{b}</section>' for h, b in sides)
     shown = list(dict.fromkeys(("上り調子" if x["t"] == "急成長中" else x["t"]) for c, *_x in picks for x in c["tags"][:5]))
     basis = "".join(f"<dt>{e(k)}</dt><dd>{e(rules[k])}</dd>" for k in shown if k in rules)
-    return f"""<title>ミカタ新聞 {e(title)}</title>
-{FONTS}<style>{CSS}</style>
+    return f"""<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><title>ミカタ新聞 {e(title)}</title>
+{FONTS}<style>{CSS}</style></head><body>
 {f'<div class="note-top">{e(note)}</div>' if note else ''}
 {cover(title, grade, name, venue, len(sel), len(picks), trend, hook, period, today)}
 <main class="mag">
@@ -568,7 +571,7 @@ def page(title: str, venue: str | None, picks, sel: list[dict], wt: dict, trend:
 <dl>{basis}</dl>
 <p>この新聞は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
 <footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ新聞 ・ 文・データ ミカタ(カモメの記者)・ {e(today)}<br>競艇をいろんな角度から。買い目は売りません。</span></footer>
-</main>"""
+</main></body></html>"""
 
 
 WALL_CSS = """
