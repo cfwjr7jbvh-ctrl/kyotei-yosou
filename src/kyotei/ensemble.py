@@ -15,8 +15,22 @@ from .models import PLLogit, _race_tensor, race_softmax
 from .plackett import PERMS3, fit_discount, pl_trifecta_matrix, trifecta_logprob_batch
 
 
+def align_extra(extra, race_ids):
+    """(ids, E2, E3) を race_ids の順に並べ替える(無いレースは0=影響なし)。None はそのまま。"""
+    if extra is None:
+        return None
+    ids, E2, E3 = extra
+    pos = pd.Series(np.arange(len(ids)), index=ids).reindex(race_ids)
+    ok = pos.notna().values
+    idx = pos.fillna(0).astype(int).values
+    A2 = np.where(ok[:, None, None], E2[idx], 0.0)
+    A3 = np.where(ok[:, None, None, None], E3[idx], 0.0)
+    return A2, A3
+
+
 class Stacker:
-    def fit(self, df: pd.DataFrame, probs: dict[str, np.ndarray]):
+    def fit(self, df: pd.DataFrame, probs: dict[str, np.ndarray], cond=None):
+        """cond=(race_id の配列, L2, L3): 2着・3着の条件付きモデル(models.RaceCond.cond)。あれば重みを学ぶ。"""
         self.names = list(probs)
         d = df[["race_id", "lane", "finish"]].copy()
         for k, p in probs.items():
@@ -31,12 +45,17 @@ class Stacker:
         zc = [f"_z{i}" for i in range(len(self.names))]
         z = pd.DataFrame(self.pl._prep(d).values, columns=zc, index=d.index)
         z[["race_id", "lane", "finish"]] = d[["race_id", "lane", "finish"]]
-        X, mask, fin, *_ = _race_tensor(z, zc)
+        X, mask, fin, uniq, *_ = _race_tensor(z, zc)
         ok = (np.nan_to_num(fin, nan=99) <= 3).sum(1) == 3
         X, mask, fin = X[ok], mask[ok], fin[ok]
         o = np.argsort(np.nan_to_num(fin, nan=99), axis=1)[:, :3]
         r = np.arange(len(X))
         k = X.shape[2]
+        C2 = C3 = None
+        if cond is not None:  # 条件付きモデルの log P(2着=j | 1着) と log P(3着=k | 1着, 2着) を特徴量に
+            A2, A3 = align_extra(cond, uniq[ok])
+            C2 = A2[r, o[:, 0]][:, :, None]
+            C3 = A3[r, o[:, 0], o[:, 1]][:, :, None]
         # 1着艇(2着艇)との位置関係のボーナス: 「1着の枠×自分の枠」ごとの一定値(例: 4号艇がまくると5号艇が続きやすい)
         lanes = np.arange(6)[None, :]
         E1 = np.zeros((len(X), 6, 36))
@@ -47,12 +66,23 @@ class Stacker:
         pen3 = np.r_[np.full(k, 1e-4), np.full(72, 1e-3)]
         avail = mask.copy()
         avail[r, o[:, 0]] = False
-        th2 = _fit_conditional(np.concatenate([X, E1], 2), avail, o[:, 1], pen2)
+        parts2 = [X, E1] + ([C2] if C2 is not None else [])
+        th2 = _fit_conditional(np.concatenate(parts2, 2), avail, o[:, 1], np.r_[pen2, [1e-4] * (C2 is not None)])
         avail[r, o[:, 1]] = False
-        th3 = _fit_conditional(np.concatenate([X, E1, E2], 2), avail, o[:, 2], pen3)
-        self.w2, self.b2 = th2[:k], th2[k:].reshape(6, 6)
-        self.w3, self.b3a, self.b3b = th3[:k], th3[k:k + 36].reshape(6, 6), th3[k + 36:].reshape(6, 6)
+        parts3 = [X, E1, E2] + ([C3] if C3 is not None else [])
+        th3 = _fit_conditional(np.concatenate(parts3, 2), avail, o[:, 2], np.r_[pen3, [1e-4] * (C3 is not None)])
+        self.w2, self.b2 = th2[:k], th2[k:k + 36].reshape(6, 6)
+        self.w3, self.b3a, self.b3b = th3[:k], th3[k:k + 36].reshape(6, 6), th3[k + 36:k + 72].reshape(6, 6)
+        self.wc2 = float(th2[k + 36]) if C2 is not None else None
+        self.wc3 = float(th3[k + 72]) if C3 is not None else None
         return self
+
+    def cond_extra(self, cond):
+        """条件付きモデルの出力に学んだ重みをかけ、3連単確率の追加項 (ids, E2, E3) にする。重みが無ければ None。"""
+        if cond is None or getattr(self, "wc2", None) is None:
+            return None
+        ids, L2, L3 = cond
+        return ids, L2 * self.wc2, L3 * self.wc3
 
     @property
     def bonus(self):
@@ -87,6 +117,8 @@ class Stacker:
             sd = self.pl.sd.values
             out.update({f"2nd_{k}": v for k, v in zip(self.names, np.round(self.w2 / sd, 3))})
             out.update({f"3rd_{k}": v for k, v in zip(self.names, np.round(self.w3 / sd, 3))})
+        if getattr(self, "wc2", None) is not None:
+            out["2nd_race_cond"], out["3rd_race_cond"] = round(self.wc2, 3), round(self.wc3, 3)
         return out
 
 
@@ -122,10 +154,11 @@ def race_matrix(d: pd.DataFrame, col: str = "p"):
     return P.values[ok], orders[ok]
 
 
-def evaluate(d: pd.DataFrame, races: pd.DataFrame, col: str, lam2=1.0, lam3=1.0, s_cols=None, bonus=None) -> dict:
+def evaluate(d: pd.DataFrame, races: pd.DataFrame, col: str, lam2=1.0, lam3=1.0, s_cols=None, bonus=None, extra=None) -> dict:
     """的中率・対数損失・回収率(払戻金から計算できる戦略)をまとめて出す。
 
     s_cols=(列名, 列名) を渡すと、その列を2着・3着の強さとして3連単確率を作る(Stacker.strengths)。
+    extra=(ids, E2, E3) は条件付きモデルの追加項(Stacker.cond_extra)。
     """
     d = d.sort_values(["race_id", "lane"])
     P = d.pivot(index="race_id", columns="lane", values=col).reindex(columns=range(1, 7)).fillna(1e-6)
@@ -144,11 +177,12 @@ def evaluate(d: pd.DataFrame, races: pd.DataFrame, col: str, lam2=1.0, lam3=1.0,
     res = {"races": int(n)}
     res["win_logloss"] = float(-np.log(Pv[r, orders[:, 0]]).mean())
     res["win_hit"] = float((Pv.argmax(1) == orders[:, 0]).mean())
-    res["tri_logloss"] = float(-trifecta_logprob_batch(Pv, orders, lam2, lam3, S2, S3, bonus).mean())
+    EX = align_extra(extra, rid)
+    res["tri_logloss"] = float(-trifecta_logprob_batch(Pv, orders, lam2, lam3, S2, S3, bonus, EX).mean())
 
     def tri(i):
         return pl_trifecta_matrix(Pv[i], lam2, lam3, None if S2 is None else S2[i], None if S3 is None else S3[i],
-                                  bonus)
+                                  bonus, None if EX is None else (EX[0][i], EX[1][i]))
 
     rc = races.set_index("race_id").reindex(rid)
     tri_pay = rc["tri_pay"].values.astype(float)

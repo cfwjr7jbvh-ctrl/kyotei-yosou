@@ -59,7 +59,12 @@ def predict_win(bundle, stage, df):
             X[c] = np.nan
     probs = {k: m.predict_proba(X) for k, m in st["models"].items()}
     stack = st["stack"]
-    return stack.predict(X, probs), stack, stack.strengths(X, probs)
+    extra = {}
+    if st.get("cond") is not None:  # 2着・3着の条件付きモデル(D21): レースごとの追加項 {race_id: (E2, E3)}
+        ex = stack.cond_extra(st["cond"].cond(X))
+        if ex is not None:
+            extra = {rid: (ex[1][i], ex[2][i]) for i, rid in enumerate(ex[0])}
+    return stack.predict(X, probs), stack, (*stack.strengths(X, probs), extra)
 
 
 def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=None, blend_ab=None,
@@ -68,11 +73,12 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
     w = np.full(6, 1e-6)
     w[rdf["lane"].values - 1] = p_win
     w = w / w.sum()
-    s2 = s3 = None
-    if s23 is not None:  # 2着・3着の強さ(着順ごとの重み)
+    s2 = s3 = extra = None
+    if s23 is not None:  # 2着・3着の強さ(着順ごとの重み)と、条件付きモデルの追加項
         s2, s3 = np.full(6, 1e-9), np.full(6, 1e-9)
-        s2[rdf["lane"].values - 1], s3[rdf["lane"].values - 1] = s23
-    pm = model_tri_probs(w, stack.lam2, stack.lam3, s2, s3, getattr(stack, "bonus", None))
+        s2[rdf["lane"].values - 1], s3[rdf["lane"].values - 1] = s23[0], s23[1]
+        extra = s23[2].get(rdf["race_id"].iloc[0]) if len(s23) > 2 and s23[2] else None
+    pm = model_tri_probs(w, stack.lam2, stack.lam3, s2, s3, getattr(stack, "bonus", None), extra)
     p_final, bets, market, pick = pm, [], None, []
     if odds is not None and np.isfinite(odds).sum() >= 100:
         pk = market_probs(odds)
@@ -232,12 +238,12 @@ def morning(day: dt.date):
         update_index()
         return
     bundle = load_bundle()
-    p, stack, (s2, s3) = predict_win(bundle, "early", df)
+    p, stack, (s2, s3, extra) = predict_win(bundle, "early", df)
     df["p"], df["s2"], df["s3"] = p, s2, s3
     out = {"date": day.isoformat(), "model_built_at": bundle.get("built_at"), "races": []}
     for rid, rdf in df.groupby("race_id", sort=True):
         out["races"].append(race_payload(rdf, rdf["p"].values, stack, "early",
-                                         s23=(rdf["s2"].values, rdf["s3"].values)))
+                                         s23=(rdf["s2"].values, rdf["s3"].values, extra)))
     out["races"].sort(key=lambda r: (r["deadline"] or "", r["jcd"]))
     write_json(DAYS / f"{day.isoformat()}.json", out)
     update_index()

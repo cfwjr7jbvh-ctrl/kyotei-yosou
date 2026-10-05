@@ -28,8 +28,8 @@ from kyotei.arashi import confirm as arashi_confirm  # noqa: E402
 from kyotei.data import load_history  # noqa: E402
 from kyotei.betting import (COMBOS, BetFilter, backtest_ev, blend, entropy,  # noqa: E402
                             fit_blend, market_probs, model_tri_probs, odds_matrix)
-from kyotei.ensemble import Stacker, evaluate  # noqa: E402
-from kyotei.models import available_models, race_softmax  # noqa: E402
+from kyotei.ensemble import Stacker, align_extra, evaluate  # noqa: E402
+from kyotei.models import RaceCond, available_models, race_softmax  # noqa: E402
 from kyotei.plackett import trifecta_logprob_batch  # noqa: E402
 from kyotei.publish import write_json  # noqa: E402
 
@@ -51,7 +51,7 @@ def win_matrix(df, p, race_ids):
 PER_RACE: dict[str, pd.DataFrame] = {}  # 改良案の比較用: テストの各レースの誤差
 
 
-def per_race_losses(ev, stack):
+def per_race_losses(ev, stack, extra=None):
     """テストの各レースの誤差(1着・3連単)。比較で「レース単位の差」の信頼区間を出すのに使う(evaluate と同じ計算)。"""
     d = ev.sort_values(["race_id", "lane"])
 
@@ -65,7 +65,8 @@ def per_race_losses(ev, stack):
     S2 = piv("s2", 1e-9).values[ok] if "s2" in d else None
     S3 = piv("s3", 1e-9).values[ok] if "s3" in d else None
     win = -np.log(Pv[np.arange(len(Pv)), o[:, 0]])
-    tri = -trifecta_logprob_batch(Pv, o, stack.lam2, stack.lam3, S2, S3, getattr(stack, "bonus", None))
+    tri = -trifecta_logprob_batch(Pv, o, stack.lam2, stack.lam3, S2, S3, getattr(stack, "bonus", None),
+                                  align_extra(extra, P.index[ok].values))
     return pd.DataFrame({"race_id": P.index[ok], "win": win, "tri": tri})
 
 
@@ -78,7 +79,10 @@ def run_stage(stage, df, races, tr, va, te, report, log):
         log(f"  fitted {M.name}")
     pv = {k: m.predict_proba(va) for k, m in models.items()}
     pt = {k: m.predict_proba(te) for k, m in models.items()}
-    stack = Stacker().fit(va, pv)
+    cond = RaceCond(feats).fit(tr)  # 2着・3着の条件付きモデル(D21)。スタッカーが重みを学ぶ
+    log("  fitted race_cond")
+    stack = Stacker().fit(va, pv, cond=cond.cond(va))
+    extra = stack.cond_extra(cond.cond(te))
     res = {}
     ev = te[["race_id", "lane", "finish"]].copy()
     ev["p"] = lane_baseline(tr, te)
@@ -90,8 +94,8 @@ def run_stage(stage, df, races, tr, va, te, report, log):
     s23 = stack.strengths(te, pt)  # 2着・3着の強さ(着順ごとの重み)
     ev["p"] = p_ens
     ev["s2"], ev["s3"] = s23
-    res["ensemble"] = evaluate(ev, races, "p", stack.lam2, stack.lam3, s_cols=("s2", "s3"), bonus=stack.bonus)
-    PER_RACE[stage] = per_race_losses(ev, stack)
+    res["ensemble"] = evaluate(ev, races, "p", stack.lam2, stack.lam3, s_cols=("s2", "s3"), bonus=stack.bonus, extra=extra)
+    PER_RACE[stage] = per_race_losses(ev, stack, extra)
     report["stages"][stage] = {
         "n_features": len(feats), "metrics": res,
         "ensemble_weights": {k: float(v) for k, v in stack.weights().items()},
@@ -103,7 +107,7 @@ def run_stage(stage, df, races, tr, va, te, report, log):
     show = ["win_logloss", "win_hit", "tri_logloss", "tri_hit_top1", "tri_hit_top5",
             "roi_win_top1", "roi_tri_top1", "roi_tri_top5"]
     log(pd.DataFrame(res).T[show].to_string())
-    return feats, models, stack, p_ens, s23
+    return feats, models, stack, p_ens, s23, cond, extra
 
 
 def segment_analysis(te, p_ens):
@@ -178,7 +182,7 @@ def pos_calibration(PM, PK, PB, y) -> dict:
     return out
 
 
-def ev_analysis(te, p_ens, stack, races, odds, report, log, s23=None):
+def ev_analysis(te, p_ens, stack, races, odds, report, log, s23=None, extra=None):
     rids = np.sort(te["race_id"].unique())
     O = odds_matrix(odds, rids)
     has = np.isfinite(O).sum(1) >= 100
@@ -192,7 +196,9 @@ def ev_analysis(te, p_ens, stack, races, odds, report, log, s23=None):
     W = win_matrix(te, p_ens, rids)
     if s23 is not None:
         S2, S3 = win_matrix(te, s23[0], rids), win_matrix(te, s23[1], rids)
-        PM = np.array([model_tri_probs(w, stack.lam2, stack.lam3, a, b, stack.bonus) for w, a, b in zip(W, S2, S3)])
+        EX = align_extra(extra, rids)
+        PM = np.array([model_tri_probs(w, stack.lam2, stack.lam3, a, b, stack.bonus, None if EX is None else (EX[0][i], EX[1][i]))
+                       for i, (w, a, b) in enumerate(zip(W, S2, S3))])
     else:
         PM = np.array([model_tri_probs(w, stack.lam2, stack.lam3) for w in W])
     PK = np.array([market_probs(o) for o in O])
@@ -264,10 +270,10 @@ def main():
               "stages": {}}
     bundle = {"stages": {}, "blend": None, "bet_filter": None}
     for stage in ("early", "late"):
-        feats, models, stack, p_ens, s23 = run_stage(stage, df, races, tr, va, te, report, log)
+        feats, models, stack, p_ens, s23, cond, extra = run_stage(stage, df, races, tr, va, te, report, log)
         report["stages"][stage]["segments"] = segment_analysis(te, p_ens)
         if stage == "late" and odds is not None:
-            res = ev_analysis(te, p_ens, stack, races, odds, report, log, s23)
+            res = ev_analysis(te, p_ens, stack, races, odds, report, log, s23, extra)
             if res:
                 bundle["blend"], bundle["bet_filter"] = res
             ac = arashi_walk_forward()
@@ -280,7 +286,8 @@ def main():
         full = pd.concat([tr, va])
         for k in models:
             models[k] = type(models[k])(feats).fit(full)
-        bundle["stages"][stage] = {"feats": feats, "models": models, "stack": stack}
+        cond = RaceCond(feats).fit(full)
+        bundle["stages"][stage] = {"feats": feats, "models": models, "stack": stack, "cond": cond}
         log(f"[{stage}] refit done")
 
     out = pathlib.Path(args.out)
