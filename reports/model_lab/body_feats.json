@@ -1,0 +1,19 @@
+{
+ "name": "body_feats",
+ "note": "当日体重の直近30走との差・休み明けの日数・F後の走数を足す",
+ "races": 33528,
+ "base_logloss": 1.2131,
+ "cand_logloss": 1.2121,
+ "delta": -0.00105,
+ "lo90": -0.00164,
+ "hi90": -0.00046,
+ "verdict": "改善(偶然ではなさそう)",
+ "made": "2026-10-06 00:15",
+ "base_feats": 147,
+ "cand_feats": 150,
+ "added": [
+  "f_since",
+  "rest_days",
+  "w_dev"
+ ]
+}
