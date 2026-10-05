@@ -343,7 +343,7 @@ def render(title: str, venue_name: str | None, picks, all_cards, corners: list[t
 <div class="wrap">
 <header class="mast"><div class="seal">{gull_svg(64, bg="#f8faf2")}</div><div><h1>{e(title)} 出場選手をデータで読む</h1>
 <p>{e(venue_name + '開催 ・ ' if venue_name else '')}注目選手 {len(picks)}人 ・ 集計 {e(meta['period'][0])}〜{e(meta['asof'])} ・ 下書き {today}</p></div></header>
-<p class="lead">{note}公式の予想紙・スポーツ紙とは別の切り口で、選手の「型」と「相性」をデータで読む下書きです。数字はすべて公式の成績データを自分たちで集計したもので、<b>見出しはどれも下の基準を満たした数字に基づいています</b>。</p>
+<p class="lead">{note}公式の予想紙・スポーツ紙とは別の切り口で、選手の「型」をデータで読む下書きです。使っているのは、時期を変えても同じ選手に出ると確かめた本物の型だけ(ジンクスの検証は後半)。数字はすべて公式の成績データを自分たちで集計したもので、<b>見出しはどれも下の基準を満たした数字に基づいています</b>。</p>
 {blocks}
 {nerai_block}
 <div class="corners">{cor}</div>
@@ -405,12 +405,14 @@ def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str]
            f"{title}{'(' + venue_name + ')' if venue_name else ''}の出場予定{n_all}人を、過去3年・約17万レースの成績から読みました。",
            "このノートは買い目を売るものではありません。あなたが自分で予想するときに「へえ、この人はこういう型なのか」と使える材料を集めたものです。",
            "(もともとは、友達と現地で観戦するときに「この選手ってどんな型?」と話したくて集め始めたデータです)",
+           "使っているのは、時期を変えても同じ選手に出ると確かめた「本物の型」だけ。逆に、よく言われるジンクスの多くは偶然でした(後半で全部見せます)。",
            "", "■この記事でわかること",
            f"・データで目立つ注目{n_pick}人と、それぞれの“型”",
            "・狙い目の早見表:コースが決まったら、誰がそのコースで強いかがすぐわかる",
            "・展示STを信じていい選手" + (f"、{venue_name}の傾向" if trend else ""),
            "・いま伸びている選手(成長指数)、よく当たるライバル",
-           "・「勝負駆けに強い」「○○巧者」は本物? ジンクスをデータで確かめた結果",
+           "・大一番はここが違う(優勝戦・準優・選抜の指数)",
+           "・「勝負駆けに強い」「最終レースは荒れる」「3-2.5.6-2.5.6」は本物? ジンクス・オカルト検証",
            f"・保存版:出場{n_all}人全員のひと言タグ一覧(現地観戦のおともに)", ""]
     out += pick_lines(1, picks[0])
     if trend:
@@ -475,11 +477,22 @@ def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: l
         p2 = f"注目選手のカードを1枚だけ先に公開。{picks[0][0]['name']}は「{picks[0][1]['t']}」"
     p3 = (f"注目{len(picks)}人の“型”、コースが決まったら使える狙い目の早見表、全{n_all}人のひと言タグ一覧はnoteにまとめました"
           f"(現地観戦のおともに)\n\n(noteのURL)\n\n#競艇 #ボートレース {tag}")
+    extra = []
+    for x in occult_data().get("occult", []):
+        if x["key"] == "r12":
+            extra.append(f"「最終レースは荒れる」って本当?\n\n過去3年で調べたら逆でした。人気薄で決まった割合は12Rが{x['value']:.0%}、ほかのレースは{x['ref']:.0%}。\n"
+                         "12Rは強い選手が1号艇に入る番組が多いから、かも。\n\nみんなの「信じてるジンクス」教えてください")
+        if x["key"] == "3256":
+            extra.append(f"「3-2.5.6-2.5.6」は熱いのか、過去のオッズと結果で確かめました。\n\n人気のわりに来た割合は{x['value']:.2f}(1.0が人気どおり)。\n"
+                         "熱くも冷たくもない、人気どおりでした。\n\nでも、信じて買うのも競艇の楽しみ。みんなの推し出目は?")
+        if x["key"] == "home":
+            extra.append(f"「地元の選手は強い」は本当でした。ただし小さめ。\n\n同じ選手で比べると、地元の3着内率は平均{x['value'] * 100:+.1f}ポイント。\n"
+                         "一方で「誰が○○巧者か」は、時期を変えるとほぼ入れ替わる(偶然の幅が大きい)。\n\nみんなは地元選手、買う派?")
     out = []
-    for i, p in enumerate((p1, p2, p3), 1):
+    for i, p in enumerate((p1, p2, p3, *extra), 1):
         warn = "  ※140字を超えています" if len(p) > 140 else ""
-        out += [f"--- 投稿{i}({len(p)}字){warn} ---", p, ""]
-    out.append("画像: 投稿1に注目1人目のカード、投稿2に今回の場と相性のいい選手のカードを添える")
+        out += [f"--- 投稿{i}({len(p)}字){warn}{'  ※小ネタ(別の日に単独で)' if i > 3 else ''} ---", p, ""]
+    out.append("画像: 投稿1に注目1人目のカードを添える。投稿2は文字だけでよい(場の傾向の数字が主役)")
     out.append("出し方: noteのリンクは最後の投稿だけ(本文にリンクがあると届きにくい)。平日の12時台か20〜23時、初日の前日の夜がおすすめ。"
                "返信が来たら返す(返信のやりとりがいちばん評価される)")
     return "\n".join(out)
@@ -488,6 +501,51 @@ def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: l
 JINX = [("kake", "勝負駆けに強い選手"), ("big", "準優・優勝戦に強い選手"), ("rough", "荒れ水面に強い選手"),
         ("venue", "場との相性(○○巧者)"), ("first", "節の初戦に強い選手"), ("late_y", "予選の後半に上げてくる選手")]
 REAL = [("st", "平均ST"), ("front", "前づけ率"), ("makuri", "まくりで勝つ割合")]
+
+
+def occult_data() -> dict:
+    p = ROOT / "reports/occult.json"
+    import json as _json
+    return _json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+
+
+def scene_lines() -> list[str]:
+    """場面ごとに「いつもとどう違うか」(予選と比べる。scripts/occult_check.py)。"""
+    sc = occult_data().get("scenes", {})
+    b = sc.get("予選")
+    if not b:
+        return []
+    out = []
+    for k in ("選抜・特選", "ドリーム戦", "準優勝戦", "優勝戦"):
+        x = sc.get(k)
+        if not x:
+            continue
+        out.append(f"{k}:1号艇の1着率{x['c1']:.0%}(予選{b['c1']:.0%})、平均ST{str(round(x['st'], 3))[1:]}(予選{str(round(b['st'], 3))[1:]})、"
+                   f"進入が動いた{x['moved']:.0%}(予選{b['moved']:.0%})、まくり・まくり差しの決着{x['makuri']:.0%}(予選{b['makuri']:.0%})")
+    rs = occult_data().get("racer_scene", {}).get("st_big", {})
+    if rs.get("r") is not None:
+        out.append(f"選手ごとの「大一番でSTを上げてくる度合い」は相関{rs['r']:.2f}とそこまで安定しない。場面の違いは全員に共通、と見るのがよさそう")
+    return out
+
+
+def occult_lines() -> list[str]:
+    """よく聞くオカルトの検証(scripts/occult_check.py)。お金の額は出さない。"""
+    out = []
+    for x in occult_data().get("occult", []):
+        k, v, r = x["key"], x["value"], x["ref"]
+        if k == "rain":
+            out.append(f"「雨の日はインが弱い」→ {x['verdict']}。1号艇の1着率は雨{v:.1%}・晴れや曇り{r:.1%}({x['note']})")
+        elif k == "r12":
+            out.append(f"「最終レースは荒れる」→ {x['verdict']}。人気薄で決まった割合は12Rが{v:.0%}、ほかが{r:.0%}。"
+                       f"12Rは強い選手が1号艇に入る番組が多いため({x['note']})")
+        elif k == "home":
+            out.append(f"「地元の選手は強い」→ {x['verdict']}。同じ選手で比べて3着内率が平均{v * 100:+.1f}ポイント。{x['note']}")
+        elif k == "3256":
+            out.append(f"「3-2.5.6-2.5.6は熱い」→ {x['verdict']}(人気のわりに来た割合{v:.2f}、1.0が人気どおり)。熱くも冷たくもない")
+        elif k == "123":
+            out.append(f"「1-2-3はよく来る」→ {x['verdict']}(人気のわりに来た割合{v:.2f})。いちばん来る出目({x['note']})。"
+                       "ただし控除があるので、買い続けて得になるほどではない")
+    return out
 
 
 def jinx_lines() -> list[str]:
@@ -548,12 +606,24 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
             + "</ul><p>成長指数=直近90日の勝率の伸び×0.41。伸びの4割ほどは次の3か月も残る、という過去3年の平均から</p>"))
         txt += ["■いま伸びている(成長指数)"] + [f"・{c['name']} 成長指数 {c['growth']['index']:+.2f}(勝率{c['growth']['prev']:.2f}→{c['growth']['pts90']:.2f})" for c in gr[:5]] + \
                ["※成長指数=直近90日の勝率の伸び×0.41(伸びの4割ほどは次の3か月も残る、という過去3年の平均から)"]
-    jinx = jinx_lines()
-    if jinx:
-        corners.append(("ジンクスは本物? データで確かめた", "<ul>" + "".join(f"<li>{e(x)}</li>" for x in jinx) + "</ul>"
-                        "<p>同じ選手を奇数月と偶数月に分け、片方で強い選手がもう片方でも強いかの相関(1に近いほど本物、0に近いほど偶然)</p>"))
-        txt += ["■ジンクスは本物? データで確かめた"] + [f"・{x}" for x in jinx] + \
-               ["※同じ選手を奇数月と偶数月に分け、片方で強い選手がもう片方でも強いかの相関(1に近いほど本物、0に近いほど偶然)"]
+    scn = scene_lines()
+    if scn:
+        corners.append(("大一番はここが違う(場面ごとの指数)", "<ul>" + "".join(f"<li>{e(x)}</li>" for x in scn) + "</ul>"
+                        "<p>過去3年の全レースを場面ごとに集計。予選と比べた違い</p>"))
+        txt += ["■大一番はここが違う(場面ごとの指数)"] + [f"・{x}" for x in scn] + ["※過去3年の全レースを場面ごとに集計。予選と比べた違い"]
+    jinx, occ = jinx_lines(), occult_lines()
+    if jinx or occ:
+        body = ""
+        if jinx:
+            body += "<p>選手の「○○に強い」は本物?</p><ul>" + "".join(f"<li>{e(x)}</li>" for x in jinx) + "</ul>"
+        if occ:
+            body += "<p style='margin-top:6px'>よく聞くオカルト</p><ul>" + "".join(f"<li>{e(x)}</li>" for x in occ) + "</ul>"
+        body += ("<p style='margin-top:6px'>相関は、同じ選手を奇数月と偶数月に分けて、片方で強い選手がもう片方でも強いか(1に近いほど本物)。"
+                 "データ的には偶然でも、信じて買うのも競艇の楽しみ。こういう見方もあるよ、ということで</p>")
+        corners.append(("ジンクス・オカルト検証", body))
+        txt += ["■ジンクス・オカルト検証", "(選手の「○○に強い」は本物?)"] + [f"・{x}" for x in jinx] + ["(よく聞くオカルト)"] + [f"・{x}" for x in occ] + \
+               ["※相関は、同じ選手を奇数月と偶数月に分けて、片方で強い選手がもう片方でも強いか(1に近いほど本物)。",
+                "データ的には偶然でも、信じて買うのも競艇の楽しみ。こういう見方もあるよ、ということで"]
     # 選手同士の相性: 対戦の多い組(よく当たるライバル)を、両方の先着数で並べる(負けた側だけを強調しない)
     h2h = rc.head_to_head(d, [c["id"] for c in sel], min_meet=10)
     name = {c["id"]: c["name"] for c in sel}
