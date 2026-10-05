@@ -2619,6 +2619,128 @@ def t_series(ent, r):
     }
 
 
+def t_fixed(ent, r):
+    """進入固定レースってなに? インは強くなる? それとも番組で強い選手を1号艇に置いているだけ?"""
+    fx = ent.drop_duplicates("race_id").set_index("race_id")["fixed_entry"]
+    x = r.copy(); x["fx"] = x["race_id"].map(fx) == 1
+    vs = x.loc[x["fx"], "jcd"].unique()
+    x = x[x["jcd"].isin(vs)].copy()
+    gap = ent.groupby("race_id").apply(lambda g: g.loc[g["lane"] == 1, "nat_win_rate"].mean() - g.loc[g["lane"] != 1, "nat_win_rate"].mean())
+    x["gap"] = x["race_id"].map(gap)
+    nari = ent.groupby("race_id").apply(lambda g: bool((g["course"] == g["lane"]).all()))
+    x["nari"] = x["race_id"].map(nari)
+    m1 = measure(x, x["fx"], ref=~x["fx"]); m1["ref_label"] = "同じ場の、固定でないレース"
+    same = x["gap"].between(1, 2, inclusive="right")
+    m2 = measure(x, x["fx"] & same, ref=~x["fx"] & same); m2["ref_label"] = "固定でない(同じくらいの力の差)"
+    v1, v2 = verdicts(m1), verdicts(m2)
+    bins = [(-9, 0, "1号艇のほうが弱い"), (0, 1, "少し強い(勝率+0〜1)"), (1, 2, "強い(+1〜2)"), (2, 9, "とても強い(+2以上)")]
+    tbl = []
+    for lo, hi, nm in bins:
+        b = x["gap"].between(lo, hi, inclusive="right")
+        a_, c_ = x[b & x["fx"]], x[b & ~x["fx"]]
+        tbl.append([nm, _n100(a_["c1"].mean()), _n100(c_["c1"].mean()), f"{len(a_):,}"])
+    venues = x.loc[x["fx"], "jcd"].map(lambda j: VENUES[int(j)]).value_counts()
+    gap_f, gap_n = float(x.loc[x["fx"], "gap"].mean()), float(x.loc[~x["fx"], "gap"].mean())
+    nari_n = float(x.loc[~x["fx"], "nari"].mean())
+    beat = v1.get("edge") == 1
+    return {
+        "id": "fixed", "title": "進入固定レースってなに? インは強くなる?",
+        "belief": "進入固定は1号艇が堅い。でもそれは、番組で強い選手を1号艇に置いているからだろ。固定そのものは関係ねえ",
+        "subject": "1号艇", "unit": "レース",
+        "lead": f"進入固定は、1〜6号艇が必ず枠番どおりのコースに入るレース。前づけができない。このデータでは{len(venues)}場が使っていて、多いのは{'・'.join(venues.index[:3])}。"
+                f"1号艇が勝つのは100レースで{_n100(m1['in1'])}回(同じ場の固定でないレースは{_n100(m1['in1_ref'])}回)。たしかに固定のレースは1号艇に強い選手が置かれやすい"
+                f"(1号艇とほかの5人の勝率の差: 固定{gap_f:+.1f}、固定でない{gap_n:+.1f})。でも、力の差が同じくらいのレースどうしでくらべても、固定のほうが{_diff_words(m2, '勝つ')}。"
+                + ("しかもオッズの見込みより多い(追試中)。" if beat else ""),
+        "conclusion": ["半分ウソ。番組もあるけど、固定そのものでも1号艇は強くなる",
+                       f"力の差が同じくらいでも、固定のレースは1号艇が100レースで{_diff_words(m2, '勝つ')}。前づけがないので、1号艇は助走を十分にとれる"],
+        "tables": [("1号艇とほかの5人の力の差(全国勝率の差)ごとの、1号艇の1着(100レースあたり)", tbl, ["1号艇の強さ", "固定", "固定でない", "固定のレース数"])],
+        "measures": [("進入固定のレースの1号艇", m1, v1), ("力の差が同じくらい(勝率+1〜2)で、進入固定", m2, v2)],
+        "rules": ["進入固定競走: 1〜6号艇が枠番どおりに進入することが決まっているレース。出走表や新聞に前もって書かれる(公式の用語解説)",
+                  "ふつうのレースでは、外の艇が内に入る『前づけ』ができる。固定のレースではできない",
+                  f"くらべたのは、進入固定を使っている場の中だけ。固定でないレースでも、枠なりは100レースに{_n100(nari_n)}回",
+                  "力の差: 1号艇の全国勝率から、ほかの5人の全国勝率の平均を引いた数"],
+        "faq": [("どの場が進入固定をやっている?", f"このデータでは{'・'.join(venues.index)}。朝のレースや企画レースなど、場ごとに決まったレースで使われることが多い"),
+                ("なぜ固定だと1号艇が強い?", "前づけで内に入ってくる艇がいないので、1号艇は深くならず、助走を十分にとれる。スタートも速くなる(1コースの平均STが早い)"),
+                ("固定のレースは買い?", "1号艇は強いけど、人気も集まる。オッズの見込みとくらべてどうかは、レース数が少ないので追いかけ中")],
+        "use": ["出走表の『進入固定』の文字を見たら、1号艇の信頼度を一段上げる", "力の差があまりない固定レースこそ、1号艇がいつもより来る"],
+        "mikata": "前づけのドキドキはないけど、そのぶん1号艇がのびのび走れる。レースの性格がはっきりしているのも、予想しやすくて楽しいね",
+        "gen": "固定は強い選手を1号艇に置いてるだけだと思ってたよ。並びが決まってるだけで、そんなに変わるもんなんだな",
+        "challenge": "次に進入固定のレースを見つけたら、1号艇のスタートが他のレースより速いか、展示から見てみよう",
+        "numbers": {"venues": venues.to_dict(), "gap": [gap_f, gap_n], "nari_nonfixed": nari_n},
+    }
+
+
+def _race_kind(t):
+    t = str(t)
+    if "優勝戦" in t and "準" not in t:
+        return "優勝戦"
+    if "準優" in t:
+        return "準優勝戦"
+    if "予選" in t:
+        return "予選"
+    return "その他"
+
+
+def t_final(ent, r):
+    """準優・優勝戦ならではの考え方と数字。枠の決まり方、1号艇の強さ、スタートは控える? 準優は2着でいい?"""
+    x = r.copy(); x["kind"] = x["race_title"].map(_race_kind)
+    kinds = x.set_index("race_id")["kind"]
+    e = ent.copy(); e["kind"] = e["race_id"].map(kinds); e["dt"] = pd.to_datetime(e["date"])
+    st = e["st"].where(e["st"].between(0, 0.6) & (e["st_flag"] != "F"))
+    e["st_dev"] = st - st.groupby(e["racer_id"]).transform("mean")
+    e["F"] = (e["result_code"].astype(str) == "F").astype(float)
+    pre = x["kind"] == "予選"
+    ms_, mf_ = measure(x, x["kind"] == "準優勝戦", ref=pre), measure(x, x["kind"] == "優勝戦", ref=pre)
+    for m_ in (ms_, mf_):
+        m_["ref_label"] = "予選"
+    vs, vf = verdicts(ms_), verdicts(mf_)
+    # 優勝戦の枠: 前の日の準優で何着だったか
+    semi = e[e["kind"] == "準優勝戦"][["jcd", "dt", "racer_id", "finish", "lane"]].copy(); semi["dt"] = semi["dt"] + pd.Timedelta(days=1)
+    fin = e[e["kind"] == "優勝戦"][["jcd", "dt", "racer_id", "lane"]]
+    j = fin.merge(semi, on=["jcd", "dt", "racer_id"], how="inner", suffixes=("", "_semi"))
+    in13 = float((j.loc[j["lane"] <= 3, "finish"] == 1).mean()); out46 = float((j.loc[j["lane"] >= 4, "finish"] == 2).mean())
+    f1_from1 = float((j.loc[j["lane"] == 1, "lane_semi"] == 1).mean())
+    # 1号艇が負けたときの2着残り(同じくらいの人気でくらべる)
+    c1 = ent[ent["lane"] == 1].drop_duplicates("race_id").set_index("race_id")["finish"]
+    x["f1"] = x["race_id"].map(c1)
+    lose = x[(x["f1"] > 1) & x["f1"].notna() & x["q1"].between(0.65, 0.8)]
+    sec_semi = float((lose.loc[lose["kind"] == "準優勝戦", "f1"] == 2).mean()); sec_pre = float((lose.loc[lose["kind"] == "予選", "f1"] == 2).mean())
+    tbl = []
+    for k in ("予選", "準優勝戦", "優勝戦"):
+        g = x[x["kind"] == k]; ge = e[e["kind"] == k]
+        sd = float(ge["st_dev"].mean())
+        tbl.append([k, _n100(g["c1"].mean()), _n100(g["upset"].mean()), "ほぼ同じ" if abs(sd) < 0.003 else f"{abs(sd):.3f}秒{'早い' if sd < 0 else '遅い'}", f"{ge['F'].mean() * 1000:.1f}回"])
+    lanes = x[x["kind"] == "優勝戦"]["win_lane"].value_counts(normalize=True).sort_index()
+    ltbl = [[f"{int(k)}号艇", _n100(v)] for k, v in lanes.items()]
+    st_f = float(e.loc[e["kind"] == "優勝戦", "st_dev"].mean()); f_f = float(e.loc[e["kind"] == "優勝戦", "F"].mean() * 1000); f_p = float(e.loc[e["kind"] == "予選", "F"].mean() * 1000)
+    return {
+        "id": "final", "title": "準優・優勝戦ならではの考え方",
+        "belief": "優勝戦はフライングの罰が重いから、みんなスタートを控える。準優は2着でいいから、1号艇も無理はしない",
+        "subject": "1号艇", "unit": "レース",
+        "lead": f"予選の上位18人が準優勝戦(3レース)に進み、各レースの1着と2着が優勝戦へ。データで見ると、優勝戦の1〜3号艇は準優の1着の人({fun_rate(in13)})、4〜6号艇は準優の2着の人({fun_rate(out46)})。"
+                f"1号艇が勝つのは100レースで、予選{_n100(ms_['in1_ref'])}回、準優{_n100(ms_['in1'])}回、優勝戦{_n100(mf_['in1'])}回。"
+                f"そして『罰が重いから控える』はウソ。優勝戦のスタートは本人のふだんより{abs(st_f):.3f}秒早く、フライングも1000走で{f_f:.1f}回(予選は{f_p:.1f}回)。大一番は攻める。",
+        "conclusion": ["ウソ。大一番は、むしろ攻める",
+                       f"準優・優勝戦はスタートがふだんより早く、フライングも多い。1号艇は準優で{_n100(ms_['in1'])}回、優勝戦で{_n100(mf_['in1'])}回勝つ(オッズも知っている)。"
+                       f"『準優は2着でいい』は数字には出ない(1号艇が負けたときの2着残りは、同じくらいの人気なら予選とほぼ同じ)"],
+        "tables": [("レースの種類ごとの数字(1号艇の1着・万舟は100レースあたり、STは本人のふだんとくらべて)", tbl, ["レース", "1号艇1着", "万舟", "ST", "F(1000走)"]),
+                   ("優勝戦の、枠ごとの1着(100レースあたり)", ltbl, ["枠", "1着"])],
+        "measures": [("準優勝戦の1号艇", ms_, vs), ("優勝戦の1号艇", mf_, vf)],
+        "rules": ["準優勝戦: 予選の得点の上位(ふつう18人)が3レースに分かれて走り、各レースの1着・2着が優勝戦に進む(公式の用語解説)",
+                  f"枠の決まり方(このデータで確認): 準優は予選の順位が上の人ほど内の枠。優勝戦は、準優1着の人が1〜3号艇、2着の人が4〜6号艇。優勝戦の1号艇の{fun_rate(f1_from1)}は、準優を1号艇から勝った人",
+                  "フライングの罰: 優勝戦・準優勝戦のフライングは、大きな大会(SG・G1・G2)に出られない期間が長くなる。SGの優勝戦なら24か月(公式のお知らせ、令和5年度から)。事故点も優勝戦は重い"],
+        "faq": [("準優は2着でいいから、1号艇は2着に残りやすい?", f"1号艇の人気が同じくらい(勝つ見込み65〜80%)のレースで、1号艇が負けたときの2着残りは、準優{_n100(sec_semi)}回・予選{_n100(sec_pre)}回(100回あたり)。『2着でいい走り』は数字には出なかった"),
+                ("優勝戦の外枠は?", f"6号艇の優勝は100レースで{_n100(lanes.get(6, 0))}回。4〜6号艇は準優2着の人なので、内の3人より予選の成績が下のことが多い"),
+                ("なぜ大一番で攻める?", "優勝すれば賞金も名誉も大きい。上位の選手はもともとスタートが得意で、ここ一番で踏み込む。罰が重くても、勝ちに行く気持ちのほうが強いのかも")],
+        "use": ["優勝戦は1号艇が強い(人気どおり)。勝負は2着・3着の並び", "大一番はスタートが早くなる。ふだんのSTが近い選手が並んでいたら、スリットの差は小さいと見る",
+                "準優の枠は予選の順位で決まる。予選の最終日は、上位の人が『準優の内枠』を取りに行く勝負駆けにも注目"],
+        "mikata": "優勝戦の6人がピットを出る瞬間は、何度見てもドキドキする。罰が重くても踏み込む、それが大一番なんだね",
+        "gen": "優勝戦はFが怖くて控えると思ってたけどな……。違うのか。やっぱり勝負師だな、あいつらは",
+        "challenge": "次の優勝戦で、6人のふだんのSTと、本番のSTをくらべてみよう。何人が『ふだんより早い』かな",
+        "numbers": {"in13": in13, "out46": out46, "f1_from1": f1_from1, "sec": [sec_semi, sec_pre], "st_final": st_f, "F": [f_f, f_p]},
+    }
+
+
 THEORIES = {t["id"]: t for t in []}
 BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke, "tenji": t_tenji, "flying": t_flying, "combo": t_combo,
             "rest": t_rest, "travel": t_travel, "weight": t_weight, "dayno": t_dayno, "twice": t_twice, "tilt": t_tilt,
@@ -2627,7 +2749,7 @@ BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in"
             "birthday": t_birthday, "blood": t_blood, "height": t_height, "furusato": t_furusato,
             "pressure": t_pressure, "humid": t_humid, "heat": t_heat,
             "lane6": t_lane6, "motor": t_motor, "entry": t_entry,
-            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season, "penalty": t_penalty, "slowdash": t_slowdash, "formation": t_formation, "samefin": t_samefin, "series": t_series}
+            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season, "penalty": t_penalty, "slowdash": t_slowdash, "formation": t_formation, "samefin": t_samefin, "series": t_series, "fixed": t_fixed, "final": t_final}
 
 
 # ---------------------------------------------------------------- 記事
