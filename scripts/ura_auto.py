@@ -70,7 +70,8 @@ async def render_png(pages: list[tuple[str, str]]) -> list[bytes]:
         pg = await b.new_page(viewport={"width": 1080, "height": 1350}, device_scale_factor=1)
         for _, html in pages:
             await pg.set_content(html)
-            await pg.wait_for_timeout(150)
+            await pg.evaluate("document.fonts.ready")   # 見出しと数字のフォント(Google Fonts)が届くまで待つ
+            await pg.wait_for_timeout(300)
             out.append(await pg.screenshot(clip={"x": 0, "y": 0, "width": 1080, "height": 1350}))
         await b.close()
     return out

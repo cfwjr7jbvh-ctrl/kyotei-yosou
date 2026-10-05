@@ -19,7 +19,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from kyotei import nerai  # noqa: E402
+from kyotei import mag, nerai  # noqa: E402
 from kyotei import racer_card as rc  # noqa: E402
 from kyotei.card_render import gull_svg, radar_svg  # noqa: E402
 
@@ -186,106 +186,198 @@ def course_line(bc: dict | None, c: dict) -> str:
             f"({g}の{bc['c']}コース平均は1着率{bc['avg_win']:.0%}・3着内率{bc['avg_top3']:.0%}。本人のほかのコースと比べても上)")
 
 
+def stars(t: dict) -> str:
+    """タグの強さ(同じ級別の中での位置)を★で。★★★=上位1%、★★=上位5%、★=上位10%。位置で決まらないタグは空。"""
+    sc = t.get("score")
+    if t.get("cat") in ("front", "growth", "exlate", "ex2") or sc is None:
+        return ""
+    return "★★★" if sc >= 99 else "★★" if sc >= 95 else "★" if sc >= 90 else ""
+
+
+def big_stat(c: dict, t: dict) -> tuple[str, str]:
+    """注目選手の一番大きく出す数字(タグの根拠と同じもの)。"""
+    k, cat = c["kim"], t["cat"]
+    if cat == "start":
+        return rc.st_fmt(c["st"]["avg"]), "平均ST"
+    if cat == "ex":
+        return f"{c['ex']['mae']:.3f}", "展示と本番のSTのずれ(秒)"
+    if cat == "ex2":
+        return f"{c['ex']['delta']:+.2f}", "展示→本番のST(秒)"
+    if cat == "nige":
+        return f"{k['nige']['w'] / max(1, k['nige']['n']):.0%}", f"逃げ率(1コース{k['nige']['n']}走)"
+    if cat in ("sashi", "makuri", "mz"):
+        name = {"sashi": "差し", "makuri": "まくり", "mz": "まくり差し"}[cat]
+        return f"{k[cat]['w']}", f"{name}で勝った回数"
+    if cat == "out":
+        return f"{c['out']['res'] * 100:+.0f}", "4〜6コースの3着内率(コース平均との差、ポイント)"
+    if cat == "front":
+        return f"{c['front']['rate']:.0%}", "枠より内のコースに入った割合"
+    if cat == "growth":
+        return f"{c['growth']['pts90']:.2f}", f"直近90日の勝率(前の1年 {c['growth']['prev']:.2f})"
+    if cat == "exlate":
+        return f"{c['exlate']['res'] * 100:+.0f}", "展示タイム4位以下のときの3着内率(普段との差、ポイント)"
+    return f"{c['top3']:.0%}", "3着内率"
+
+
 def card_block(c: dict, t: dict, heads: list[str], com: str, idx: int, bc: dict | None = None) -> str:
     k = c["kim"]
     pc = lambda v: "-" if v is None else f"{v:.0%}"  # noqa: E731
-    crs = "".join(f"<tr><th>{x['c']}</th><td>{x['n']}</td><td>{pc(x['win'])}</td><td>{pc(x['top3'])}</td></tr>" for x in c["courses"])
-    tags = "".join(f"<li><b>{e(x['t'])}</b><span>{e(x['why'])}</span></li>" for x in c["tags"][:5])
+    crs = "".join(f"<tr><th>{lane_tile(x['c'] - 1)}</th><td>{x['n']}</td><td>{pc(x['win'])}</td><td>{pc(x['top3'])}</td></tr>" for x in c["courses"])
+    tags = "".join(f"<li><b>{e(x['t'])}<i>{stars(x)}</i></b><span>{e(x['why'])}</span></li>" for x in c["tags"][:5])
     alt = "".join(f"<li>{e(h)}</li>" for h in heads[1:])
     g = rc.GROUP_NAME.get(c["grp"], "")
+    num, lbl = big_stat(c, t)
     return f"""<article class="pick" id="r{c['id']}">
-  <div class="pick-head"><span class="no">注目{idx}</span><span class="who">{e(c['name'])}<small>{e(c['class'] or '')}・{e(c['branch'] or '')}・{int(c['age'] or 0)}歳</small></span></div>
-  <h2>{e(heads[0])}</h2>
-  {f'<ul class="alt"><li class="lbl">見出しの別案</li>{alt}</ul>' if alt else ''}
-  <div class="pick-body">
-    <div class="pick-text"><p class="com">{e(com)}</p>
-      {f'<p class="hint"><b>予想のヒント</b>{e(hint(t))}</p>' if hint(t) else ''}
-      {f'<p class="hint"><b>狙い目のコース</b>{e(course_line(bc, c))}</p>' if bc else ''}
-      <ul class="tags">{tags}</ul></div>
-    <figure class="pick-card">{radar_svg(c['radar'])}
-      <figcaption>{e(g)}の中での位置(100がトップ)</figcaption>
-      <table class="mini"><tr><th>コース</th><th>走</th><th>1着</th><th>3着内</th></tr>{crs}</table>
-      <p class="kim">逃げ {k['nige']['w']}/{k['nige']['n']}・差し {k['sashi']['w']}・まくり {k['makuri']['w']}・まくり差し {k['mz']['w']}</p>
-    </figure>
+  <header class="pk-h"><span class="no">注目<b>{idx}</b></span><span class="nm">{e(c['name'])}</span>
+    <span class="meta">{e(c['class'] or '')}・{e(c['branch'] or '')}・{int(c['age'] or 0)}歳</span></header>
+  <div class="pk-main">
+    <div class="pk-body">
+      <div class="pk-tag"><span class="vt">{e(t['t'])}</span><span class="st">{stars(t)}</span></div>
+      <h2><span class="mk">{e(heads[0])}</span></h2>
+      <div class="pk-num"><b>{e(num)}</b><small>{e(lbl)}</small></div>
+      <p class="com">{e(com)}</p>
+      {f'<div class="mikata">{gull_svg(46, bg="#ffffff", cls="mg")}<p><b>ミカタのひと言</b>{e(hint(t))}</p></div>' if hint(t) else ''}
+      {f'<p class="crs-hint"><b>狙い目のコース</b>{e(course_line(bc, c))}</p>' if bc else ''}
+    </div>
   </div>
+  <div class="pk-data">
+    <figure>{radar_svg(c['radar'])}<figcaption>{e(g)}の中での位置(100がトップ)</figcaption></figure>
+    <div><table class="mini"><tr><th>コース</th><th>走</th><th>1着</th><th>3着内</th></tr>{crs}</table>
+      <p class="kim">逃げ {k['nige']['w']}/{k['nige']['n']}・差し {k['sashi']['w']}・まくり {k['makuri']['w']}・まくり差し {k['mz']['w']}</p></div>
+  </div>
+  <ul class="tags">{tags}</ul>
+  {f'<details class="alt"><summary>見出しの別案</summary><ul>{alt}</ul></details>' if alt else ''}
 </article>"""
 
 
 CSS = """
-/* 予想紙の紙と朱の印。見出しは太いゴシック、数字はレース場の掲示板の細身の書体 */
+/* 競艇新聞: 新聞紙の地に黒・赤・黄。見出しは極太、数字は掲示板の細長い書体。艇番の6色をそのまま使う */
 :root{
-  --paper:#eef1e4; --paper2:#e2e7d3; --ink:#14212c; --mute:#56636e; --rule:#c7cfb8; --stamp:#c8141c; --card:#f8faf2;
+  --paper:#f4efdf; --paper2:#ebe4cc; --ink:#111111; --mute:#5b5547; --rule:#111111; --red:#e60012; --yellow:#ffe100; --card:#fffdf5;
   --head:"Dela Gothic One","BIZ UDPGothic",system-ui,sans-serif; --body:"BIZ UDPGothic",system-ui,sans-serif;
-  --num:"Barlow Condensed","BIZ UDPGothic",sans-serif;
+  --num:"Oswald","Barlow Condensed","BIZ UDPGothic",sans-serif; --dots:rgba(17,17,17,.10);
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --paper:#141b1f; --paper2:#1c252a; --ink:#e8ede4; --mute:#9aa7a0; --rule:#2f3b40; --stamp:#ff5a5f; --card:#182126; color-scheme:dark}}
-:root[data-theme="dark"]{--paper:#141b1f; --paper2:#1c252a; --ink:#e8ede4; --mute:#9aa7a0; --rule:#2f3b40; --stamp:#ff5a5f; --card:#182126; color-scheme:dark}
-body{background:var(--paper);color:var(--ink);font:15px/1.7 var(--body);padding-inline:16px;padding-block:20px 48px}
-.wrap{max-width:860px;margin:0 auto;display:grid;gap:22px}
-.mast{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;border-bottom:3px solid var(--ink);padding-bottom:12px}
-.seal{width:64px;height:64px;transform:rotate(-6deg)}
-.seal svg{display:block;width:64px;height:64px}
-.mast h1{margin:0;font:400 clamp(24px,5vw,38px)/1.15 var(--head);text-wrap:balance}
-.mast p{margin:4px 0 0;color:var(--mute);font-size:13px}
-.lead{background:var(--paper2);border-radius:6px;padding:12px 14px;font-size:14px}
-.lead b{color:var(--stamp)}
-.pick{background:var(--card);border-radius:8px;padding:16px 16px 18px;display:grid;gap:10px;border-top:6px solid var(--ink)}
-.pick-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.no{font:400 13px/1 var(--head);color:#fff;background:var(--stamp);padding:5px 8px;border-radius:3px}
-.who{font-weight:700;font-size:18px}
-.who small{font-weight:400;color:var(--mute);font-size:12px;margin-left:8px}
-.pick h2{margin:0;font:400 clamp(20px,4.2vw,28px)/1.3 var(--head);text-wrap:balance}
-.alt{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--mute)}
-.alt .lbl{font-weight:700}
-.alt li:not(.lbl)::before{content:"・"}
-.pick-body{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;align-items:start}
-@media (max-width:640px){.pick-body{grid-template-columns:1fr}}
+  --paper:#16140f; --paper2:#211e16; --ink:#f3eedf; --mute:#b5ad98; --rule:#f3eedf; --card:#1d1a13; --dots:rgba(243,238,223,.08); color-scheme:dark}}
+:root[data-theme="dark"]{--paper:#16140f; --paper2:#211e16; --ink:#f3eedf; --mute:#b5ad98; --rule:#f3eedf; --card:#1d1a13; --dots:rgba(243,238,223,.08); color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.7 var(--body);padding:0 0 48px}
+.wrap{max-width:880px;margin:0 auto;display:grid;gap:20px;padding:0 16px}
+/* 題字 */
+.mast{margin:0;background:#111;color:#fff;padding:14px 16px 12px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center;border-bottom:6px solid var(--red)}
+.mast .logo{display:flex;flex-direction:column;align-items:center;gap:2px}
+.mast .logo svg{display:block;width:58px;height:58px}
+.mast .ti{font:400 clamp(30px,8vw,52px)/1 var(--head);color:var(--yellow);letter-spacing:.04em}
+.mast .ti small{font-size:.42em;color:#fff;margin-left:8px;letter-spacing:0;vertical-align:.35em}
+.mast .ed{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-top:6px;font-size:13px;color:#ddd}
+.mast .gr{background:var(--red);color:#fff;font:400 16px/1 var(--head);padding:5px 9px;border-radius:2px}
+.mast h1{margin:0;font:400 clamp(18px,4.6vw,26px)/1.25 var(--head);color:#fff}
+/* 一面 */
+.front{display:grid;grid-template-columns:auto minmax(0,1fr);border:3px solid var(--rule);background:var(--card)}
+.front .vhead{writing-mode:vertical-rl;text-orientation:upright;background:var(--red);color:#fff;font:400 clamp(24px,6vw,36px)/1.15 var(--head);
+  padding:12px 8px;letter-spacing:.04em;max-height:440px}
+.front .fb{padding:14px 16px;display:grid;gap:8px;align-content:start;background-image:radial-gradient(var(--dots) 1px,transparent 1.2px);background-size:6px 6px}
+.front .big{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.front .big b{font:700 clamp(64px,18vw,112px)/.95 var(--num);color:var(--red)}
+.front .big span{font:400 18px var(--head)}
+.front .big em{font-style:normal;font:700 26px var(--num);color:var(--mute)}
+.front ul{margin:0;padding-left:1.1em;font-size:14px;display:grid;gap:4px}
+.front .dist{height:110px}
+/* 前文 */
+.lead{margin:0;border-top:3px double var(--rule);border-bottom:3px double var(--rule);padding:10px 2px;font-size:14px}
+.lead b{background:linear-gradient(transparent 55%,var(--yellow) 55%)}
+.secthead{margin:6px 0 -6px;display:flex;align-items:center;gap:10px;font:400 22px/1 var(--head)}
+.secthead::before{content:"";width:12px;height:26px;background:var(--red)}
+.secthead::after{content:"";flex:1;height:3px;background:var(--rule)}
+/* 注目選手 */
+.pick{background:var(--card);border:3px solid var(--rule);display:grid;gap:0}
+.pk-h{background:#111;color:#fff;display:flex;align-items:baseline;gap:10px;padding:8px 12px;flex-wrap:wrap}
+.pk-h .no{background:var(--red);color:#fff;font:400 14px/1 var(--head);padding:5px 8px;align-self:center}
+.pk-h .no b{font:700 20px/1 var(--num);margin-left:2px}
+.pk-h .nm{font:400 clamp(24px,6vw,32px)/1.1 var(--head);color:#fff}
+.pk-h .meta{font-size:13px;color:#ccc}
+.pk-main{display:block}
+.pk-tag{justify-self:start;background:var(--red);color:#fff;display:inline-flex;align-items:center;gap:10px;padding:6px 12px 7px;
+  transform:skewX(-8deg);box-shadow:4px 4px 0 #111}
+.pk-tag .vt{font:400 clamp(20px,5.4vw,28px)/1.1 var(--head);letter-spacing:.04em;transform:skewX(8deg)}
+.pk-tag .st{color:var(--yellow);font-size:17px;line-height:1;white-space:nowrap;transform:skewX(8deg)}
+.pk-tag .st:empty{display:none}
+.pk-body{padding:14px 14px 12px;display:grid;gap:9px;align-content:start}
+.pk-body h2{margin:0;font:400 clamp(20px,5vw,27px)/1.35 var(--head);text-wrap:balance}
+.mk{background:linear-gradient(transparent 58%,var(--yellow) 58%);box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.pk-num{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;border-top:1px dashed var(--rule);border-bottom:1px dashed var(--rule);padding:2px 0}
+.pk-num b{font:700 clamp(46px,12vw,64px)/1 var(--num);color:var(--red)}
+.pk-num small{font-size:13px;color:var(--mute);font-weight:700}
 .com{margin:0;font-size:15px}
-.hint{margin:10px 0 0;font-size:14px;background:var(--paper2);border-radius:6px;padding:8px 10px}
-.hint b{display:inline-block;color:var(--stamp);margin-right:8px;font-size:12.5px}
-.tags{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
-.tags li{display:grid;gap:1px;padding-left:10px;border-left:3px solid var(--stamp)}
-.tags b{font-size:14px}
-.tags span{font-size:12.5px;color:var(--mute)}
-.pick-card{margin:0;display:grid;gap:6px;justify-items:center}
-.radar{width:100%;max-width:360px;height:auto}
-.radar .rg{fill:none;stroke:var(--rule);stroke-width:1}
-.radar .rd{fill:var(--stamp);fill-opacity:.18;stroke:var(--stamp);stroke-width:2;stroke-linejoin:round}
-.radar text{font-size:11px;fill:var(--mute)}
-.radar .rv{font-family:var(--num);font-weight:700;fill:var(--ink);font-size:12.5px}
+.mikata{display:grid;grid-template-columns:46px minmax(0,1fr);gap:10px;align-items:start}
+.mikata svg{display:block}
+.mikata p{margin:0;position:relative;background:#fff;color:#111;border:2px solid #111;border-radius:12px;padding:8px 11px;font-size:14px}
+.mikata p::before{content:"";position:absolute;left:-9px;top:14px;border:8px solid transparent;border-right-color:#111;border-left:0}
+.mikata b{display:block;font-size:12px;color:var(--red)}
+.crs-hint{margin:0;font-size:13.5px;background:var(--paper2);padding:7px 10px;border-left:6px solid #111}
+.crs-hint b{display:block;font-size:12px;color:var(--red)}
+.pk-data{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;padding:10px 14px;border-top:3px solid var(--rule);align-items:center}
+@media (max-width:620px){.pk-data{grid-template-columns:1fr}}
+.pk-data figure{margin:0;display:grid;justify-items:center;gap:2px}
+.radar{width:100%;max-width:330px;height:auto}
+.radar .rg{fill:none;stroke:var(--mute);stroke-opacity:.35;stroke-width:1}
+.radar .rd{fill:var(--red);fill-opacity:.22;stroke:var(--red);stroke-width:2.2;stroke-linejoin:round}
+.radar text{font-size:11px;fill:var(--mute);font-weight:700}
+.radar .rv{font-family:var(--num);font-weight:700;fill:var(--ink);font-size:13px}
 figcaption{font-size:11.5px;color:var(--mute)}
-.mini{border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;width:100%;max-width:260px}
-.mini th,.mini td{padding:3px 6px;border-bottom:1px solid var(--rule);text-align:right}
+.mini{border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums;width:100%}
+.mini th,.mini td{padding:3px 6px;border-bottom:1px solid var(--mute);text-align:right}
+.mini tr:first-child th{background:#111;color:#fff;font-size:12px}
 .mini th:first-child{text-align:center}
-.kim{margin:0;font-size:12px;color:var(--mute);text-align:center}
-.corner{background:var(--card);border-radius:8px;padding:14px 16px}
-.corner h3{margin:0 0 8px;font:400 19px/1.3 var(--head)}
-.corner ul{margin:0;padding-left:1.1em;display:grid;gap:4px}
-.corner p{margin:0;color:var(--mute);font-size:13px}
-.corners{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:14px}
-.lt{display:inline-grid;place-items:center;width:20px;height:22px;border-radius:3px;font:700 14px var(--num);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}
-.basis{font-size:12.5px;color:var(--mute)}
-.basis h3{font:400 16px var(--head);color:var(--ink);margin:0 0 6px}
-.basis dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 12px;margin:0}
-.basis dt{font-weight:700;color:var(--ink)}
-.basis dd{margin:0}
-.foot{font-size:12px;color:var(--mute);border-top:1px solid var(--rule);padding-top:10px}
-.nerai{background:var(--card);border-radius:8px;padding:14px 16px;border-top:6px solid var(--stamp);display:grid;gap:10px}
-.nerai h3{margin:0;font:400 21px/1.3 var(--head)}
-.nerai > p{margin:0;font-size:13px;color:var(--mute)}
-.waku{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
-.waku th,.waku td{padding:6px 6px;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
-.waku th{white-space:nowrap;font-weight:700}
-.waku th small{display:block;font-weight:400;color:var(--mute);font-size:11.5px}
-.waku td span{display:inline-block;margin-right:12px;white-space:nowrap}
-.waku td em{font-style:normal;font:700 15px var(--num)}
-.waku td small{color:var(--mute);font-size:11.5px}
-.trend ul{margin:0;padding-left:1.1em;display:grid;gap:4px;font-size:14px}
-.dist{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;align-items:end;max-width:420px;height:120px;margin-top:4px}
+.mini td{font:600 15px var(--num)}
+.kim{margin:6px 0 0;font-size:12px;color:var(--mute)}
+.tags{list-style:none;margin:0;padding:10px 14px 12px;display:grid;gap:6px;border-top:1px dashed var(--rule)}
+.tags li{display:grid;gap:0}
+.tags b{font-size:14px}
+.tags b i{font-style:normal;color:var(--red);margin-left:6px;letter-spacing:1px}
+.tags span{font-size:12.5px;color:var(--mute)}
+.alt{padding:0 14px 10px;font-size:12px;color:var(--mute)}
+.alt ul{margin:4px 0 0;padding-left:1.2em}
+/* 早見表・場の傾向 */
+.nerai{background:var(--card);border:3px solid var(--rule);padding:0 0 12px;display:grid;gap:8px}
+.nerai h3{margin:0;background:#111;color:var(--yellow);font:400 20px/1.3 var(--head);padding:8px 12px}
+.nerai > p{margin:0 12px;font-size:12.5px;color:var(--mute)}
+.waku{border-collapse:collapse;width:calc(100% - 24px);margin:0 12px}
+.waku th,.waku td{padding:7px 6px;border-bottom:2px solid var(--rule);text-align:left;vertical-align:middle}
+.waku th{white-space:nowrap;width:1%}
+.waku th .lt{width:34px;height:38px;font-size:24px;border-radius:2px}
+.waku th small{display:block;font-weight:700;color:var(--mute);font-size:11px;margin-top:2px}
+.waku td span{display:inline-flex;align-items:baseline;gap:4px;margin:2px 14px 2px 0;white-space:nowrap;font-weight:700}
+.waku td span:first-child{font-size:16px}
+.waku td span:first-child em{color:var(--red);font-size:22px}
+.waku td em{font-style:normal;font:700 18px var(--num)}
+.waku td small{color:var(--mute);font-size:11px;font-weight:400}
+.trend ul{margin:0 12px;padding-left:1.1em;display:grid;gap:4px;font-size:14px}
+.dist{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;align-items:end;max-width:420px;height:130px;margin:4px 12px 0}
 .dist div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:100%}
-.dist i{display:block;width:70%;background:var(--ink);border-radius:3px 3px 0 0}
-.dist b{font:700 13px var(--num)}
+.dist i{display:block;width:70%;background:var(--ink)}
+.dist div:first-child i{background:var(--red)}
+.dist b{font:700 15px var(--num)}
+.lt{display:inline-grid;place-items:center;width:22px;height:24px;border-radius:2px;font:700 15px var(--num);box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.45)}
+/* 囲み記事 */
+.corners{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.corner{background:var(--card);border:3px solid var(--rule);padding:0 0 12px}
+.corner h3{margin:0 0 8px;background:var(--red);color:#fff;font:400 18px/1.35 var(--head);padding:7px 12px}
+.corner ul{margin:0 12px;padding-left:1.1em;display:grid;gap:5px;font-size:14px}
+.corner p{margin:6px 12px 0;color:var(--mute);font-size:12.5px}
+.corner p:has(+ ul){color:var(--ink);font-weight:700;font-size:13.5px}
+.scn{border-collapse:collapse;width:calc(100% - 24px);margin:0 12px;font-size:13px}
+.scn th,.scn td{padding:5px 4px;border-bottom:1px solid var(--mute);text-align:right;white-space:nowrap}
+.scn tr:first-child th{background:#111;color:#fff;font-size:11.5px;text-align:center}
+.scn th:first-child{text-align:left}
+.scn td{font:600 16px var(--num)}
+.scn tr.hi td{color:var(--red)}
+.basis{font-size:12.5px}
+.basis h3{background:#111}
+.basis dl{display:grid;grid-template-columns:max-content minmax(0,1fr);gap:4px 12px;margin:0 12px}
+.basis dt{font-weight:700}
+.basis dd{margin:0;color:var(--mute)}
+.foot{font-size:12px;color:var(--mute);border-top:3px double var(--rule);padding-top:10px;margin:0}
 """
 
 
@@ -307,7 +399,7 @@ def nerai_html(wt: dict, trend: dict | None, venue: str | None) -> str:
         f"<tr><th>{lane_tile(crs - 1)} コース<small>{e(label)}</small></th><td>"
         + "".join(f"<span>{e(r['name'])} <em>{r['rate']:.0%}</em><small>({r['k']}/{r['n']})</small></span>" for r in wt.get(crs, []))
         + "</td></tr>" for crs, label, _ in waku_rows(wt))
-    out = f"""<section class="nerai"><h3>狙い目の早見表(コースが決まったらチェック)</h3>
+    out = f"""<section class="nerai"><h3>狙い目の早見表 コースが決まったらチェック</h3>
 <p>出走表と展示の進入が出たら、得意なコースに入った選手を探してみてください。{e(WAKU_NOTE)}</p>
 <table class="waku">{rows}</table></section>"""
     if trend and venue:
@@ -322,7 +414,7 @@ def nerai_html(wt: dict, trend: dict | None, venue: str | None) -> str:
 
 
 def render(title: str, venue_name: str | None, picks, all_cards, corners: list[tuple[str, str]], meta: dict, note: str,
-           nerai_block: str = "") -> str:
+           nerai_block: str = "", front: str = "") -> str:
     blocks = "\n".join(card_block(c, t, heads, com, i + 1, bc) for i, (c, t, heads, com, bc) in enumerate(picks))
     cor = "".join(f'<section class="corner"><h3>{e(h)}</h3>{body}</section>' for h, body in corners)
     def rule_key(name):
@@ -336,21 +428,46 @@ def render(title: str, venue_name: str | None, picks, all_cards, corners: list[t
     keys = list(dict.fromkeys(rule_key(x) for x in shown))
     basis = "".join(f"<dt>{e(k)}</dt><dd>{e(rules[k])}</dd>" for k in keys if k in rules)
     today = dt.date.today().isoformat()
-    return f"""<title>{e(title)} 出場選手をデータで読む</title>
+    grade = title.split(" ")[0] if title.split(" ")[0] in ("SG", "PG1", "G1", "G2", "G3") else ""
+    name = title[len(grade):].strip() if grade else title
+    return f"""<title>ミカタ新聞 {e(title)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=BIZ+UDPGothic:wght@400;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=BIZ+UDPGothic:wght@400;700&family=Oswald:wght@600;700&display=swap">
 <style>{CSS}</style>
+<header class="mast"><div class="logo">{gull_svg(58, bg="#f4efdf")}</div><div>
+<div class="ti">ミカタ新聞<small>競艇をいろんな角度から</small></div>
+<div class="ed">{f'<span class="gr">{e(grade)}</span>' if grade else ''}<h1>{e(name)}</h1></div>
+<div class="ed">{e(venue_name + ' ・ ' if venue_name else '')}出場{len(all_cards)}人 ・ 注目{len(picks)}人 ・ 集計 {e(meta['period'][0])}〜{e(meta['asof'])} ・ 下書き {today}</div></div></header>
 <div class="wrap">
-<header class="mast"><div class="seal">{gull_svg(64, bg="#f8faf2")}</div><div><h1>{e(title)} 出場選手をデータで読む</h1>
-<p>{e(venue_name + '開催 ・ ' if venue_name else '')}注目選手 {len(picks)}人 ・ 集計 {e(meta['period'][0])}〜{e(meta['asof'])} ・ 下書き {today}</p></div></header>
-<p class="lead">{note}公式の予想紙・スポーツ紙とは別の切り口で、選手の「型」をデータで読む下書きです。使っているのは、時期を変えても同じ選手に出ると確かめた本物の型だけ(ジンクスの検証は後半)。数字はすべて公式の成績データを自分たちで集計したもので、<b>見出しはどれも下の基準を満たした数字に基づいています</b>。</p>
+{front}
+<p class="lead">{note}公式の予想紙・スポーツ紙とは別の切り口で、選手の「型」をデータで読む新聞です。<b>使っているのは、時期を変えても同じ選手に出ると確かめた本物の型だけ</b>(ジンクスの検証は後半)。数字はすべて公式の成績データを自分たちで集計したもので、見出しはどれも下の基準を満たした数字に基づいています。</p>
+<h2 class="secthead">注目選手</h2>
 {blocks}
+<h2 class="secthead">狙い目と場の傾向</h2>
 {nerai_block}
+<h2 class="secthead">データの囲み</h2>
 <div class="corners">{cor}</div>
 <section class="corner basis"><h3>タグの基準</h3><dl>{basis}</dl>
-<p style="margin-top:8px">「上位X%」は同じ級別(A1・A2・B級)の中での位置。3着内率の「上積み」は、コースごとの全体の3着内率を差し引いた値。回数が少ない数字は全体や本人の普段の値に寄せて計算しています。</p></section>
-<p class="foot">この下書きは選手の傾向を楽しむための読み物で、舟券の的中や利益を約束するものではありません。公式の成績データ(番組表・競走成績)を自分たちで集計した数字とグラフだけを使っています。舟券の購入は20歳になってから。</p>
+<p>「上位X%」は同じ級別(A1・A2・B級)の中での位置。★★★は上位1%、★★は上位5%、★は上位10%。3着内率の「上積み」は、コースごとの全体の3着内率を差し引いた値。回数が少ない数字は全体や本人の普段の値に寄せて計算しています。</p></section>
+<p class="foot">この新聞は選手の傾向を楽しむための読み物で、舟券の的中や利益を約束するものではありません。公式の成績データ(番組表・競走成績)を自分たちで集計した数字とグラフだけを使っています。舟券の購入は20歳になってから。</p>
 </div>"""
+
+
+def front_html(trend: dict | None, venue: str | None) -> str:
+    """一面: 場の傾向の一番の数字を大きく(全国との差があるときだけ、言い方は title_ideas と同じ考え方)。"""
+    if not trend or not venue:
+        return ""
+    tp = trend["top"] if trend["top"].get("n", 0) >= 100 else trend["all"]
+    nt = trend["nat_top"] if tp is trend["top"] else trend["nat_all"]
+    lbl = "トップ級のレース" if tp is trend["top"] else "全レース"
+    d = tp["c1"] - nt["c1"]
+    head = f"{venue}の1号艇は絶対じゃない" if d <= -0.04 else f"{venue}はインが強い" if d >= 0.04 else f"{venue}の1号艇は全国なみ"
+    bars = "".join(f'<div><b>{tp["dist"][k]:.0%}</b><i style="height:{round(tp["dist"][k] * 120)}px"></i>{lane_tile(k - 1)}</div>' for k in range(1, 7))
+    lines = "".join(f"<li>{e(x)}</li>" for x in nerai.trend_lines(trend, venue)[1:])
+    return f"""<section class="front"><div class="vhead">{e(head)}</div><div class="fb">
+<div class="big"><span>1号艇の1着率</span><b>{tp['c1']:.0%}</b><em>全国 {nt['c1']:.0%}</em></div>
+<p style="margin:0;font-size:13px;color:var(--mute)">{e(venue)}の{e(lbl)}({tp['n']}レース)。過去3年</p>
+<div class="dist">{bars}</div><ul>{lines}</ul></div></section>"""
 
 
 def title_ideas(title: str, venue: str | None, n_all: int, picks, trend: dict | None) -> list[str]:
@@ -391,10 +508,9 @@ def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str]
 
     def pick_lines(i, x):
         c, t, heads, com, bc = x
-        out = [f"■注目{i}{'(無料で公開)' if i == 1 else ''} {c['name']}({c['class']}・{c['branch']})",
-               f"〔画像:{c['id']}_{c['name']}.png〕", f"【{heads[0]}】", com]
-        if hint(t):
-            out.append(f"予想のヒント:{hint(t)}")
+        out = [f"■注目{i}{'(無料で公開)' if i == 1 else ''} {c['name']}({c['class']}・{c['branch']}支部・{int(c['age'] or 0)}歳)「{t['t']}」",
+               f"〔画像:{c['id']}_{c['name']}.png〕", f"【{heads[0]}】", mag.deck(c, t), ""] + \
+              [p for para in mag.body(c, t, bc) for p in (para, "")] + [f"ミカタのひと言:「{mag.mikata(t)}」"]
         if bc:
             out.append(f"狙い目のコース:{course_line(bc, c)}")
         return out + [""]
@@ -402,10 +518,9 @@ def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str]
     out = ["【タイトル案】(先頭の数字がフック。スマホの一覧では40字くらいで切れるので、|より前が勝負)"] + \
           [f"{i}. {x}" for i, x in enumerate(title_ideas(title, venue_name, n_all, picks, trend_raw), 1)] + [
            "", "――――――――――(ここから無料)――――――――――", "",
-           f"{title}{'(' + venue_name + ')' if venue_name else ''}の出場予定{n_all}人を、過去3年・約17万レースの成績から読みました。",
+           *[x for p_ in mag.issue_lead(sel, picks, trend_raw, venue_name, title) for x in (p_, "")],
            "このノートは買い目を売るものではありません。あなたが自分で予想するときに「へえ、この人はこういう型なのか」と使える材料を集めたものです。",
            "(もともとは、友達と現地で観戦するときに「この選手ってどんな型?」と話したくて集め始めたデータです)",
-           "使っているのは、時期を変えても同じ選手に出ると確かめた「本物の型」だけ。逆に、よく言われるジンクスの多くは偶然でした(後半で全部見せます)。",
            "", "■この記事でわかること",
            f"・データで目立つ注目{n_pick}人と、それぞれの“型”",
            "・狙い目の早見表:コースが決まったら、誰がそのコースで強いかがすぐわかる",
@@ -612,8 +727,13 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
                ["※成長指数=直近90日の勝率の伸び×0.41(伸びの4割ほどは次の3か月も残る、という過去3年の平均から)"]
     scn = scene_lines()
     if scn:
-        corners.append(("大一番はここが違う(場面ごとの指数)", "<ul>" + "".join(f"<li>{e(x)}</li>" for x in scn) + "</ul>"
-                        "<p>過去3年の全レースを場面ごとに集計。予選と比べた違い</p>"))
+        sc = occult_data().get("scenes", {})
+        rows = "".join(f"<tr class=\"{'hi' if k in ('準優勝戦', '優勝戦') else ''}\"><th>{e(k)}</th><td>{x['c1']:.0%}</td><td>{_st3(x['st'])}</td>"
+                       f"<td>{x['moved']:.0%}</td><td>{x['makuri']:.0%}</td></tr>"
+                       for k in ("予選", "選抜・特選", "ドリーム戦", "準優勝戦", "優勝戦") if (x := sc.get(k)))
+        corners.append(("大一番はここが違う(場面ごとの指数)",
+                        f"<table class=\"scn\"><tr><th>場面</th><th>1号艇の1着</th><th>平均ST</th><th>進入が動く</th><th>まくり系</th></tr>{rows}</table>"
+                        f"<p>{e(scn[-1])}</p><p>過去3年の全レースを場面ごとに集計。まくり系=まくり・まくり差しで決まった割合</p>"))
         txt += ["■大一番はここが違う(場面ごとの指数)"] + [f"・{x}" for x in scn] + ["※過去3年の全レースを場面ごとに集計。予選と比べた違い"]
     jinx, occ = jinx_lines(), occult_lines()
     if jinx or occ:
@@ -642,7 +762,8 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
         corners.append(("よく当たるライバル", "<ul>" + "".join(f"<li>{e(line(x))}</li>" for x in rows)
                         + "</ul><p>同じレースで両方に着順がついた対戦の、先着した回数</p>"))
         txt += ["■よく当たるライバル"] + [f"・{line(x)}" for x in rows]
-    page = render(title, vname, picks, sel, corners, meta, note, nerai_html(wt, trend, vname))
+    page = mag.page(title, vname, picks, sel, wt, trend, corners, meta["rules"], note, mag.cover_hook(trend, vname),
+                    (meta["period"][0], meta["asof"]))
     trust_lines = ["■展示STを信じていい選手(展示と本番のSTのずれが小さい)"] + \
         [f"・{c['name']}(ずれ平均{c['ex']['mae']:.3f}秒、{c['ex']['n']}走)" for c in trust] if trust else []
     waku = [f"{crs}コース {label}:" + "、".join(xs) for crs, label, xs in waku_rows(wt) if xs]

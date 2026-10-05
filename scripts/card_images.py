@@ -35,7 +35,8 @@ async def render(pages: list[tuple[str, str]], out: pathlib.Path):
         pg = await b.new_page(viewport={"width": 1080, "height": 1350}, device_scale_factor=1)
         for name, html in pages:
             await pg.set_content(html)
-            await pg.wait_for_timeout(150)
+            await pg.evaluate("document.fonts.ready")
+            await pg.wait_for_timeout(300)
             await pg.screenshot(path=str(out / name), clip={"x": 0, "y": 0, "width": 1080, "height": 1350})
         await b.close()
 
