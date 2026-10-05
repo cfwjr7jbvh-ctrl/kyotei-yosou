@@ -509,6 +509,10 @@ def occult_data() -> dict:
     return _json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
 
 
+def _st3(v: float) -> str:
+    return f"{v:.3f}"[1:]
+
+
 def scene_lines() -> list[str]:
     """場面ごとに「いつもとどう違うか」(予選と比べる。scripts/occult_check.py)。"""
     sc = occult_data().get("scenes", {})
@@ -520,7 +524,7 @@ def scene_lines() -> list[str]:
         x = sc.get(k)
         if not x:
             continue
-        out.append(f"{k}:1号艇の1着率{x['c1']:.0%}(予選{b['c1']:.0%})、平均ST{str(round(x['st'], 3))[1:]}(予選{str(round(b['st'], 3))[1:]})、"
+        out.append(f"{k}:1号艇の1着率{x['c1']:.0%}(予選{b['c1']:.0%})、平均ST{_st3(x['st'])}(予選{_st3(b['st'])})、"
                    f"進入が動いた{x['moved']:.0%}(予選{b['moved']:.0%})、まくり・まくり差しの決着{x['makuri']:.0%}(予選{b['makuri']:.0%})")
     rs = occult_data().get("racer_scene", {}).get("st_big", {})
     if rs.get("r") is not None:
