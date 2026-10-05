@@ -1045,8 +1045,9 @@ async function renderUraOne(box, key) {
   <p class="ura-note">${uraMeta(d)} ・ 集計 ${esc(d.asof)}${d.missing && d.missing.length ? ` ・ 見つからない選手 ${d.missing.length}人` : ""}</p>
   <div class="ura-sec"><h3>記事(確認用)</h3><p>出す前に、見出しと数字を読んで直してください。</p>
     <div class="ura-btns"><button id="ura-open">別のタブで開く</button><button class="sub" id="ura-inline">ここで読む</button></div><div id="ura-frame"></div></div>
-  <div class="ura-sec"><h3>友達に共有</h3><p>リンクを知っている人だけが読めるページを送ります(パスワード不要)。LINEなどの共有画面が開きます。</p>
-    <div class="ura-btns"><button id="ura-share">LINEなどで共有</button><button class="sub" id="ura-share-copy">リンクをコピー</button></div><p class="ura-note" id="ura-share-url"></p></div>
+  <div class="ura-sec"><h3>友達に共有</h3><p>紙面をそのまま画像(${(d.pages || []).length}枚)かPDFで送れます。LINEなどの共有画面が開きます。リンクで送ることもできます。</p>
+    <div class="ura-btns">${(d.pages || []).length ? `<button id="ura-share-img">画像で共有</button>` : ""}${d.pdf ? `<button id="ura-share-pdf">PDFで共有</button>` : ""}
+      <button class="sub" id="ura-share">リンクで共有</button><button class="sub" id="ura-share-copy">リンクをコピー</button></div><p class="ura-note" id="ura-share-url"></p></div>
   <div class="ura-sec"><h3>note の本文</h3><p>無料と有料の切れ目の線が入っています。タイトル案は冒頭。</p>
     <div class="ura-btns"><button id="ura-copy-note">本文をコピー</button></div></div>
   <div class="ura-sec"><h3>X の投稿案</h3>${posts.map((p) =>
@@ -1080,6 +1081,25 @@ async function renderUraOne(box, key) {
     else copyText(url, e.target);
   };
   $("#ura-share-copy").onclick = async (e) => { const url = await shareURL(); $("#ura-share-url").textContent = url; copyText(url, e.target); };
+  const shareFiles = async (btn, list, mime, field) => {
+    const t = btn.textContent; btn.disabled = true; btn.textContent = "準備中…";
+    try {
+      const files = [];
+      for (const f of list) {
+        const x = await getJSON(`api/data/ura/${f.file}`);
+        const bin = Uint8Array.from(atob(x[field]), (c) => c.charCodeAt(0));
+        files.push(new File([bin], x.name, { type: mime }));
+      }
+      if (navigator.share && navigator.canShare && navigator.canShare({ files })) await navigator.share({ title: d.title, files });
+      else {
+        // 共有画面が使えない端末では、1枚ずつ保存
+        for (const f of files) { const a = document.createElement("a"); a.href = URL.createObjectURL(f); a.download = f.name; a.click(); }
+      }
+    } catch (err) { if (!/abort/i.test(String(err))) alert("共有できませんでした: " + err); }
+    btn.disabled = false; btn.textContent = t;
+  };
+  if ($("#ura-share-img")) $("#ura-share-img").onclick = (e) => shareFiles(e.target, d.pages, "image/png", "png");
+  if ($("#ura-share-pdf")) $("#ura-share-pdf").onclick = (e) => shareFiles(e.target, [{ file: d.pdf }], "application/pdf", "pdf");
   $$("[data-copy]", box).forEach((b) => b.onclick = () => copyText(posts.find((p) => p.n === b.dataset.copy).body, b));
   $("#ura-imgs-load").onclick = async (e) => {
     e.target.disabled = true;

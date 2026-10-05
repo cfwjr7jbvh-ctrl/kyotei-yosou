@@ -80,6 +80,56 @@ async def render_png(pages: list[tuple[str, str]]) -> list[bytes]:
     return out
 
 
+async def render_pages(html: str, width: int = 1080, page_h: int = 1920) -> tuple[list[bytes], bytes]:
+    """紙面(HTML)を、LINE で送れる画像(幅1080、1920pxごとに分割)と PDF に。"""
+    from playwright.async_api import async_playwright
+    from PIL import Image
+    import io
+    async with async_playwright() as p:
+        b = await p.chromium.launch()
+        pg = await b.new_page(viewport={"width": width, "height": page_h}, device_scale_factor=1)
+        await pg.set_content(html)
+        await pg.evaluate("document.fonts.ready")
+        await pg.wait_for_timeout(500)
+        full = await pg.screenshot(full_page=True)
+        # 記事や囲みの切れ目(各ブロックの上端)を取り、ページの区切りをそこに寄せる
+        tops = await pg.evaluate("[...document.querySelectorAll('header, nav, article, section, .side, .chart, blockquote, footer')]"
+                                 ".map(e => Math.round(e.getBoundingClientRect().top + window.scrollY))")
+        pdf = await pg.pdf(width="1080px", height="1527px", print_background=True, margin={"top": "0", "bottom": "0", "left": "0", "right": "0"})
+        await b.close()
+    im = Image.open(io.BytesIO(full))
+    out, y = [], 0
+    tops = sorted(set(t for t in tops if 0 < t < im.height))
+    while y < im.height:
+        end = min(y + page_h, im.height)
+        if end < im.height:
+            cands = [t for t in tops if y + page_h * 0.55 <= t <= end]
+            if cands:
+                end = max(cands)
+        part = im.crop((0, y, im.width, end))
+        buf = io.BytesIO(); part.save(buf, "PNG", optimize=True); out.append(buf.getvalue())
+        y = end
+    return out, pdf
+
+
+def save_pages(out: pathlib.Path, key: str, html: str, no_images: bool) -> list[dict]:
+    """紙面の画像と PDF を ura/<key>_pN.json・ura/<key>_pdf.json に(暗号化)。"""
+    if no_images:
+        return []
+    try:
+        pngs, pdf = asyncio.run(render_pages(html))
+    except Exception as e:  # noqa: BLE001
+        print("紙面の画像は作れませんでした:", e)
+        return []
+    files = []
+    for k, png in enumerate(pngs):
+        f = f"{key}_p{k}.json"
+        write_json(out / f, {"name": f"{key}_{k + 1:02d}.png", "png": base64.b64encode(png).decode()})
+        files.append({"file": f, "name": f"{key}_{k + 1:02d}.png"})
+    write_json(out / f"{key}_pdf.json", {"name": f"{key}.pdf", "pdf": base64.b64encode(pdf).decode()})
+    return files
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
@@ -122,9 +172,11 @@ def main():
                 write_json(out / f, {"name": name, "png": base64.b64encode(png).decode()})
                 images.append({"file": f, "name": name})
         pick_rows = [{"id": c["id"], "name": c["name"], "tag": t["t"]} for c, t, *_x in picks]
+        pages_ = save_pages(out, s["key"], r["html"], a.no_images)
         write_json(out / f"{s['key']}.json", {
             "key": s["key"], "title": title, "grade": s["grade"], "venue": venue, "jcd": s["jcd"], "hd": s["hd"],
-            "html": r["html"], "note": r["note"], "x": r["x"], "picks": pick_rows, "images": images,
+            "html": r["html"], "note": r["note"], "x": r["x"], "picks": pick_rows, "images": images, "pages": pages_,
+            "pdf": f"{s['key']}_pdf.json" if pages_ else None,
             "n": len(r["sel"]), "missing": r["missing"], "asof": meta["asof"]})
         items.append({"key": s["key"], "title": title, "grade": s["grade"], "venue": venue, "jcd": s["jcd"], "hd": s["hd"],
                       "n": len(r["sel"]), "picks": [p["name"] for p in pick_rows], "images": len(images)})
@@ -134,10 +186,12 @@ def main():
     for p in sorted((ROOT / "reports/lab").glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True)[:6]:
         t = json.loads(p.read_text(encoding="utf-8"))
         key = f"lab_{t['id']}"
+        html_ = labmod.page(t, t.get("asof", ""))
+        pages_ = save_pages(out, key, html_, a.no_images)
         write_json(out / f"{key}.json", {"key": key, "title": f"検証ラボ: {t['title']}", "grade": "LAB", "venue": "", "jcd": 0,
-                                         "hd": (t.get("made") or "2026-01-01").replace("-", ""), "html": labmod.page(t, t.get("asof", "")),
+                                         "hd": (t.get("made") or "2026-01-01").replace("-", ""), "html": html_,
                                          "note": labmod.note_text(t), "x": labmod.x_text(t), "picks": [], "images": [], "n": 0, "missing": [],
-                                         "asof": t.get("asof", "")})
+                                         "pages": pages_, "pdf": f"{key}_pdf.json" if pages_ else None, "asof": t.get("asof", "")})
         items.append({"key": key, "title": f"検証ラボ: {t['title']}", "grade": "LAB", "venue": "", "jcd": 0,
                       "hd": (t.get("made") or "2026-01-01").replace("-", ""), "n": 0, "picks": [], "images": 0})
     write_json(out / "index.json", {"asof": dt.datetime.now(JST).strftime("%Y-%m-%d %H:%M"), "today": today.isoformat(),
