@@ -12,14 +12,21 @@ COLORS = {
     "スタート職人": "#e8453c", "展示STを信じていい": "#3b82e6", "本番で踏み込む": "#f2772b", "イン逃げ番長": "#2c3e50",
     "差し職人": "#2eaa5e", "まくり屋": "#d6336c", "まくり差しの職人": "#8e5bd6", "外からでも届く": "#1aa3b8",
     "前づけの仕掛け人": "#d99a1e", "展示は控えめ、本番で化ける": "#b04fc9", "上り調子": "#f06a3a", "舟券に絡む安定感": "#3a9c6c",
+    "展示タイム番長": "#0f8a7e",
 }
 SHORT = {"スタート職人": "ST職人", "展示STを信じていい": "展示", "本番で踏み込む": "踏込", "イン逃げ番長": "逃げ", "差し職人": "差し", "まくり屋": "まくり",
          "まくり差しの職人": "まく差", "外からでも届く": "外伸び", "前づけの仕掛け人": "前づけ", "展示は控えめ、本番で化ける": "化け", "上り調子": "上昇",
-         "舟券に絡む安定感": "安定"}
+         "舟券に絡む安定感": "安定", "展示タイム番長": "展示王"}
 ALIAS = {"急成長中": "上り調子"}
 # 丸の中の文字(1文字が基本。2文字は小さめ)
 KANJI = {"スタート職人": "ST", "展示STを信じていい": "展", "本番で踏み込む": "踏", "イン逃げ番長": "逃", "差し職人": "差", "まくり屋": "捲",
-         "まくり差しの職人": "捲差", "外からでも届く": "外", "前づけの仕掛け人": "前", "展示は控えめ、本番で化ける": "化", "上り調子": "昇", "舟券に絡む安定感": "安"}
+         "まくり差しの職人": "捲差", "外からでも届く": "外", "前づけの仕掛け人": "前", "展示は控えめ、本番で化ける": "化", "上り調子": "昇", "舟券に絡む安定感": "安",
+         "展示タイム番長": "展王"}
+# 輪に入れる英字(クラブのエンブレム風)
+RING = {"スタート職人": "START MASTER", "展示STを信じていい": "TRUE EXHIBIT", "本番で踏み込む": "FULL THROTTLE", "イン逃げ番長": "INSIDE BOSS",
+        "差し職人": "SASHI MASTER", "まくり屋": "MAKURI ATTACK", "まくり差しの職人": "MAKURI-ZASHI", "外からでも届く": "OUTSIDE REACH",
+        "前づけの仕掛け人": "COURSE TAKER", "展示は控えめ、本番で化ける": "SLEEPER", "上り調子": "RISING", "舟券に絡む安定感": "STEADY TOP 3",
+        "展示タイム番長": "EXHIBIT KING"}
 
 
 def boat(x: float, y: float, rot: float = 0, scale: float = 1.0, faint: bool = False, fill: str = W) -> str:
@@ -90,36 +97,58 @@ _ART = {
 
 
 def emblem_svg(tag: str, size: int = 40, cls: str = "emb", ring: bool = True) -> str:
-    """型の紋章(文字紋)。知らないタグなら空文字。"""
+    """型の紋章(文字紋+クラブのエンブレム風の輪)。知らないタグなら空文字。
+
+    大きいとき(size>=44): 紺の輪に英字(上)と「MIKATA ★ TYPE」(下)、左右に星、中に色の丸と漢字。
+    小さいとき: 輪の文字は読めないので省き、細い紺の縁+色の丸+漢字だけ。
+    """
     tag = ALIAS.get(tag, tag)
     if tag not in COLORS:
         return ""
     c, k = COLORS[tag], KANJI[tag]
-    fs = 58 if len(k) == 1 else (44 if k == "ST" else 34)
-    y = 70 if len(k) == 1 else (66 if k == "ST" else 62)
     font = "Dela Gothic One, 'Zen Kaku Gothic New', sans-serif"
-    return (f'<svg class="{cls}" viewBox="0 0 100 100" width="{size}" height="{size}" role="img" aria-label="{tag}の紋章">'
-            f'<circle cx="50" cy="50" r="47" fill="{c}" stroke="{INK}" stroke-width="4"/>'
-            + (f'<circle cx="50" cy="50" r="41" fill="none" stroke="{W}" stroke-opacity=".35" stroke-width="2"/>' if ring else "")
-            + f'<text x="50" y="{y}" font-family="{font}" font-size="{fs}" fill="{W}" text-anchor="middle">{k}</text></svg>')
+    big = size >= 44
+    if not big:
+        fs = 58 if len(k) == 1 else (44 if k == "ST" else 34)
+        y = 70 if len(k) == 1 else (66 if k == "ST" else 62)
+        return (f'<svg class="{cls}" viewBox="0 0 100 100" width="{size}" height="{size}" role="img" aria-label="{tag}の紋章">'
+                f'<circle cx="50" cy="50" r="47" fill="{c}" stroke="{INK}" stroke-width="6"/>'
+                f'<text x="50" y="{y}" font-family="{font}" font-size="{fs}" fill="{W}" text-anchor="middle">{k}</text></svg>')
+    fs = 46 if len(k) == 1 else (34 if k == "ST" else 31)
+    y = 75 if len(k) == 1 else (72 if k == "ST" else 71)
+    eng = RING.get(tag, "")
+    ef = 11 if len(eng) <= 12 else 9.5
+    star = lambda x, y_: (f'<path transform="translate({x} {y_}) scale(.42)" d="M 0 -10 L 2.9 -3.1 L 10 -3.1 L 4.3 1.2 L 6.2 8.1 L 0 4 L -6.2 8.1 L -4.3 1.2 L -10 -3.1 L -2.9 -3.1 Z" fill="#ffd23f"/>')
+    return (f'<svg class="{cls}" viewBox="0 0 120 120" width="{size}" height="{size}" role="img" aria-label="{tag}の紋章">'
+            '<defs><path id="emTop" d="M 15 60 A 45 45 0 0 1 105 60"/><path id="emBot" d="M 13 60 A 47 47 0 0 0 107 60"/></defs>'
+            f'<circle cx="60" cy="60" r="58" fill="{INK}"/>'
+            f'<circle cx="60" cy="60" r="55" fill="none" stroke="{c}" stroke-width="1.6"/>'
+            f'<text font-family="Oswald, \'Zen Kaku Gothic New\', sans-serif" font-weight="600" font-size="{ef}" letter-spacing="1.6" fill="{W}">'
+            f'<textPath href="#emTop" startOffset="50%" text-anchor="middle">{eng}</textPath></text>'
+            f'<text font-family="Oswald, \'Zen Kaku Gothic New\', sans-serif" font-weight="600" font-size="8" letter-spacing="2.2" fill="{W}" fill-opacity=".75">'
+            f'<textPath href="#emBot" startOffset="50%" text-anchor="middle">MIKATA TYPE</textPath></text>'
+            + star(12.5, 61) + star(107.5, 61)
+            + f'<circle cx="60" cy="60" r="38" fill="{c}"/><circle cx="60" cy="60" r="34.5" fill="none" stroke="{W}" stroke-opacity=".5" stroke-width="1.4"/>'
+            f'<path d="M 30 60 A 30 30 0 0 1 90 60" fill="none" stroke="{W}" stroke-opacity=".12" stroke-width="10"/>'
+            f'<text x="60" y="{y}" font-family="{font}" font-size="{fs}" fill="{W}" text-anchor="middle" stroke="{INK}" stroke-width="1.2" paint-order="stroke">{k}</text></svg>')
 
 
 def sheet_html() -> str:
     """12個を並べた見本(確認用)。小さい表示も並べる。"""
     cells = "".join(f'<div class="cell">{emblem_svg(t, 128)}<b>{t}</b></div>' for t in COLORS)
-    small = "".join(emblem_svg(t, 28) for t in COLORS)
-    return ('<!doctype html><html lang="ja"><head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@700&display=swap">'
+    small = "".join(emblem_svg(t, 28) for t in COLORS) + "&nbsp;&nbsp;" + "".join(emblem_svg(t, 56) for t in list(COLORS)[:6])
+    return ('<!doctype html><html lang="ja"><head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Oswald:wght@600&family=Zen+Kaku+Gothic+New:wght@700&display=swap">'
             '<style>body{margin:0;background:#f4efdf;font-family:"Zen Kaku Gothic New",sans-serif;padding:24px}h1{font:400 26px "Dela Gothic One",sans-serif;margin:0 0 16px}'
             '.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}.cell{background:#fff;border:3px solid #14212c;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:8px}'
             '.cell b{font-size:13.5px;text-align:center}.small{margin-top:18px;display:flex;gap:6px;align-items:center;background:#fff;padding:10px;border:3px solid #14212c}.small span{font-size:13px;margin-right:6px}</style></head><body>'
-            '<h1>ミカタの「型」の紋章 12種(第5案: 文字紋)</h1>'
+            '<h1>ミカタの「型」の紋章(第6案: 文字紋+エンブレムの輪)</h1>'
             f'<div class="grid">{cells}</div><div class="small"><span>タグの横の大きさ(28px):</span>{small}</div></body></html>')
 
 
 def js_module() -> str:
     """アプリ用(docs/emblems.js)。window.emblem(tag, size) で同じ絵を出す。"""
     import json
-    data = {t: {"c": COLORS[t], "k": KANJI[t]} for t in COLORS}
+    data = {t: {"c": COLORS[t], "k": KANJI[t]} for t in COLORS}  # アプリは小さい表示(22px)なので文字紋だけ
     return ("// 自動生成: python -c 'from kyotei.emblem import js_module; print(js_module())' > docs/emblems.js\n"
             f"const EMBLEMS = {json.dumps(data, ensure_ascii=False)};\nconst EMBLEM_ALIAS = {json.dumps(ALIAS, ensure_ascii=False)};\n"
             "function emblem(tag, size = 22) {\n  tag = EMBLEM_ALIAS[tag] || tag;\n  const d = EMBLEMS[tag];\n  if (!d) return \"\";\n"

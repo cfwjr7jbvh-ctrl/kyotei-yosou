@@ -131,6 +131,8 @@ def build(d: pd.DataFrame, asof: str | None = None) -> tuple[dict, dict]:
     own_rel(title.str.contains("準優|優勝戦"), "big")                     # 大一番
     s["ex_rank"] = s.groupby("race_id")["exhibit_time"].rank(method="min")
     own_rel(s["ex_rank"] >= 4, "exlate")                                  # 展示タイムがレース内4位以下
+    xt = s[s["ex_rank"].notna()].assign(t=lambda q: (q["ex_rank"] <= 2).astype(float)).groupby("racer_id")["t"].agg(["mean", "size"])
+    base["extop"], base["extop_n"] = xt["mean"].reindex(base.index), xt["size"].reindex(base.index).fillna(0)   # 展示タイム1・2位の割合
     pop_exlate = float(s.loc[s["ex_rank"] >= 4, "res3"].mean() - s.loc[s["ex_rank"].notna(), "res3"].mean())
 
     a = pd.Timestamp(asof)
@@ -144,10 +146,11 @@ def build(d: pd.DataFrame, asof: str | None = None) -> tuple[dict, dict]:
     # パーセンタイル(全選手 / 同じ級別)
     active = pd.to_datetime(base["last"]) > a - pd.Timedelta(days=180)
     pop = base[(base["n"] >= MIN_STARTS) & active]
-    cond = {"ex_mae": pop["ex_n"] >= 30, "ex_delta": pop["ex_n"] >= 30, "growth": (pop["n90"] >= 15) & (pop["n_prev"] >= 30)}
+    cond = {"ex_mae": pop["ex_n"] >= 30, "ex_delta": pop["ex_n"] >= 30, "growth": (pop["n90"] >= 15) & (pop["n_prev"] >= 30),
+            "extop": pop["extop_n"] >= 50}
     lower = {"st_avg", "ex_mae"}
     lower.add("ex_delta")
-    cols = ["st_avg", "ex_mae", "ex_delta", "nige", "sashi", "makuri", "mz", "attack", "top3", "res3", "front", "out_res", "growth", "pts"]
+    cols = ["st_avg", "ex_mae", "ex_delta", "nige", "sashi", "makuri", "mz", "attack", "top3", "res3", "front", "out_res", "growth", "pts", "extop"]
 
     def rank(v, ref, low):
         if ref.empty:
@@ -220,6 +223,28 @@ def _latest_series(x: pd.DataFrame | None) -> dict | None:
             "finishes": fin, "motor_no": _f(y["motor_no"].iloc[-1], 0), "motor_2rate": _f(y["motor_2rate"].iloc[-1], 1)}
 
 
+# フライングのあと(scripts/lab.py の flying、2026-10-05): 全選手で、直後10走はSTが平均+0.033秒遅く・3着内率-8ポイント、
+# 11〜40走は+0.019秒・-3ポイント、41走目以降はほぼ戻る。慎重さの大きさは同じ選手でも毎回ちがう(1回目と2回目の相関0.10)
+F_AFTER = [(10, 0.033, -0.08), (40, 0.019, -0.033)]
+
+
+def _f_after(x: pd.DataFrame | None, asof: str) -> dict | None:
+    """最後のフライングから何走目か(40走以内、180日以内のときだけ)。"""
+    if x is None or x.empty:
+        return None
+    x = x.sort_values(["date", "rno"]).reset_index(drop=True)
+    fi = x.index[x["st_flag"] == "F"]
+    if not len(fi):
+        return None
+    k = int(fi[-1])
+    since = len(x) - 1 - k
+    d0 = str(x.loc[k, "date"])
+    if since > 40 or pd.Timestamp(asof) - pd.Timestamp(d0) > pd.Timedelta(days=180):
+        return None
+    st_d, t3_d = next((a, b_) for n, a, b_ in F_AFTER if since <= n)
+    return {"since": since, "date": d0, "st": st_d, "top3": t3_d}
+
+
 def _card(rid, b, pa, pg, cg, stc, vg, x, asof, ctx) -> dict:
     courses = []
     for c in range(1, 7):
@@ -251,6 +276,8 @@ def _card(rid, b, pa, pg, cg, stc, vg, x, asof, ctx) -> dict:
         "kake": {"res": _f(b["kake_res"]), "n": _i(b["kake_n"])},
         "big": {"res": _f(b["big_res"]), "n": _i(b["big_n"]), "pop": _f(ctx["pop_big"])},
         "exlate": {"res": _f(b["exlate_res"]), "n": _i(b["exlate_n"]), "pop": _f(ctx["pop_exlate"])},
+        "extime": {"top": _f(b["extop"]), "n": _i(b["extop_n"]), **P("extop")},
+        "fafter": _f_after(x, asof),
         "growth": {"pts90": _f(b["pts90"], 2), "n90": _i(b["n90"]), "prev": _f(b["pts_prev"], 2), "n_prev": _i(b["n_prev"]),
                    "diff": _f(b["growth"], 2), "index": _f(GROWTH_KEEP * b["growth"], 2) if pd.notna(b["growth"]) else None, **P("growth")},
         "series": _latest_series(x),
@@ -322,6 +349,12 @@ TAG_RULES = [
      "test": lambda c: c["front"]["n"] >= 50 and (c["front"]["rate"] or 0) >= 0.15,
      "why": lambda c: f"2枠以上の{c['front']['n']}走のうち{c['front']['rate']:.0%}で枠より内のコースへ",
      "score": lambda c: 60 + 100 * c["front"]["rate"]},
+    {"tag": "展示タイム番長", "cat": "extime",
+     "rule": "展示タイムがレース内1・2位になる割合が、同じ級別の中で上位10%以内(展示50走以上)。"
+             "展示上位が本番にどれだけ効くかは人によらずほぼ同じ(「展示だけの人」は時期を変えると入れ替わる)",
+     "test": lambda c: c["extime"]["n"] >= 50 and (c["extime"]["grp"] or 0) >= 90,
+     "why": lambda c: f"展示タイム1・2位が{c['extime']['top']:.0%}({c['extime']['n']}走、{grp(c)}の中で{top(c['extime']['grp'])})",
+     "score": lambda c: c["extime"]["grp"]},
     {"tag": "展示は控えめ、本番で化ける", "cat": "exlate",
      "rule": "展示タイムがレース内4位以下の走でも、3着内の上積みが本人の普段とほぼ変わらない(普段との差が全選手の平均より+6ポイント以上良い、30走以上)",
      "test": lambda c: c["exlate"]["n"] >= 30 and c["exlate"]["res"] is not None and c["exlate"]["res"] - (c["exlate"]["pop"] or 0) >= 0.06,
@@ -343,7 +376,7 @@ VENUE_RULE = "(使っていない)"
 
 # 型が本物か(scripts/trait_reliability.py、2026-10-05): 同じ選手を奇数月・偶数月に分けたときの相関。
 # 0.7 以上はタグにする。0.1 前後以下は偶然の幅が大きいのでタグにしない(カードには「参考」として数字だけ残す)
-RELIABILITY = {"スタート": 0.94, "1コースの逃げ": 0.85, "前づけ": 0.97, "展示とのずれ": 0.84, "展示→本番": 0.86, "差し": 0.71,
+RELIABILITY = {"展示上位率": 0.93, "スタート": 0.94, "1コースの逃げ": 0.85, "前づけ": 0.97, "展示とのずれ": 0.84, "展示→本番": 0.86, "差し": 0.71,
                "まくり": 0.80, "まくり差し": 0.74, "外から": 0.91, "コースごとの得意": 0.30, "展示が下位": 0.26,
                "節の初戦": 0.10, "大一番": 0.08, "荒れ水面": 0.07, "勝負駆け": 0.05, "場との相性": 0.02, "予選の後半": 0.01}
 GROWTH_KEEP = 0.41   # 直近90日の勝率の伸びのうち、次の90日に残る割合(平均。trait_reliability.py の growth)
