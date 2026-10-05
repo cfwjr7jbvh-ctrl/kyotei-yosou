@@ -98,8 +98,6 @@ def main():
         title = short_title(s.get("title") or s.get("title_page", ""), venue, s["grade"])
         r = ura_shinbun.make(title, [str(x["id"]) for x in s["racers"]], s["jcd"], a.n, "", d, cards, meta)
         picks = r["picks"]
-        fi = next((i for i, (_, t, *_x) in enumerate(picks) if t["cat"] == "venue"), 0)   # note の注目1(無料)と同じ順に
-        picks = [picks[fi]] + [x for k, x in enumerate(picks) if k != fi]
         images = []
         if not a.no_images:
             used: set = set()

@@ -129,33 +129,20 @@ def comment(c: dict, picked: dict, venue: dict | None) -> str:
         c1 = c["courses"][0]
         if c1["n"]:
             parts.append(f"1コースでは{c1['n']}走で3着内率{c1['top3']:.0%}。")
-    if venue and picked["cat"] != "venue" and venue.get("n", 0) >= 10 and venue["res"] is not None and venue["res"] >= 0.05:
-        parts.append(f"今回の{venue['name']}では{venue['n']}走で3着内率が普段より{rc.pts(venue['res'])}。")
     return "".join(parts)
 
 
 # ---------------------------------------------------------------- 選定
 def pick(cards: list[dict], n: int, venue_fit: dict, jcd: int | None = None) -> list[tuple[dict, dict]]:
     """タグの珍しさ(付いている選手の少なさ)と強さで点を付け、同じ型が続かないように選ぶ。
-    大会の場が決まっているときは、ほかの場の「巧者」タグは見出しに使わない(今回のレースと関係が薄い)。"""
+    場との相性・勝負駆け・大一番・荒れ水面は「型」として本物と言えない(trait_reliability.py)ので使わない。"""
     cand = []
     for c in cards:
         for t in c["tags"]:
             if jcd and t["cat"] == "venue" and t.get("jcd") != jcd:
                 continue
             score = (1 - t.get("share", 0.1)) * 100 + t["score"] / 5
-            if t["cat"] == "venue" and venue_fit.get(c["id"]):
-                score += 10
             cand.append((score, c, t))
-    v_tag = []
-    for c in cards:  # 今回の場で相性が良い選手は、タグがなくても候補に
-        v = venue_fit.get(c["id"])
-        if v and v["n"] >= 10 and v["res"] is not None and v["res"] >= 0.08:
-            t = {"t": f"{v['name']}と好相性", "cat": "venue", "jcd": v["jcd"], "score": 60 + 300 * v["res"],
-                 "why": f"{v['name']}の{v['n']}走で、3着内率が普段より{rc.pts(v['res'])}", "share": 0.05}
-            c = {**c, "venues": [v] + [x for x in c["venues"] if x["jcd"] != v["jcd"]]}
-            v_tag.append(((1 - 0.05) * 100 + t["score"] / 5 + 5, c, t))
-    cand += v_tag
     cand.sort(key=lambda x: -x[0])
     out, used_racer, used_cat = [], set(), {}
     while cand and len(out) < n:
@@ -195,8 +182,8 @@ def course_line(bc: dict | None, c: dict) -> str:
     if not bc:
         return ""
     g = rc.GROUP_NAME.get(c["grp"], "")
-    return (f"{bc['c']}コースに入ったら注目:{bc['n']}走で1着率{bc['win']:.0%}・3着内率{bc['top3']:.0%}"
-            f"({g}の{bc['c']}コース平均は1着率{bc['avg_win']:.0%}・3着内率{bc['avg_top3']:.0%})")
+    return (f"{bc['c']}コースが得意な型:{bc['n']}走で1着率{bc['win']:.0%}・3着内率{bc['top3']:.0%}"
+            f"({g}の{bc['c']}コース平均は1着率{bc['avg_win']:.0%}・3着内率{bc['avg_top3']:.0%}。本人のほかのコースと比べても上)")
 
 
 def card_block(c: dict, t: dict, heads: list[str], com: str, idx: int, bc: dict | None = None) -> str:
@@ -388,12 +375,8 @@ def title_ideas(title: str, venue: str | None, n_all: int, picks, trend: dict | 
         else:
             k = max(trend["kim_non1"].items(), key=lambda x: x[1])[0]
             out.append(f"{venue}でインが負けるときは{k}が{trend['kim_non1'][k]:.0%}|{short} 出場{n_all}人をデータで読む")
-    cat = t["cat"]
-    if cat == "venue":
-        v = next((x for x in c["venues"] if x.get("jcd") == t.get("jcd")), c["venues"][0])
-        out.append(f"{c['name']}は{v['name']}で3着内率{rc.pts(v['res'])}|{short} 全{n_all}人の“型”と狙い目")
-    elif cat in ("nige", "makuri", "sashi", "mz", "start"):
-        out.append(f"{t['t']}{c['name']}の数字|{short} 出場{n_all}人をデータで読む")
+    out.append(f"{heads[0].split(' ')[0]}|{short} 全{n_all}人の“型”")
+    out.append(f"「勝負駆けに強い」は本物か|{short} 全{n_all}人をデータで読む")
     out.append(f"【保存版】{short} 全{n_all}人のひと言タグとコース別の早見表")
     out.append(f"{short}の{n_all}人、データで見ると誰が何の“職人”か")
     return [f"{x}({len(x)}字)" for x in out[:5]]
@@ -404,8 +387,6 @@ def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str]
     """note に貼る本文の下書き。考え方(発信方針): 答え(買い目)ではなく、読んだ人が自分で予想するのが楽しくなる「材料」を届ける。
     無料部分で1人分を丸ごとと場の傾向を見せて中身の質を伝え、有料部分の中身は見出しで見せる。"""
     n_all, n_pick = len(sel), len(picks)
-    fi = next((i for i, (_, t, *_r) in enumerate(picks) if t["cat"] == "venue"), 0)
-    picks = [picks[fi]] + [x for k, x in enumerate(picks) if k != fi]  # 無料で見せる1人を注目1に
     trust = free_corner or []
 
     def pick_lines(i, x):
@@ -428,7 +409,8 @@ def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str]
            f"・データで目立つ注目{n_pick}人と、それぞれの“型”",
            "・狙い目の早見表:コースが決まったら、誰がそのコースで強いかがすぐわかる",
            "・展示STを信じていい選手" + (f"、{venue_name}の傾向" if trend else ""),
-           f"・{venue_name + 'と' if venue_name else ''}相性のいい選手、勝負駆けや荒れ水面に強い選手、よく当たるライバル",
+           "・いま伸びている選手(成長指数)、よく当たるライバル",
+           "・「勝負駆けに強い」「○○巧者」は本物? ジンクスをデータで確かめた結果",
            f"・保存版:出場{n_all}人全員のひと言タグ一覧(現地観戦のおともに)", ""]
     out += pick_lines(1, picks[0])
     if trend:
@@ -486,9 +468,7 @@ def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: l
     if trust_names and len(p1 + "\n\nみんなは展示ST、どこまで信じる派?") <= 140:
         p1 += "\n\nみんなは展示ST、どこまで信じる派?"
     if trend_head:
-        q = f"\n\nみんなは{venue_name}の1号艇、どこまで信じる?"
-        p2 = fit(lambda ns: trend_head + ("\n\n" + f"{venue_name}と相性がいい選手👇\n" + "\n".join(f"・{x}" for x in ns) if ns else "") + q,
-                 venue_names)
+        p2 = trend_head + f"\n\nみんなは{venue_name}の1号艇、どこまで信じる?"
     elif venue_names:
         p2 = fit(lambda ns: f"{venue_name}と相性がいい選手(3着内率が普段より上)\n" + "\n".join(f"・{x}" for x in ns), venue_names)
     else:
@@ -505,6 +485,25 @@ def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: l
     return "\n".join(out)
 
 
+JINX = [("kake", "勝負駆けに強い選手"), ("big", "準優・優勝戦に強い選手"), ("rough", "荒れ水面に強い選手"),
+        ("venue", "場との相性(○○巧者)"), ("first", "節の初戦に強い選手"), ("late_y", "予選の後半に上げてくる選手")]
+REAL = [("st", "平均ST"), ("front", "前づけ率"), ("makuri", "まくりで勝つ割合")]
+
+
+def jinx_lines() -> list[str]:
+    """よく言われる「〇〇に強い」が本物かどうか(scripts/trait_reliability.py の結果)。"""
+    p = ROOT / "reports/trait_reliability.json"
+    if not p.exists():
+        return []
+    import json as _json
+    t = _json.loads(p.read_text(encoding="utf-8"))["traits"]
+    out = [f"{label}:相関{t[k]['r']:.2f} → ほぼ偶然。過去に強かった選手が、次も強いとは言えない" for k, label in JINX if k in t and "r" in t[k]]
+    real = "、".join(f"{label}{t[k]['r']:.2f}" for k, label in REAL if k in t and "r" in t[k])
+    if real:
+        out.append(f"(くらべると、本物の型は {real} と高い。この記事の注目選手の「型」はこちら側だけで選んでいます)")
+    return out
+
+
 def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "", d=None, cards=None, meta=None) -> dict:
     """下書き一式(HTML・note の本文・X の投稿案)と、画像にする注目選手を返す。d・cards・meta を渡せば集計を使い回す。"""
     if d is None:
@@ -512,7 +511,6 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
     if cards is None:
         cards, meta = rc.build(d)
     meta = {**meta, "rules": {r["tag"]: r["rule"] for r in meta["rules"]} if isinstance(meta["rules"], list) else dict(meta["rules"])}
-    meta["rules"]["(今回の場)と好相性"] = "今回の場での3着内の上積みが、本人の普段より+8ポイント以上(その場で10走以上。回数が少ないほど普段の値に寄せて計算)"
     sel, missing = [], []
     for k in keys:
         c = rc.find(cards, k)
@@ -520,7 +518,7 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
             sel.append(c)
         elif not c:
             missing.append(k)
-    vf = venue_fit(d, [c["id"] for c in sel], jcd)
+    vf: dict = {}   # 場との相性は使わない(偶然の幅が大きい)
     base = nerai.course_base(d)
     chosen = pick(sel, min(n, len(sel)), vf, jcd)
     picks = [(c, t, headlines(c, t), comment(c, t, vf.get(c["id"])), nerai.best_course(c, base)) for c, t in chosen]
@@ -542,25 +540,20 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
         txt += ["■展示STを信じていい選手"] + [f"・{c['name']}(ずれ平均{c['ex']['mae']:.3f}秒)" for c in trust] + \
                (["(展示STは参考程度)"] + [f"・{c['name']}(ずれ平均{c['ex']['mae']:.3f}秒)" for c in adjust] if adjust else [])
     vv = []
-    if jcd:
-        # 相性が良い選手だけ載せる(普段より下がる選手の名前は出さない)
-        vv = sorted([(vf[c["id"]], c) for c in sel if c["id"] in vf and vf[c["id"]]["n"] >= 10 and vf[c["id"]]["res"] >= 0.03],
-                    key=lambda x: -x[0]["res"])
-        if vv:
-            corners.append((f"{vname}との相性", "<ul>" + "".join(
-                f"<li>{e(c['name'])} {rc.pts(v['res'])}({v['n']}走)</li>" for v, c in vv[:5]) + "</ul><p>3着内率の普段との差</p>"))
-            txt += [f"■{vname}との相性"] + [f"・{c['name']} {rc.pts(v['res'])}({v['n']}走)" for v, c in vv[:5]]
-    for key, label, n_min in (("kake", "勝負駆けに強い", 15), ("rough", "荒れ水面に強い", 20)):
-        xs = sorted([c for c in sel if c[key]["n"] >= n_min and (c[key]["res"] or 0) >= 0.03], key=lambda c: -c[key]["res"])
-        if xs:
-            corners.append((label, "<ul>" + "".join(f"<li>{e(c['name'])} {rc.pts(c[key]['res'])}({c[key]['n']}走)</li>" for c in xs[:5])
-                            + "</ul><p>3着内率の普段との差</p>"))
-            txt += [f"■{label}"] + [f"・{c['name']} {rc.pts(c[key]['res'])}({c[key]['n']}走)" for c in xs[:5]]
-    gr = sorted([c for c in sel if c["growth"]["n90"] >= 15 and (c["growth"]["diff"] or 0) >= 0.3], key=lambda c: -c["growth"]["diff"])
+    gr = sorted([c for c in sel if c["growth"]["n90"] >= 15 and c["growth"]["n_prev"] >= 30 and (c["growth"]["index"] or 0) >= 0.2],
+                key=lambda c: -c["growth"]["index"])
     if gr:
-        corners.append(("いま勢いがある", "<ul>" + "".join(
-            f"<li>{e(c['name'])} 勝率{c['growth']['prev']:.2f}→{c['growth']['pts90']:.2f}</li>" for c in gr[:5]) + "</ul><p>前の1年 → 直近90日</p>"))
-        txt += ["■いま勢いがある"] + [f"・{c['name']} 勝率{c['growth']['prev']:.2f}→{c['growth']['pts90']:.2f}" for c in gr[:5]]
+        corners.append(("いま伸びている(成長指数)", "<ul>" + "".join(
+            f"<li>{e(c['name'])} 成長指数 {c['growth']['index']:+.2f}(勝率{c['growth']['prev']:.2f}→{c['growth']['pts90']:.2f})</li>" for c in gr[:5])
+            + "</ul><p>成長指数=直近90日の勝率の伸び×0.41。伸びの4割ほどは次の3か月も残る、という過去3年の平均から</p>"))
+        txt += ["■いま伸びている(成長指数)"] + [f"・{c['name']} 成長指数 {c['growth']['index']:+.2f}(勝率{c['growth']['prev']:.2f}→{c['growth']['pts90']:.2f})" for c in gr[:5]] + \
+               ["※成長指数=直近90日の勝率の伸び×0.41(伸びの4割ほどは次の3か月も残る、という過去3年の平均から)"]
+    jinx = jinx_lines()
+    if jinx:
+        corners.append(("ジンクスは本物? データで確かめた", "<ul>" + "".join(f"<li>{e(x)}</li>" for x in jinx) + "</ul>"
+                        "<p>同じ選手を奇数月と偶数月に分け、片方で強い選手がもう片方でも強いかの相関(1に近いほど本物、0に近いほど偶然)</p>"))
+        txt += ["■ジンクスは本物? データで確かめた"] + [f"・{x}" for x in jinx] + \
+               ["※同じ選手を奇数月と偶数月に分け、片方で強い選手がもう片方でも強いかの相関(1に近いほど本物、0に近いほど偶然)"]
     # 選手同士の相性: 対戦の多い組(よく当たるライバル)を、両方の先着数で並べる(負けた側だけを強調しない)
     h2h = rc.head_to_head(d, [c["id"] for c in sel], min_meet=10)
     name = {c["id"]: c["name"] for c in sel}
@@ -582,7 +575,7 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
     tl = nerai.trend_lines(trend, vname) if trend else None
     th = nerai.trend_headline(trend, vname) if trend else None
     return {"html": page, "note": note_text(title, vname, picks, sel, txt, trust_lines, waku, tl, trend),
-            "x": x_text(title, vname, picks, sel, [c["name"] for c in trust], [c["name"] for v, c in vv[:3]], th),
+            "x": x_text(title, vname, picks, sel, [c["name"] for c in trust], [], th),
             "picks": picks, "sel": sel, "missing": missing, "jcd": jcd, "venue": vname}
 
 

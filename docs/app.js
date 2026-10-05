@@ -106,9 +106,7 @@ function traitChips(r, b) {
   else if (t.series != null && t.series <= -0.27) add("今節の足△", "minus");
   else if (t.motor != null && t.motor <= -0.15) add("モーター△", "minus");
   if (c > 1 && r.stage !== "late" && t.front != null && t.front >= 0.054) add("前づけあり");
-  if (t.local != null && t.top3 != null && t.local - t.top3 >= 0.072) add("当地◎", "plus");
   if (t.f != null && t.f >= 1) add("F持ち", "minus");
-  if (t.rough != null && t.top3 != null && t.rough - t.top3 >= 0.056) add("荒れ水面◎", "plus");
   if (t.growth != null && t.growth >= 0.3) add("上り調子", "plus");
   return chips.length ? `<div class="chips">${chips.slice(0, 3).join("")}</div>` : "";
 }
@@ -349,16 +347,17 @@ function cardHTML(c, race, lane) {
     <h4>決まり手</h4><table class="cd-t">${kimRow("逃げ(1コース)", k.nige, `逃げ率 ${Math.round(k.nige.w / Math.max(1, k.nige.n) * 100)}%`)}
       ${kimRow("差し", k.sashi, "2コース以遠")}${kimRow("まくり", k.makuri, "2コース以遠")}${kimRow("まくり差し", k.mz, "3コース以遠")}</table>
     <h4>コース別</h4><table class="cd-t cd-c"><tr><th>コース</th><th>走数</th><th>1着</th><th>3着内</th><th>平均ST</th></tr>${crs}</table>
-    <h4>得意な場<small>3着内率の普段との差(ポイント)</small></h4><div class="vchips">${ven}</div>
+    <h4>場ごとの成績<small>3着内率の普段との差。参考(偶然の幅が大きい)</small></h4><div class="vchips">${ven}</div>
     <h4>こんなとき</h4><table class="cd-t">
       <tr><th>前づけ</th><td>${c.front.rate == null ? "-" : Math.round(c.front.rate * 100) + "%"}</td><td><small>2枠以上で枠より内へ(${c.front.n}走)</small></td></tr>
       <tr><th>荒れ水面</th><td>${pp(c.rough.res)}</td><td><small>波5cm・風5m以上(${c.rough.n}走)</small></td></tr>
       <tr><th>勝負駆け</th><td>${pp(c.kake.res)}</td><td><small>予選最終日(${c.kake.n}走)</small></td></tr>
       <tr><th>大一番</th><td>${pp(c.big.res)}</td><td><small>準優・優勝戦(${c.big.n}走、出場選手の平均 ${pp(c.big.pop)})</small></td></tr>
       <tr><th>展示が下位</th><td>${pp(c.exlate.res)}</td><td><small>展示タイム4位以下(${c.exlate.n}走、全選手の平均 ${pp(c.exlate.pop)})</small></td></tr></table>
-    <p class="cd-note">「こんなとき」の数字は、3着内率が本人の普段と比べて何ポイント上下するか(回数が少ないほど普段の値に寄せて計算)</p>
+    <p class="cd-note">「こんなとき」の数字は、3着内率が本人の普段と比べて何ポイント上下するか(回数が少ないほど普段の値に寄せて計算)。前づけ以外は、同じ選手でも時期を変えると入れ替わることが多い参考の数字です(前づけ・展示が下位はそこそこ本物、荒れ水面・勝負駆け・大一番・場はほぼ偶然)</p>
     <h4>最近の調子と今節</h4><table class="cd-t">
       <tr><th>勝率</th><td>${gr.prev ?? "-"} → <b>${gr.pts90 ?? "-"}</b></td><td><small>前の1年 → 直近90日(${gr.n90}走)</small></td></tr>
+      ${gr.index != null ? `<tr><th>成長指数</th><td><b>${gr.index >= 0 ? "+" : "−"}${Math.abs(gr.index).toFixed(2)}</b></td><td><small>この先3か月の勝率の伸びの見込み(伸びの4割ほどが残る傾向から)</small></td></tr>` : ""}
       ${b ? `<tr><th>今節の足</th><td>${word(t.series, 0.31, -0.27)}</td><td><small>このレースの時点、同じモーターでの今節の着順から</small></td></tr>
       <tr><th>モーター</th><td>${word(t.motor, 0.165, -0.15)}</td><td><small>${b.motor_2rate != null ? `2連率${Math.round(b.motor_2rate)}%・` : ""}乗り手の腕を差し引いた力</small></td></tr>` : ""}
       ${sr ? `<tr><th>直近の節</th><td>${esc(sr.venue)}</td><td><small>${esc(sr.from.slice(5).replace("-", "/"))}〜${esc(sr.to.slice(5).replace("-", "/"))} 着順 ${sr.finishes.map(esc).join(" ")}</small></td></tr>` : ""}</table>
@@ -641,6 +640,67 @@ function rowHTML(r) {
     <div class="body">${bodyHTML(r)}</div></details>`;
 }
 
+// ---- 今日の荒れそうなレース ----
+// 予想モデルの「1号艇が負ける確率」が高い順に、まだ締切前のレースを3つ。理由は本物と確かめた型だけ(ST・決まり手・前づけ・今節の足・モーター)。
+// 荒れそう=当てやすい・儲かる、ではない(1号艇が負けることもオッズに織り込まれている。荒れ狙いの検証 E7 で確認)
+function anaReasons(r) {
+  const out = [];
+  const inB = r.boats.find((b) => courseOf(r, b) === 1) || r.boats[0];
+  const t = inB.traits || {};
+  const st = t.st_pred != null && r.stage === "late" ? t.st_pred : t.st;
+  const inBad = [];
+  if (t.nige != null && t.nige < 0.39) inBad.push(`逃げ率${Math.round(t.nige * 100)}%`);
+  if (st != null && st >= 0.18) inBad.push(`ST ${fmtST(st)}`);
+  if (t.series != null && t.series <= -0.27) inBad.push("今節の足△");
+  else if (t.motor != null && t.motor <= -0.15) inBad.push("モーター△");
+  if (t.f != null && t.f >= 1) inBad.push("F持ち");
+  if (inBad.length) out.push(`${inB.lane}号艇に不安材料(${inBad.slice(0, 2).join("・")})`);
+  for (const b of r.boats) {
+    const c = courseOf(r, b);
+    if (c < 2 || c > 5) continue;
+    const u = b.traits || {};
+    const types = [["まくり", u.makuri, 0.048], ["差し", u.sashi, 0.042], ["まくり差し", u.mz, 0.040]]
+      .filter(([, v, th]) => v != null && v >= th).sort((x, y) => y[1] / y[2] - x[1] / x[2]);
+    const bst = u.st_pred != null && r.stage === "late" ? u.st_pred : u.st;
+    if (types.length) out.push(`${b.lane}号艇は${types[0][0]}型${bst != null && bst <= 0.144 ? `でST速い(${fmtST(bst)})` : ""}`);
+    else if (bst != null && bst <= 0.135) out.push(`${b.lane}号艇のST速い(${fmtST(bst)})`);
+  }
+  return out.slice(0, 3);
+}
+function anaRaces() {
+  if (!state.data || state.day !== jst().date) return [];
+  return state.data.races.filter((r) => !finished(r) && r.arashi && r.arashi.in_lose != null && (minsLeft(r) == null || minsLeft(r) > 0))
+    .sort((a, b) => b.arashi.in_lose - a.arashi.in_lose).slice(0, 3);
+}
+function anaText(list) {
+  const lines = list.map((r, i) => `${"①②③"[i]} ${r.venue}${r.rno}R(${r.deadline}締切)1号艇が負ける確率${Math.round(r.arashi.in_lose * 100)}%`);
+  const why = list[0] ? anaReasons(list[0]) : [];
+  return `今日いちばん荒れそうなレース🌊\n\n${lines.join("\n")}\n\n${why.length ? `${list[0].venue}${list[0].rno}Rの材料:${why.join("、")}\n\n` : ""}荒れそう=当てやすい、ではないのでご注意を。みんなはどのレースが荒れると思う?`;
+}
+function anaHTML() {
+  const list = anaRaces();
+  if (!list.length) return "";
+  const items = list.map((r) => {
+    const why = anaReasons(r);
+    return `<li><button type="button" class="ana-go" data-id="${r.race_id}"><span class="ana-vr"><b>${esc(r.venue)}</b> ${r.rno}R <small>${esc(r.deadline || "")}締切</small></span>
+      <span class="ana-p">1号艇が負ける<b>${Math.round(r.arashi.in_lose * 100)}%</b></span></button>
+      ${why.length ? `<p class="ana-why">${esc(why.join("。"))}</p>` : ""}</li>`;
+  }).join("");
+  return `<section class="box ana"><h3>今日の荒れそうなレース<small>締切前・AIの確率順</small></h3><ol>${items}</ol>
+    <p>荒れ度の一番上(5段階の5)は、過去に1号艇が74%負けました。ただ、荒れることもオッズに織り込まれているので、荒れそうなレースを買えば儲かるわけではありません。</p>
+    <button type="button" class="ana-copy">Xの投稿文をコピー</button></section>`;
+}
+function setupAna(box) {
+  $$(".ana-go", box).forEach((b) => b.onclick = () => {
+    const el = $(`details.row[data-id="${b.dataset.id}"], section.next[data-id="${b.dataset.id}"]`, box);
+    if (!el) return;
+    if (el.tagName === "DETAILS") { el.open = true; state.open.add(b.dataset.id); }
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  const c = $(".ana-copy", box);
+  if (c) c.onclick = () => copyText(anaText(anaRaces()), c);
+}
+
 // ---- 画面 ----
 function visibleRaces() {
   return state.data.races.filter((r) => state.venue === "all" || r.venue === state.venue);
@@ -653,7 +713,7 @@ function renderNow() {
   if (!races.length) { box.innerHTML = `<div class="empty">この日の予想はまだありません。</div>`; return; }
   const up = races.filter((r) => !finished(r)).sort(byTime);
   const done = races.filter(finished).sort((a, b) => byTime(b, a));
-  let html = "";
+  let html = state.venue === "all" ? anaHTML() : "";
   if (up.length) {
     html += `<div class="now-grid"><div><h2 class="sect">次の締切</h2>${heroHTML(up[0])}</div><div>`;
     if (up.length > 1) html += `<h2 class="sect">このあと</h2><div class="list">${up.slice(1).map(rowHTML).join("")}</div>`;
@@ -662,6 +722,7 @@ function renderNow() {
   if (done.length) html += `<h2 class="sect">終わったレース</h2><div class="list">${done.map(rowHTML).join("")}</div>`;
   box.innerHTML = html;
   setupAnims(box);
+  setupAna(box);
 }
 
 function renderBets() {

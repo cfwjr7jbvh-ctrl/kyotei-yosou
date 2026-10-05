@@ -252,7 +252,7 @@ def _card(rid, b, pa, pg, cg, stc, vg, x, asof, ctx) -> dict:
         "big": {"res": _f(b["big_res"]), "n": _i(b["big_n"]), "pop": _f(ctx["pop_big"])},
         "exlate": {"res": _f(b["exlate_res"]), "n": _i(b["exlate_n"]), "pop": _f(ctx["pop_exlate"])},
         "growth": {"pts90": _f(b["pts90"], 2), "n90": _i(b["n90"]), "prev": _f(b["pts_prev"], 2), "n_prev": _i(b["n_prev"]),
-                   "diff": _f(b["growth"], 2), **P("growth")},
+                   "diff": _f(b["growth"], 2), "index": _f(GROWTH_KEEP * b["growth"], 2) if pd.notna(b["growth"]) else None, **P("growth")},
         "series": _latest_series(x),
     }
     card["radar"] = {"スタート": _f(pg["st_avg"], 0), "逃げ": _f(pg["nige"], 0), "差し": _f(pg["sashi"], 0),
@@ -322,21 +322,6 @@ TAG_RULES = [
      "test": lambda c: c["front"]["n"] >= 50 and (c["front"]["rate"] or 0) >= 0.15,
      "why": lambda c: f"2枠以上の{c['front']['n']}走のうち{c['front']['rate']:.0%}で枠より内のコースへ",
      "score": lambda c: 60 + 100 * c["front"]["rate"]},
-    {"tag": "荒れ水面巧者", "cat": "rough",
-     "rule": "波5cm以上か風5m以上のときの3着内の上積みが、本人の普段より+8ポイント以上(20走以上。回数が少ないほど普段の値に寄せて判定)",
-     "test": lambda c: c["rough"]["n"] >= 20 and (c["rough"]["res"] or 0) >= 0.08,
-     "why": lambda c: f"波5cm以上か風5m以上の{c['rough']['n']}走で、3着内率が普段より{pts(c['rough']['res'])}",
-     "score": lambda c: 60 + 300 * c["rough"]["res"]},
-    {"tag": "勝負駆けに強い", "cat": "kake",
-     "rule": "予選最終日(準優勝戦の前日)の予選で、3着内の上積みが本人の普段より+8ポイント以上(15走以上。普段の値に寄せて判定)",
-     "test": lambda c: c["kake"]["n"] >= 15 and (c["kake"]["res"] or 0) >= 0.08,
-     "why": lambda c: f"予選最終日の{c['kake']['n']}走で、3着内率が普段より{pts(c['kake']['res'])}",
-     "score": lambda c: 60 + 300 * c["kake"]["res"]},
-    {"tag": "大一番に強い", "cat": "big",
-     "rule": "準優勝戦・優勝戦での3着内の上積みの下がり方が、出場した選手の平均より8ポイント以上小さい(15走以上。普段の値に寄せて判定)",
-     "test": lambda c: c["big"]["n"] >= 15 and c["big"]["res"] is not None and c["big"]["res"] - (c["big"]["pop"] or 0) >= 0.08,
-     "why": lambda c: f"準優・優勝戦の{c['big']['n']}走で、3着内率は普段から{c['big']['res'] * 100:+.0f}ポイント(出場選手の平均は{(c['big']['pop'] or 0) * 100:+.0f}ポイント)",
-     "score": lambda c: 60 + 300 * (c["big"]["res"] - (c["big"]["pop"] or 0))},
     {"tag": "展示は控えめ、本番で化ける", "cat": "exlate",
      "rule": "展示タイムがレース内4位以下の走でも、3着内の上積みが本人の普段とほぼ変わらない(普段との差が全選手の平均より+6ポイント以上良い、30走以上)",
      "test": lambda c: c["exlate"]["n"] >= 30 and c["exlate"]["res"] is not None and c["exlate"]["res"] - (c["exlate"]["pop"] or 0) >= 0.06,
@@ -345,7 +330,8 @@ TAG_RULES = [
     {"tag": "上り調子", "cat": "growth",
      "rule": "直近90日の勝率(1着10点〜6着1点の平均)が、その前の1年より0.8点以上高い(直近15走以上・前の1年30走以上)。26歳以下は「急成長中」",
      "test": lambda c: c["growth"]["n90"] >= 15 and c["growth"]["n_prev"] >= 30 and (c["growth"]["diff"] or 0) >= 0.8,
-     "why": lambda c: f"勝率 {c['growth']['prev']:.2f}(前の1年)→ {c['growth']['pts90']:.2f}(直近90日、{c['growth']['n90']}走)",
+     "why": lambda c: f"勝率 {c['growth']['prev']:.2f}(前の1年)→ {c['growth']['pts90']:.2f}(直近90日、{c['growth']['n90']}走)。"
+                      f"成長指数 {c['growth']['index']:+.2f}(伸びの4割ほどは次の3か月も残る傾向)",
      "score": lambda c: 60 + 20 * c["growth"]["diff"]},
     {"tag": "舟券に絡む安定感", "cat": "stable",
      "rule": "3着内の上積み(コース平均との差)が同じ級別の中で上位5%以内(100走以上)",
@@ -353,7 +339,14 @@ TAG_RULES = [
      "why": lambda c: f"3着内率 {c['top3']:.0%}、コース平均より{pts(c['res3'])}({c['n']}走、{grp(c)}の中で{top(c['p']['res3']['grp'])})",
      "score": lambda c: c["p"]["res3"]["grp"]},
 ]
-VENUE_RULE = "ある場での3着内の上積みが、本人の普段より+10ポイント以上(その場で20走以上。回数が少ないほど普段の値に寄せて計算)"
+VENUE_RULE = "(使っていない)"
+
+# 型が本物か(scripts/trait_reliability.py、2026-10-05): 同じ選手を奇数月・偶数月に分けたときの相関。
+# 0.7 以上はタグにする。0.1 前後以下は偶然の幅が大きいのでタグにしない(カードには「参考」として数字だけ残す)
+RELIABILITY = {"スタート": 0.94, "1コースの逃げ": 0.85, "前づけ": 0.97, "展示とのずれ": 0.84, "展示→本番": 0.86, "差し": 0.71,
+               "まくり": 0.80, "まくり差し": 0.74, "外から": 0.91, "コースごとの得意": 0.30, "展示が下位": 0.26,
+               "節の初戦": 0.10, "大一番": 0.08, "荒れ水面": 0.07, "勝負駆け": 0.05, "場との相性": 0.02, "予選の後半": 0.01}
+GROWTH_KEEP = 0.41   # 直近90日の勝率の伸びのうち、次の90日に残る割合(平均。trait_reliability.py の growth)
 
 
 def tags_for(c: dict) -> list[dict]:
@@ -367,10 +360,6 @@ def tags_for(c: dict) -> list[dict]:
                 out.append({"t": name, "cat": r["cat"], "why": r["why"](c), "rule": r["rule"], "score": round(float(r["score"](c)), 1)})
         except (TypeError, KeyError, ZeroDivisionError):
             continue
-    v = c["venues"][0] if c["venues"] else None
-    if v and v["res"] is not None and v["res"] >= 0.10 and v["n"] >= 20:
-        out.append({"t": f"{v['name']}巧者", "cat": "venue", "rule": VENUE_RULE, "score": round(60 + 300 * v["res"], 1),
-                    "why": f"{v['name']}の{v['n']}走で、3着内率が普段より{pts(v['res'])}", "jcd": v["jcd"]})
     return out
 
 

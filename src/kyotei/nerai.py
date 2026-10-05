@@ -6,13 +6,16 @@
 - venue_trend: その場の傾向(1コースの強さ、1コース以外が勝つときの決まり手、人気薄で決まった割合)。
   配当の額(万舟など)は使わない(儲けを思わせる表現は避ける。公営競技の広告の指針に自主的に合わせる)。
   グレードレースは出場選手のほぼ全員が A1 なので、「6人中5人以上が A1 のレース」を「トップ級のレース」として別に出す
-順位は、回数が少ない選手を同じ級別の平均に寄せた値で付ける(表示するのは実際の回数と率)。
+順位と「狙い目のコース」は、偶然の分を差し引いた見込みで付ける(表示するのは実際の回数と率):
+  見込み = 同じ級別のそのコースの平均 + 本人の全体の上積み(ほぼ本物、相関0.94)
+          + 回数/(回数+K_COURSE) ×(そのコースだけの上積み − 本人の全体の上積み)(コースごとの得意は相関0.30しかないので強めに寄せる)
 """
 from __future__ import annotations
 
 import pandas as pd
 
-K = 10                 # 回数が少ない選手を級別の平均に寄せる強さ(回数)
+K = 10                 # (旧)回数が少ない選手を級別の平均に寄せる強さ(回数)
+K_COURSE = 70          # コースごとの得意を本人の全体に寄せる強さ(走数)。trait_reliability.py の相関0.30(各期間平均30走)から
 UPSET_POP = 30         # 「人気薄で決まった」= 3連単の結果がこの人気順位以下(全国で約2割。万舟とほぼ同じくらいの珍しさ)
 MIN_N = 8              # 早見表に載せる最低の走数
 KIM = {1: "逃げ", 2: "差し", 3: "まくり", 4: "まくり差し", 5: "抜き", 6: "恵まれ"}
@@ -37,35 +40,57 @@ def _shrunk(rate, n, prior):
     return (rate * n + K * prior) / (n + K)
 
 
+def _expect(c: dict, base: pd.DataFrame) -> dict[int, dict]:
+    """コースごとの見込み(1着率・3着内率)と、そのコースだけの得意(bump、3着内率のポイント)。"""
+    rows = {}
+    for crs in range(1, 7):
+        x = c["courses"][crs - 1]
+        if (c["grp"], crs) not in base.index:
+            continue
+        b = base.loc[(c["grp"], crs)]
+        rows[crs] = {"n": x["n"], "win": x["win"], "top3": x["top3"], "avg_win": float(b["win"]), "avg_top3": float(b["top3"])}
+    tot = sum(r["n"] for r in rows.values() if r["top3"] is not None)
+    if not tot:
+        return {}
+    own3 = sum((r["top3"] - r["avg_top3"]) * r["n"] for r in rows.values() if r["top3"] is not None) / tot
+    own1 = sum((r["win"] - r["avg_win"]) * r["n"] for r in rows.values() if r["win"] is not None) / tot
+    for r in rows.values():
+        w = r["n"] / (r["n"] + K_COURSE)
+        r["bump"] = w * ((r["top3"] - r["avg_top3"]) - own3) if r["top3"] is not None else 0.0
+        bump1 = w * ((r["win"] - r["avg_win"]) - own1) if r["win"] is not None else 0.0
+        r["exp_top3"] = r["avg_top3"] + own3 + r["bump"]
+        r["exp_win"] = r["avg_win"] + own1 + bump1
+    return rows
+
+
 def waku_table(sel: list[dict], base: pd.DataFrame, top: int = 3) -> dict[int, list[dict]]:
-    """コースごとの上位。{course: [{id, name, n, k, rate, avg}]}(k は1着か3着内の回数、avg は同じ級別の平均)。"""
+    """コースごとの上位。{course: [{id, name, n, k, rate, avg}]}(k は1着か3着内の回数、avg は同じ級別の平均)。
+    順位は見込み(_expect)で付け、表示は実際の回数と率。"""
+    exp = {c["id"]: _expect(c, base) for c in sel}
     out = {}
     for crs in range(1, 7):
         m = METRIC[crs]
         rows = []
         for c in sel:
             x = c["courses"][crs - 1]
-            if x["n"] < MIN_N or x[m] is None:
+            e = exp[c["id"]].get(crs)
+            if x["n"] < MIN_N or x[m] is None or not e:
                 continue
-            avg = float(base.loc[(c["grp"], crs), m]) if (c["grp"], crs) in base.index else None
             rows.append({"id": c["id"], "name": c["name"], "n": x["n"], "k": round(x[m] * x["n"]), "rate": x[m],
-                         "avg": avg, "score": _shrunk(x[m], x["n"], avg if avg is not None else x[m])})
+                         "avg": e["avg_" + m], "score": e["exp_" + m]})
         out[crs] = sorted(rows, key=lambda r: -r["score"])[:top]
     return out
 
 
-def best_course(c: dict, base: pd.DataFrame, min_diff: float = 0.05) -> dict | None:
-    """2〜6コースのうち、同じ級別の平均より3着内率が一番上回るコース(回数が少ないほど平均に寄せる)。"""
+def best_course(c: dict, base: pd.DataFrame, min_bump: float = 0.03) -> dict | None:
+    """2〜6コースのうち、本人のほかのコースと比べて3着内率が一番上回るコース(偶然の分を差し引いた見込みで +3ポイント以上)。"""
     best = None
-    for crs in range(2, 7):
-        x = c["courses"][crs - 1]
-        if x["n"] < 10 or x["top3"] is None or (c["grp"], crs) not in base.index:
+    for crs, r in _expect(c, base).items():
+        if crs == 1 or r["n"] < 20 or r["top3"] is None:
             continue
-        b = base.loc[(c["grp"], crs)]
-        diff = _shrunk(x["top3"], x["n"], float(b["top3"])) - float(b["top3"])
-        if diff >= min_diff and (best is None or diff > best["diff"]):
-            best = {"c": crs, "n": x["n"], "win": x["win"], "top3": x["top3"], "avg_win": float(b["win"]),
-                    "avg_top3": float(b["top3"]), "diff": diff}
+        if r["bump"] >= min_bump and (best is None or r["bump"] > best["diff"]):
+            best = {"c": crs, "n": r["n"], "win": r["win"], "top3": r["top3"], "avg_win": r["avg_win"],
+                    "avg_top3": r["avg_top3"], "diff": r["bump"]}
     return best
 
 
