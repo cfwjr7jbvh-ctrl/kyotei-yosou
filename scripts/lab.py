@@ -1767,6 +1767,15 @@ def t_wind(ent, r):
         a_, c_ = gl[gl["ang"] == w_]["c1"], gl[gl["ang"] == b_]["c1"]
         if len(a_) >= 30 and len(c_) >= 30:
             n_dir += 1; keep_dir += int(a_.mean() < c_.mean())
+    # 向きのくせ全体: 場×8方位(風3m以上)の「その場の強風の平均からのずれ」が、前の2年と最近の1年で似ているか
+    cells = []
+    for h_, part in ((0, early), (1, late)):
+        s_ = part[(part["wind"] >= 3) & part["ang"].notna()]
+        g_ = s_.groupby(["jcd", "ang"])["c1"].agg(["size", "mean"])
+        g_["dev"] = g_["mean"] - s_.groupby("jcd")["c1"].mean().reindex(g_.index.get_level_values(0)).values
+        cells.append(g_[g_["size"] >= 40]["dev"].rename(h_))
+    cc = pd.concat(cells, axis=1).dropna()
+    corr_dir = float(cc[0].corr(cc[1])) if len(cc) > 20 else float("nan")
     d5 = (m5["in1"] - m5["in1_ref"]) * 100
     v5 = verdicts(m5)
     edge_w = {-1: "しかも、オッズの予想より少ない(風の日の1号艇は、人気ほど来ていない)", 0: "オッズもちゃんと知っている",
@@ -1788,7 +1797,8 @@ def t_wind(ent, r):
                   "強い風は、ボートの浮き上がりや、1マークでの流れ方に効くと言われる。インの艇は風を正面から受けやすい",
                   "『場と季節をそろえて』は、同じ場・同じ月の平均からのずれでくらべたということ(風の強い場・季節がもともとインが弱い、という見かけの差を取りのぞく)",
                   "風向きは公式記録の8方位。場ごとに水面の向きがちがうので、『追い風・向かい風』ではなく方位のままで調べた"],
-        "faq": [("向かい風はまくり、追い風は差し?", f"風が強くなると、まくりも差しも両方増える。場ごとに『インが弱い向き』を前の2年で選んでも、最近の1年で同じだったのは{n_dir}場中{keep_dir}場。向きのくせは、思ったより入れかわる"),
+        "faq": [("向かい風はまくり、追い風は差し?", f"風が強くなると、まくりも差しも両方増える。場ごとの風向きのくせは、前の2年と最近の1年で{sim_words(corr_dir)}。"
+                                                 f"『いちばんインが弱い向き』を1つ選んでも、最近の1年でも弱かったのは{n_dir}場中{keep_dir}場。向きは参考ていど、まずは強さ"),
                 ("どの場がいちばん風に弱い?", f"結果の表のとおり。風に弱い場の顔ぶれは、前の2年と最近の1年で{sim_words(corr)}"),
                 ("波は?", f"波5cm以上だと、1号艇の勝ちは100レースで{_n100(mw['in1'])}回(波2cm以下は{_n100(mw['in1_ref'])}回)。波は風といっしょに高くなるので、風と波は同じ話の表と裏"),
                 ("オッズは風を知ってる?", f"少しは知っている(風が強いと1号艇の人気は下がる)。でも、下がり方が足りない。風5m以上だと、オッズから見込める1号艇の勝ちは100レースで{_n100(m5['in1'] / m5['market_ratio'] * (m5.get('market_ref') or 1.0)) if m5.get('market_ratio') else '-'}回、実際は{_n100(m5['in1'])}回")],
@@ -1797,7 +1807,7 @@ def t_wind(ent, r):
         "mikata": "風の日は、展示から目が離せない。旗のなびき方を見て『今日は荒れるぞ』って構えるの、現地ならではの楽しみだね",
         "gen": "風の日の水面はな、白い波がキラキラして、それだけでドキドキするんだよ。インの選手はいちばん怖いはずさ",
         "challenge": "次の風の強い日、場内の旗を見て風速を当ててみよう。直前情報と答え合わせ。5mを超えたら1号艇の頭を疑う日",
-        "numbers": {"adj": adj, "venues_lower": n_low, "corr_half": corr, "dir_keep": [keep_dir, n_dir],
+        "numbers": {"adj": adj, "venues_lower": n_low, "corr_half": corr, "dir_keep": [keep_dir, n_dir], "corr_dir": corr_dir,
                     "kimarite": kt.reset_index().astype({"wind": str}).to_dict("records")},
     }
 
