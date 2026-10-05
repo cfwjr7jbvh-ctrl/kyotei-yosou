@@ -2909,6 +2909,46 @@ def _hook(t):
     return t.get("hook") or HOOKS.get(t.get("id"))
 
 
+# 記事の組み立て(2026-10-06 決定。読み物の型の調査: 答えは早めに出す。ネタバレでも楽しさは減らず、記事の中ほどで半分が離れるため)
+#   オカルト枠: 表紙は問いだけ → 掛け合い → 「あなたはどっち?」→ すぐ結論+数字1行 → ゲンさんの返し → くわしく
+#   実用の説  : 表紙に結論 → 結論+数字1行 → 説と短い掛け合い → 予想に使うなら・お題 → くわしく(結果・表)
+def _main_measure(t):
+    """見出しの物差し。記事は大事な物差しを先頭に置いているので、基準をのぞいた最初の1つ(t["key"] で番号を指定もできる)。"""
+    ms = [x for x in t["measures"] if not x[2].get("baseline")] or t["measures"]
+    return ms[t.get("key", 0)]
+
+
+def key_line(t) -> str:
+    """結論のすぐ下に置く数字の1行(いちばん大事な物差し)。"""
+    name, m, _ = _main_measure(t)
+    unit = m.get("unit") or t.get("unit") or ("走" if t.get("no_market") else "レース")
+    refl = m.get("ref_label") or t.get("ref_label") or ("ふだん" if t.get("no_market") else "全レース")
+    per = t.get("per", 100)
+    nn = (lambda v: f"{v * per:.1f}") if _fine(m, per) else (lambda v: _n100(v, per))  # noqa: E731
+    subj = m.get("subject", t.get("subject", "1号艇"))
+    sv = ("" if subj.startswith("その") or subj in name else f"{subj}が") + m.get("verb", t.get("verb", "勝つ"))
+    return f"{name}: {per}{unit}で{sv}のは{nn(m['in1'])}回({refl}は{nn(m['in1_ref'])}回)"
+
+
+def practical_lines(t, con):
+    """実用の説の、結論のあとの短い掛け合い(説 → ひと言の答え → どこで使う? → 使いどころ)。"""
+    v = con[0].split("。")[0]
+    if "ウソ" in v:
+        g2 = "なにぃ……。じゃあ、予想のどこで気をつければいいんだ?"
+    elif v.startswith(("本当", "信じていい", "番長は本物")):
+        g2 = "だろ? で、予想のどこで使えばいいんだ?"
+    else:
+        g2 = "ふむ。で、予想のどこで使えばいいんだ?"
+    u0 = t["use"][0] if t.get("use") else t["lead"]
+    return [("g", t["belief"]), ("m", f"{count_words(t)}、数えてみたよ。ひと言でいうと『{v}』"), ("g", g2), ("m", u0)]
+
+
+def count_words(t) -> str:
+    """「17万レース」のような、数えた量のひと言。"""
+    n = t.get("n_races")
+    return f"{n / 10000:.0f}万レース" if n else "3年分のレース"
+
+
 def page(t: dict, asof: str) -> str:
     today = dt.date.today().strftime("%Y.%m.%d")
     con = conclusion(t)
@@ -2917,13 +2957,28 @@ def page(t: dict, asof: str) -> str:
     if hook:
         rows = "".join(f'<div class="hk {w}">{gull_svg(44, bg="#ffffff", cls="hk-g", who="gen" if w == "g" else "mikata")}<p><small>{"ゲンさん" if w == "g" else "ミカタ"}</small>{e(x)}</p></div>'
                        for w, x in hook["lines"])
-        hook_html = f'<section class="hook"><span class="label">はじめに(正直に言うと)</span><div class="hks">{rows}</div></section>'
-    # オカルト枠は、表紙で答えを言わない(気持ちの導入から入り、数字は結論のあとの「くわしく」へ)
-    deck = (f"「{hook['x'][0]}」――関係ないのは分かってる。でも、ワンチャン大いなる力が働いてるかも? ギャンブラーの気持ちを、データで確かめた。" if hook else t["lead"])
-    detail_html = f'<section class="howto"><span class="label">くわしく</span><p>{e(t["lead"])}</p></section>' if hook else ""
+        hook_html = (f'<section class="hook"><span class="label">はじめに(正直に言うと)</span><div class="hks">{rows}</div>'
+                     f'<p class="ask">あなたは、どっちだと思う? <b>答えは、すぐ下。</b></p></section>')
+    else:   # 実用の説: 結論のあとに、説と短い掛け合い(どこで使えるか)
+        lines = practical_lines(t, con)
+        rows = "".join(f'<div class="hk {w}">{gull_svg(44, bg="#ffffff", cls="hk-g", who="gen" if w == "g" else "mikata")}<p><small>{"ゲンさん" if w == "g" else "ミカタ"}</small>{e(x)}</p></div>'
+                       for w, x in lines)
+        hook_html = (f'<section class="hook pr"><span class="label">ゲンさんの説</span><div class="hks">{rows}</div>'
+                     f'<p class="who">ゲンさん=験かつぎ歴40年の大先輩。ストップウォッチ片手に展示を見る目は確か</p></section>')
+    # オカルト枠は表紙で答えを言わない(問いだけ)。答えは掛け合いのすぐ下。実用の説は表紙で結論まで言う
+    deck = (f"「{hook['x'][0]}」――関係ないのは分かってる。でも、ワンチャン大いなる力が働いてるかも? ギャンブラーの気持ちを、{count_words(t)}のデータで確かめた。" if hook
+            else con[1])
+    cv_con = "" if hook else f'<p class="cv-con"><span>結論</span>{e(con[0])}</p>'
+    stamp = (f'<section class="stamp"><span class="label">ミカタの結論</span><div class="st-box"><b>{e(con[0])}</b>'
+             f'<p class="kl">{e(key_line(t))}</p>' + (f'<p>{e(con[1])}</p>' if hook else "") + '</div></section>')
+    gen_reply = f'<blockquote class="ft-quote gen">{gull_svg(64, bg="#ffffff", cls="q", who="gen")}<p><small>ゲンさんの返し</small>{e(t.get("gen", "ふーん。で、今日はどこが荒れるんだ?"))}</p></blockquote>'
+    detail_html = (f'<section class="howto"><span class="label">くわしく</span><p>{e(t["lead"])}</p></section>' if hook
+                   else f'<p class="more">ここから先は、くわしい数字。場ごと・年ごとの表も</p><section class="howto"><span class="label">くわしく</span><p>{e(t["lead"])}</p></section>')
 
     tables = "".join(table_html(*tb) for tb in t["tables"])
-    use = "".join(f"<li>{e(x)}</li>" for x in t["use"])
+    use_l = t["use"] if hook else t["use"][1:]
+    use_html = (f'<section class="side"><h3>{"予想に使うなら" if hook else "ほかの使いどころ"}</h3><ul>' + "".join(f"<li>{e(x)}</li>" for x in use_l) + "</ul></section>") if use_l else ""
+    todai = f'<section class="todai"><span class="label">今日のお題</span><div class="td-box">{gull_svg(48, bg="#fff", cls="td")}<p>{e(t.get("challenge", "次に行く場で、この説が本当か自分の目で確かめてみよう"))}</p></div></section>'
     rules = ('<section class="side"><h3>まず、ルールをざっくり</h3><ol>' + "".join(f"<li>{e(x)}</li>" for x in t["rules"]) + "</ol></section>") if t.get("rules") else ""
     faq = ('<section><span class="label">よくある疑問</span>' + "".join(f'<h4>Q. {e(q)}</h4><p class="faq">{e(a)}</p>' for q, a in t["faq"]) + "</section>") if t.get("faq") else ""
     return f"""<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><title>ミカタ検証ラボ {e(t['title'])}</title>{mag.FONTS}<style>{mag.CSS}
@@ -2951,23 +3006,24 @@ def page(t: dict, asof: str) -> str:
 .gauge b{{display:block;font:400 15px var(--head);color:var(--red)}} .gauge span{{font-size:13px}}
 .td-box{{display:flex;gap:12px;align-items:flex-start;background:var(--yellow);padding:14px 16px;border:3px solid var(--ink)}} .td-box p{{margin:0;font:700 15.5px/1.7 var(--serif)}} .td-box svg{{flex:0 0 48px;width:48px;height:48px}}
 .st-box{{background:var(--red);color:#fff;padding:14px 16px}} .st-box b{{display:block;font:400 clamp(20px,5.5vw,28px)/1.3 var(--head)}} .st-box p{{margin:6px 0 0;font-size:14px;line-height:1.6}}
+.ask{{margin:10px 0 0;font:700 15.5px/1.6 var(--serif);text-align:center}} .ask b{{color:#c8141c}} .hook.pr .hks{{background:#eef4fb;border-color:#0b5fb4}}
+.st-box .kl{{margin:8px 0 0;font:700 15px/1.5 var(--sans);background:rgba(255,255,255,.16);padding:6px 10px}}
+.cv-con{{margin:6px 0 0;font:400 clamp(20px,5.6vw,30px)/1.3 var(--head);color:#c8141c}} .cv-con span{{display:inline-block;font:700 12px var(--sans);background:#c8141c;color:#fff;padding:3px 8px;margin-right:8px;vertical-align:middle}}
+.more{{margin:28px 0 0;padding:10px 0;border-top:3px double var(--ink);font:700 13px var(--sans);color:var(--mute);text-align:center}}
 .mag h4{{margin:14px 0 6px;font:400 17px var(--head)}} .side ul,.side ol{{font-size:14.5px}} .faq{{margin:0 0 10px;font-size:14.5px;line-height:1.8}}
 </style></head><body>
 <header class="cover"><div class="lanebar"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cv-in">
 <div class="cv-top"><div class="brand">ミカタ検証ラボ<small>「◯◯理論」を同じ物差しで試す</small></div><div class="issue"><b>LAB</b><br>{e(today)}</div></div>
-<p class="cv-kicker">検証する説</p><h1 class="cv-h">{e(t['title'])}</h1>
+<p class="cv-kicker">{"オカルト枠" if hook else "検証する説"}</p><h1 class="cv-h">{e(t['title'])}</h1>{cv_con}
 <p class="cv-deck">{e(deck)}</p>
 <div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ(カモメの記者)/ 説の持ち込み ゲンさん<br>公式の成績データ 2023-10〜{e(asof)} を独自に集計</span></div></div></header>
 <main class="mag">
-{hook_html}<section class="opener"><span class="label">ゲンさんの説</span><div class="gen-say">{gull_svg(64, bg="#ffffff", cls="gs", who="gen")}<p class="belief">{e(t['belief'])}</p></div>
-<p class="who">ゲンさん=験かつぎ歴40年の大先輩。ストップウォッチ片手に展示を見る目は確か。その説、ミカタがデータで確かめます</p></section>
-<section class="stamp"><span class="label">ミカタの結論</span><div class="st-box"><b>{e(con[0])}</b><p>{e(con[1])}</p></div></section>
+{(hook_html + stamp + gen_reply) if hook else (stamp + rules + hook_html + use_html + todai)}
 {detail_html}<section class="howto"><span class="label">数字の見方</span><p>数字はぜんぶ「{t.get('per', 100)}{t.get('unit') or ('走' if t.get('no_market') else 'レース')}あたり何回か」。棒の上が<b>くらべる相手</b>、下が<b>この条件</b>。差がはっきりしていて、たまたまでは出ない差なら「<b>本物の差</b>」のしるしが付きます。{'' if t.get('no_market') else 'オッズ(みんなの予想)も同じ差を見込んでいれば「<b>オッズも知ってる</b>」=配当はそのぶん堅め。'}</p></section>
-{rules}<section><span class="label">結果</span>{measures_html(t['measures'], t.get('subject', '1号艇'), t.get('verb', '勝つ'), t.get('no_market', False), t.get('compare', '全体'), t.get('ref_label'), t.get('unit'), t.get('per', 100))}{tables}</section>{faq}
-<section class="side"><h3>予想に使うなら</h3><ul>{use}</ul></section>
-<section class="todai"><span class="label">今日のお題</span><div class="td-box">{gull_svg(48, bg="#fff", cls="td")}<p>{e(t.get('challenge', '次に行く場で、この説が本当か自分の目で確かめてみよう'))}</p></div></section>
+{rules if hook else ''}<section><span class="label">結果</span>{measures_html(t['measures'], t.get('subject', '1号艇'), t.get('verb', '勝つ'), t.get('no_market', False), t.get('compare', '全体'), t.get('ref_label'), t.get('unit'), t.get('per', 100))}{tables}</section>{faq}
+{(use_html + todai) if hook else ''}
 <blockquote class="ft-quote">{gull_svg(64, bg="#ffffff", cls="q")}<p><small>ミカタのひと言</small>{e(t['mikata'])}</p></blockquote>
-<blockquote class="ft-quote gen">{gull_svg(64, bg="#ffffff", cls="q", who="gen")}<p><small>ゲンさんの返し</small>{e(t.get('gen', 'ふーん。で、今日はどこが荒れるんだ?'))}</p></blockquote>
+{'' if hook else gen_reply}
 <section class="method"><h3>データについて</h3><p>公式の成績データ(番組表・競走成績)と、締切時のオッズ(集めたレース分)を自分たちで集計。「オッズの見立て」は、締切時のオッズから、ひかれる分(控除)を除いて逆算した1号艇の勝つ見込み。
 「ふだん並み」かどうかは、同じ数のレースを何度も引き直したときに出るブレの幅で判定(ブレの外なら「本物の差」)。この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
 <footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ検証ラボ ・ 毎週1本。競艇をいろんな角度から。買い目は売りません。</span></footer></main></body></html>"""
@@ -2975,9 +3031,21 @@ def page(t: dict, asof: str) -> str:
 
 def note_text(t: dict) -> str:
     con = conclusion(t)
-    out = [f"【タイトル案】", f"1. {t['title']}|{t['belief'][:24]}…をデータで検証", f"2. 検証ラボ:{t['title']} 3つの物差しで確かめた", "",
-           *((["■はじめに(正直に言うと)"] + [f"{'ゲンさん' if w == 'g' else 'ミカタ'}「{x}」" for w, x in _hook(t)["lines"]] + [""]) if _hook(t) else []),
-           "■ゲンさんの説(験かつぎ歴40年の大先輩)", f"「{t['belief']}」", "", f"■ミカタの結論:{con[0]}", con[1], "", "■くわしく", t["lead"], ""]
+    hk = _hook(t)
+    who = lambda w: "ゲンさん" if w == "g" else "ミカタ"  # noqa: E731
+    if hk:   # オカルト枠: 問いのタイトル → 掛け合い → あなたはどっち? → すぐ結論
+        out = ["【タイトル案】", f"1. {t['title']} {count_words(t)}で数えてみた", f"2. 関係ないのは分かってる。{t['title']}", "",
+               "■はじめに(正直に言うと)", *[f"{who(w)}「{x}」" for w, x in hk["lines"]], "", "あなたは、どっちだと思う? 答えは、すぐ下。", "",
+               f"■ミカタの結論:{con[0]}", key_line(t), con[1], "", f"ゲンさんの返し:「{t.get('gen', '')}」", "", "■くわしく", t["lead"], ""]
+    else:    # 実用の説: タイトルで結論 → 結論と数字 → 説と短い掛け合い → 使いどころ・お題 → (ここから有料にするなら)くわしく
+        out = ["【タイトル案】", f"1. {t['title']}|{con[0]}", f"2. {t['title']}→{con[0].split('。')[0]}。{count_words(t)}で確かめた", "",
+               f"■ミカタの結論:{con[0]}", key_line(t), con[1], ""]
+        if t.get("rules"):
+            out += ["■まず、ルールをざっくり"] + [f"{i + 1}. {x}" for i, x in enumerate(t["rules"])] + [""]
+        out += ["■ゲンさんの説(験かつぎ歴40年の大先輩)"] + [f"{who(w)}「{x}」" for w, x in practical_lines(t, con)] + [""]
+        if t["use"][1:]:
+            out += ["■ほかの使いどころ"] + [f"・{x}" for x in t["use"][1:]] + [""]
+        out += ["■今日のお題", t.get("challenge", ""), "", "(有料にするなら、ここから先)", "■くわしく", t["lead"], ""]
     out += ["■結果"]
     for name, m, v in t["measures"]:
         unit = t.get("unit") or ("走" if t.get("no_market") else "レース")
@@ -3005,36 +3073,39 @@ def note_text(t: dict) -> str:
             out += ["", f"■{h}"] + ["・" + " / ".join(str(c) for c in x) for x in rows]
             continue
         out += ["", f"■{h}"] + [f"・{x['venue']}{x['rno']}{'R' if x['rno'] != '' else ''} {_n100(x['in1'])}回({x['n']:,}レース)" for x in rows]
-    if t.get("rules"):
+    if t.get("rules") and hk:
         out += ["", "■まず、ルールをざっくり"] + [f"{i + 1}. {x}" for i, x in enumerate(t["rules"])]
     if t.get("faq"):
         out += ["", "■よくある疑問"] + [f"Q. {q}\n{a}" for q, a in t["faq"]]
-    out += ["", "■予想に使うなら"] + [f"・{x}" for x in t["use"]] + ["", f"■今日のお題", t.get("challenge", ""), "", f"ミカタのひと言:「{t['mikata']}」", "",
+    if hk:
+        out += ["", "■予想に使うなら"] + [f"・{x}" for x in t["use"]] + ["", "■今日のお題", t.get("challenge", "")]
+    out += ["", f"ミカタのひと言:「{t['mikata']}」"] + ([] if hk else [f"ゲンさんの返し:「{t.get('gen', '')}」"]) + ["",
             "■データについて", "公式の成績データと締切時のオッズを自分たちで集計。この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。"]
     return "\n".join(out)
 
 
 def x_text(t: dict) -> str:
-    """X の投稿案。数字のひと言を残せる長さのうち、いちばん情報の多い形を選ぶ(全角は2文字で数える)。"""
+    """X の投稿案。1行目で結論と数字(オカルト枠は問いと掛け合い)を言い切る。全角は2文字で数え、280に収まるいちばん情報の多い形を選ぶ。
+    リンクは本文に入れず、返信に付ける(本文のリンクは表示が減りやすいため)。"""
     con = conclusion(t)
-    head, gen = f"【検証ラボ】{t['title']}\n\nゲンさん「{t['belief']}」\n\n", t.get("gen", "")
-    num = (con[1].split("。")[0] + "。") if con[1] else ""
-    lead1 = t["lead"].split("。")[0] + "。"
-    cands = [f"{head}ミカタ「結論:{con[0]}。{lead1}」\n\nゲンさん「{gen}」\n\nみんなはこの説、信じてた?",
-             f"{head}ミカタ「結論:{con[0]}。{num}」\n\nゲンさん「{gen}」\n\nみんなは信じてた?",
-             f"{head}ミカタ「結論:{con[0]}。{num}」\n\nみんなは信じてた?",
-             f"{head}ミカタ「結論:{con[0]}」\n\nゲンさん「{gen}」\n\nみんなは信じてた?",
-             f"{head}ミカタ「結論:{con[0]}」\n\nみんなは信じてた?"]
+    gen, kl = t.get("gen", ""), key_line(t)
     hk = _hook(t)
-    if hk:   # オカルト枠は、説の代わりに掛け合いの導入から入る
+    if hk:   # オカルト枠: ゲンさんの験 → ミカタ → 結論と数字 → 読み手の験かつぎを聞く
         gx, mx = hk["x"]
         h2 = f"【検証ラボ】{t['title']}\n\nゲンさん「{gx}」\nミカタ「{mx}」\n\n"
-        cands = [h2 + f"結論:{con[0]}。{num}\n\nゲンさん「{gen}」\n\nみんなは信じてた?",
-                 h2 + f"結論:{con[0]}。{num}\n\nみんなは信じてた?",
-                 h2 + f"結論:{con[0]}\n\nゲンさん「{gen}」",
-                 h2 + f"結論:{con[0]}"] + cands
+        ask = "あなたの験かつぎも教えて。次に数えます"
+        cands = [h2 + f"結論:{con[0]}\n{kl}\n\nゲンさん「{gen}」\n\n{ask}",
+                 h2 + f"結論:{con[0]}\n{kl}\n\n{ask}",
+                 h2 + f"結論:{con[0]}\n\n{ask}",
+                 h2 + f"結論:{con[0]}"]
+    else:    # 実用の説: 1行目で結論、2行目に数字
+        h1 = f"【検証ラボ】{t['title']}\n→ 結論:{con[0]}\n{kl}\n\n"
+        cands = [h1 + f"ゲンさん「{gen}」\n\nみんなは信じてた?",
+                 h1 + "みんなは信じてた?",
+                 f"【検証ラボ】{t['title']}\n→ 結論:{con[0]}\n\nみんなは信じてた?"]
     body = next((c for c in cands if xlen(c) <= 280), cands[-1])
-    return f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 紙面の上部のスクリーンショットか、結果のカードの部分"
+    return (f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 紙面の上部のスクリーンショットか、結果のカードの部分\n"
+            "記事のリンクは、この投稿への返信に付ける")
 
 
 def main():
@@ -3082,7 +3153,7 @@ def build_one(tid, ent, r, outdir):
             made0 = json.loads(old.read_text(encoding="utf-8")).get("made")
         except Exception:  # noqa: BLE001
             made0 = None
-    t["asof"], t["made"], t["updated"] = asof, made0 or now, now
+    t["asof"], t["made"], t["updated"], t["n_races"] = asof, made0 or now, now, int(len(r))
     (REP / f"{tid}.json").write_text(json.dumps(t, ensure_ascii=False, indent=1, default=float), encoding="utf-8")
     print("wrote", out / f"lab_{tid}.html")
     print(t["lead"])
