@@ -16,6 +16,23 @@
    "pick_bets": 49,
    "pick_hits": 1,
    "pick_return": 1970
+  },
+  {
+   "date": "2026-10-05",
+   "races": 144,
+   "top1_hit": 14,
+   "bets": 1,
+   "bet_hits": 1,
+   "invest": 100,
+   "return": 990,
+   "nerai_races": 0,
+   "nerai_bets": 0,
+   "nerai_hits": 0,
+   "nerai_return": 0,
+   "pick_races": 143,
+   "pick_bets": 424,
+   "pick_hits": 14,
+   "pick_return": 41630
   }
  ]
 }
