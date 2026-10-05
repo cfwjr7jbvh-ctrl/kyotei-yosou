@@ -1275,9 +1275,10 @@ def t_humid(ent, r):
     x["wind"] = pd.to_numeric(x["wind"], errors="coerce")
     hum = x["relative_humidity_2m"]
     wet, dry, mid = hum >= 75, hum <= 55, hum.between(56, 74)
-    mw, md = measure(x, wet), measure(x, dry)
+    mw, md = measure(x, wet, ref=dry), measure(x, dry)
     calm = x["wind"] <= 3
-    mcw, mcd = measure(x, wet & calm, ref=calm), measure(x, dry & calm, ref=calm)
+    mcw, mcd = measure(x, wet & calm, ref=dry & calm), measure(x, dry & calm, ref=calm)
+    mw["ref_label"], mcw["ref_label"] = "乾いた日", "風の弱い乾いた日"
     # 場×月の差を除いた「湿−乾」、場ごとに同じ向きか
     xv = x[hum.notna()].copy()
     xv["c1vm"] = xv["c1"] - xv.groupby(["jcd", pd.to_datetime(xv["date"]).dt.month])["c1"].transform("mean")
@@ -1290,13 +1291,13 @@ def t_humid(ent, r):
         temps.append(f"{lo}〜{hi}℃で{per100(float(x[m_ & dry]['c1'].mean()))}→{per100(float(x[m_ & wet]['c1'].mean()))}")
     e = _with_wx(_adj(ent))
     ph = _gap(e, e["relative_humidity_2m"] >= 75, e["relative_humidity_2m"] <= 55, 10, by="day")
-    ms = [("湿度75%以上", mw, verdicts(mw)), ("湿度55%以下(乾いた空気)", md, verdicts(md)), ("風3m以下 × 湿度75%以上", mcw, verdicts(mcw)), ("風3m以下 × 湿度55%以下", mcd, verdicts(mcd))]
+    ms = [("湿度75%以上の日(乾いた日=湿度55%以下とくらべて)", mw, verdicts(mw)), ("風3m以下の日だけでくらべても", mcw, verdicts(mcw))]
     return {
         "id": "humid", "title": "湿気の多い日は、インが強い", "belief": "湿気が多いとエンジンが回らない。伸びがなくなって、外からのまくりが届かない",
-        "lead": f"湿度75%以上の時間に1号艇が勝つのは100レースで{per100(mw['in1'])}、湿度55%以下の乾いた空気だと{per100(md['in1'])}。"
+        "lead": f"湿度75%以上の時間に1号艇が勝つのは100レースで{per100(mw['in1'])}、湿度55%以下の乾いた空気だと{per100(mw['in1_ref'])}。"
                 f"同じ場・同じ月の中でくらべても{gap_vm * 100:+.1f}ポイントの差があり、{n_v}場のうち{n_pos}場で同じ向き。"
                 f"風が弱い日だけ、気温をそろえて見ても同じだった({'、'.join(temps)})。",
-        "conclusion": ["本当。湿気の日はインが強い(オッズも知っている)", f"乾いた空気{per100(md['in1'])}→湿った空気{per100(mw['in1'])}。場・季節・風・気温をそろえても残る。湿った空気はうすくて、エンジンの力が少し落ちるので、外から届きにくい。オッズもそれをちゃんと映している"],
+        "conclusion": ["本当。湿気の日はインが強い(オッズも知っている)", f"乾いた空気{per100(mw['in1_ref'])}→湿った空気{per100(mw['in1'])}。場・季節・風・気温をそろえても残る。湿った空気はうすくて、エンジンの力が少し落ちるので、外から届きにくい。オッズもそれをちゃんと映している"],
         "tables": [], "measures": ms,
         "rules": ["湿度は、レース場のおおよその位置の締切の時刻の値(過去の気象データの再解析。場の観測値ではない)",
                   "湿った空気は、乾いた空気より少し軽い(水蒸気は軽い)。そのぶん酸素がうすく、エンジンの出力が少し下がる",
@@ -1349,13 +1350,123 @@ def t_heat(ent, r):
     }
 
 
+def t_lane6(ent, r):
+    """6号艇の大穴は、いつ来る?(オッズは知ってる?)"""
+    x = r.copy()
+    x["c6"] = (x["win_lane"] == 6).astype(float)
+    e6 = ent[ent["lane"] == 6].drop_duplicates("race_id").set_index("race_id")
+    e1 = ent[ent["lane"] == 1].drop_duplicates("race_id").set_index("race_id")
+    x["cls6"], x["cls1"] = x["race_id"].map(e6["racer_class"]), x["race_id"].map(e1["racer_class"])
+    x["tilt6"], x["crs6"] = x["race_id"].map(e6["tilt"]), x["race_id"].map(e6["ex_course"])   # 展示の進入(オッズが締まる前に分かる)
+    x["wind"] = pd.to_numeric(x["wind"], errors="coerce")
+    q = "q_l6" if "q_l6" in x else None
+    m_all = measure(x, x["c6"].notna(), col="c6", qcol=q) if q else None
+    conds = [("6号艇がA1、1号艇がB級", (x["cls6"] == "A1") & x["cls1"].isin(["B1", "B2"])),
+             ("6号艇がチルト1度以上(跳ねた)", x["tilt6"] >= 1.0),
+             ("6号艇がスタート展示で前づけ(5コース以内)", x["crs6"] <= 5),
+             ("風5m以上", x["wind"] >= 5)]
+    ms = [(nm, measure(x, c, col="c6", qcol=q), None) for nm, c in conds]
+    ms = [(nm, m, verdicts(m)) for nm, m, _ in ms]
+    base6 = float(x["c6"].mean())
+    best = max(ms, key=lambda q_: q_[1]["in1"])
+    hid = [q_ for q_ in ms if q_[2].get("edge") == 1 and q_[2].get("real")]   # オッズの見込みより来ている、本物の差
+    return {
+        "id": "lane6", "title": "6号艇の大穴は、いつ来る?", "belief": "6号艇はめったに来ない。でも来るときは来る。その『とき』が分かれば夢がある",
+        "subject": "6号艇", "lead": f"6号艇が勝つのは、ふだんは100レースで{base6 * 100:.1f}回。"
+                + "。".join(f"{nm}なら{m['in1'] * 100:.1f}回" for nm, m, _ in ms) + "。",
+        "conclusion": ([f"「{hid[0][0]}」は、オッズが思うより来る", f"100レースで{hid[0][1]['in1'] * 100:.1f}回(ふだん{base6 * 100:.1f}回)。オッズのいつものずれを直しても、見込みより多い。いちばん多く来るのは「{best[0]}」の{best[1]['in1'] * 100:.1f}回だけど、こちらはオッズも知っている"]
+                       if hid else [f"いちばん来るのは「{best[0]}」", f"ふだん{base6 * 100:.1f}回が{best[1]['in1'] * 100:.1f}回に。ただしオッズもそれを見込んでいる"]),
+        "tables": [], "measures": ms,
+        "rules": ["6号艇=6枠の艇。ふだんは6コース(いちばん外)から、長い助走のダッシュでスタートする",
+                  "チルトを跳ねる(上げる)と直線が伸びる。前づけは外の枠から内のコースを取ること"],
+        "faq": [("どれがいちばん『おいしい』?", "『オッズの予想より多い』のしるしが付いた行が、みんながまだ気づいていない大穴。『オッズも知ってる』の行は、来る回数に見合った配当"),
+                ("オッズの『いつものずれ』って?", "6号艇は、オッズが見込むよりいつも少しだけ来ない(人気薄が買われすぎる、よくある傾向)。そのずれを直してから、くらべている"),
+                ("前づけの6号艇は、なぜ見込みより来る?", "オッズを集めたのは締切の少し前で、スタート展示の進入はもう分かっている時間。それでも見込みより来ているのは、『6号艇は来ない』という思い込みが強いからかも。レース数は5,000ほどで、ミカタは追いかけて確かめ続ける"),
+                ("6号艇を毎回買ったら?", "ふだんの割合では、配当がよくても控除の分だけ負ける計算。条件がそろったときだけ、夢を見るのがいい")],
+        "use": ["6号艇の大穴は『A1の6号艇 × B級の1号艇』『チルトを跳ねた6号艇』から探す", "風の強い日は、外の艇にも出番がある"],
+        "mikata": "6号艇が1着でゴールする瞬間って、スタンドがどよめくよね。条件がそろったときだけ、その夢を見よう",
+        "gen": "6号艇の頭は男のロマンだ。チルトを跳ねたA1の6号艇なんて見たら、俺は黙って買うね",
+        "challenge": "今日の出走表から『A1の6号艇』を探して、そのレースだけ6号艇の頭で予想してみよう",
+        "numbers": {"base6": base6, **{nm: m["in1"] for nm, m, _ in ms}},
+    }
+
+
+def t_motor(ent, r):
+    """モーター2連率は信じていい?"""
+    x = _adj(ent)
+    mr = pd.to_numeric(x["motor_2rate"], errors="coerce")
+    top, mid, low = mr >= 45, mr.between(30, 36), mr <= 25
+    mt, ml = measure(x, top, ref=mid), measure(x, low, ref=mid)
+    ex = x["exhibit_time"].notna()
+    x["exr"] = x.groupby("race_id")["exhibit_time"].rank(method="min")
+    me1 = measure(x, ex & (x["exr"] == 1), ref=ex & x["exr"].between(3, 4))
+    me6 = measure(x, ex & (x["exr"] == 6), ref=ex & x["exr"].between(3, 4))
+    # 2連率が高いのに展示が下位、低いのに展示が1位
+    mhb = measure(x, top & ex & (x["exr"] >= 5), ref=mid & ex & x["exr"].between(3, 4))
+    mlg = measure(x, low & ex & (x["exr"] == 1), ref=mid & ex & x["exr"].between(3, 4))
+    ms = [("モーター2連率45%以上", mt, verdicts(mt)), ("2連率25%以下", ml, verdicts(ml)), ("展示タイム1位", me1, verdicts(me1)), ("展示タイム6位", me6, verdicts(me6)),
+          ("2連率45%以上なのに展示5・6位", mhb, verdicts(mhb)), ("2連率25%以下なのに展示1位", mlg, verdicts(mlg))]
+    return {
+        "id": "motor", "title": "モーター2連率は信じていい?", "belief": "モーターは2連率がすべて。40%超えの『エース機』を引いた選手を買えばいい",
+        "subject": "その選手", "verb": "3着以内に入る", "no_market": True, "compare": "2連率30〜36%のふつうのモーター(本人のふだんにそろえてある)",
+        "lead": f"本人のふだんとくらべて、モーター2連率45%以上は{_pp(mt)}ポイント、25%以下は{_pp(ml)}。いっぽう展示タイム1位は{_pp(me1)}、6位は{_pp(me6)}。"
+                f"2連率が高いのに展示5・6位なら{_pp(mhb)}、2連率が低いのに展示1位なら{_pp(mlg)}。",
+        "conclusion": ["2連率より、今日の展示", f"2連率45%以上でも{_pp(mt)}ポイントどまり。展示タイム1位は{_pp(me1)}。数字のいいモーターでも、展示が悪ければ{_pp(mhb)}"],
+        "tables": [], "measures": ms,
+        "rules": ["モーター2連率: そのモーターが今までのレースで2着以内に入った割合(出走表に載っている)。乗った選手の腕も混ざる",
+                  "モーターは年に1回くらい新しくなり、そのあとしばらくは2連率の数字があてにならない",
+                  "数字は、その選手のふだんとくらべた差。強い選手もふだんの自分とくらべている"],
+        "faq": [("なぜ2連率は効きが弱い?", "2連率には、前に乗っていた選手の腕も入っている。強い選手が続けて乗ったモーターは、数字が高めに出る。展示タイムは今日の、その選手とモーターの組み合わせそのもの"),
+                ("ミカタのモデルは?", "モーターは2連率のほかに、乗り手の腕を差し引いた『モーターの力』と、今節の展示・成績を使っている")],
+        "use": ["2連率は目安。最後は展示タイムで決める", "2連率が低いモーターで展示1位なら、その選手が仕上げてきた合図"],
+        "mikata": "モーターの数字は過去の話、展示は今日の話。今日の話のほうが、やっぱり強いね",
+        "gen": "エース機を引いたやつの顔は明るいんだよ。……でも展示で遅けりゃ、そりゃ買えねえな",
+        "challenge": "今日の出走表で2連率がいちばん高いモーターを探して、その選手の展示タイムの順位を見てみよう",
+        "numbers": {"top": mt["in1"] - mt["in1_ref"], "low": ml["in1"] - ml["in1_ref"], "ex1": me1["in1"] - me1["in1_ref"], "ex6": me6["in1"] - me6["in1_ref"],
+                    "top_but_slow": mhb["in1"] - mhb["in1_ref"], "low_but_fast": mlg["in1"] - mlg["in1_ref"]},
+    }
+
+
+def t_entry(ent, r):
+    """展示の進入と本番の進入は同じ?(スタート展示を信じていい?)"""
+    e = ent[ent["course"].between(1, 6) & ent["ex_course"].between(1, 6)]
+    diff_boat = (e["course"] != e["ex_course"])
+    rd = diff_boat.groupby(e["race_id"]).any()
+    ex_front = (e["ex_course"] < e["lane"]).groupby(e["race_id"]).any()
+    x = r[r["race_id"].isin(rd.index)].copy()
+    x["chg"] = x["race_id"].map(rd).astype(bool); x["exfront"] = x["race_id"].map(ex_front).astype(bool)
+    share = float(x["chg"].mean())
+    keep = float((~x.loc[x["exfront"], "chg"]).mean())
+    mc, mn = measure(x, x["chg"], ref=~x["chg"]), measure(x, x["exfront"] & ~x["chg"], ref=~x["exfront"])
+    uc, un = float(x[x["chg"]]["upset"].mean()), float(x[~x["chg"]]["upset"].mean())
+    ms = [("展示と本番で進入が変わったレース", mc, verdicts(mc)), ("展示で前づけがあり、本番も同じ進入", mn, verdicts(mn))]
+    return {
+        "id": "entry", "title": "スタート展示の進入は信じていい?", "belief": "スタート展示はあくまで練習。本番では進入が変わる。展示の並びは当てにならない",
+        "compare": "進入が変わらなかったレース",
+        "lead": f"展示と本番で進入(コースの並び)がひとつでも変わったレースは{share:.1%}。展示で前づけがあったレースでも、本番で同じ並びだったのは{keep:.0%}。"
+                f"進入が変わったレースで1号艇が勝つのは100レースで{per100(mc['in1'])}(変わらなかったレースは{per100(mc['in1_ref'])})、30番人気以下が来たのは{uc:.1%}(変わらない{un:.1%})。",
+        "conclusion": [f"信じていい。{1 - share:.0%}のレースは展示どおり", f"ただし進入が変わったレースは荒れやすい(1号艇{per100(mc['in1'])}・大穴{uc:.1%})。変わったときは、ひと波乱の合図"],
+        "tables": [], "measures": ms,
+        "rules": ["スタート展示: レースの前に、本番と同じようにスタートの練習をする。そこでの進入が『展示の進入』",
+                  "ミカタの直前予想は、展示の進入でコースを決めている"],
+        "faq": [("進入が変わるのは、どんなとき?", "前づけの仕掛け人がいるレース。展示では様子を見て、本番で動く選手もいる。選手カードの『前づけの仕掛け人』の型が目印"),
+                ("本番の進入が決まるのはいつ?", "スタートの直前、ピットを出てからの待機行動で決まる。現地ならピット離れから目が離せない")],
+        "use": ["展示の進入は信じていい。直前予想もそれで計算している", "本番で進入が変わったら、その場で『荒れるかも』と身構える"],
+        "mikata": "展示の並びはほとんどそのまま。でも変わったときのざわざわ感は、現地のいちばんの見どころかも",
+        "gen": "ピット離れで動くやつがいると、スタンドが一瞬ざわつく。あの空気がたまらねえんだよ",
+        "challenge": "現地では、スタート展示の並びをメモしておいて、本番の待機行動で変わるかどうかを見てみよう",
+        "numbers": {"share_changed": share, "keep_after_exfront": keep, "upset_changed": uc, "upset_same": un},
+    }
+
+
 THEORIES = {t["id"]: t for t in []}
 BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke, "tenji": t_tenji, "flying": t_flying, "combo": t_combo,
             "rest": t_rest, "travel": t_travel, "weight": t_weight, "dayno": t_dayno, "twice": t_twice, "tilt": t_tilt,
             "moon": t_moon, "manshu": t_manshu, "lucky7": t_lucky7,
             "rain": t_rain, "age": t_age, "zorome": t_zorome, "payday": t_payday,
             "birthday": t_birthday, "blood": t_blood, "height": t_height, "furusato": t_furusato,
-            "pressure": t_pressure, "humid": t_humid, "heat": t_heat}
+            "pressure": t_pressure, "humid": t_humid, "heat": t_heat,
+            "lane6": t_lane6, "motor": t_motor, "entry": t_entry}
 
 
 # ---------------------------------------------------------------- 記事
@@ -1390,32 +1501,61 @@ def mark(v):
     return ex, kn, sb
 
 
-def measures_html(ms, subject="1号艇", verb="勝つ", no_market=False, compare="全体"):
-    ref = next((m["market_ref"] for _, m, _ in ms if "market_ref" in m), None)
-    ref_w = f"(全レースの平均で {round((ref - 1) * 100):+d}%)" if ref is not None else ""
-    rows = ""
+def _n100(v):
+    """100あたりの回数。10未満は小数1桁(6号艇など)。"""
+    if v is None or v != v:
+        return "-"
+    x = v * 100
+    return f"{x:.1f}" if x < 10 else f"{round(x)}"
+
+
+def _diff_words(m, verb):
+    d = (m["in1"] - m["in1_ref"]) * 100
+    if abs(d) < 0.5:
+        return "ほぼ同じ"
+    n = f"{abs(d):.1f}" if abs(d) < 10 and abs(d) != round(abs(d)) and abs(d) < 3 else f"{round(abs(d))}"
+    return f"{n}回{'多い' if d > 0 else '少ない'}"
+
+
+def measures_html(ms, subject="1号艇", verb="勝つ", no_market=False, compare="全体", ref_label=None):
+    """結果を1行=1枚のカードで。棒2本(くらべる相手/この条件)と差、ふだんの言葉のバッジ。"""
+    unit = "走" if no_market else "レース"
+    default_ref = ref_label or ("ふだん" if no_market else "全レース")
+    top = max([max(m["in1"], m["in1_ref"]) for _, m, _ in ms] + [0.01])
+    cards = ""
     for name, m, v in ms:
-        ex, kn, sb = mark(v)
-        r = m.get("market_ratio")
-        if r is None or r != r:
-            rw, rs = "-", ""
-        else:  # オッズの見立て(100レースで何回勝つと見ていたか)と実際
-            rw = f"見立て{per100(m['in1'] / r)} → 実際{per100(m['in1'])}"
-            rs = f"見立てより{round((r - 1) * 100):+d}%"
-        rows += (f"<tr><th>{e(name)}<small>{m['n']:,}レース</small></th><td><b>{per100(m['in1'])}</b><small>{e(fun_rate(m['in1']))}。{e(ex)}</small></td>"
-                 f"<td><b>{e(rw)}</b><small>{e(rs)}。{e(kn)}</small></td><td>{e(sb)}</td></tr>")
-    if no_market:
-        rows = ""
-        for name, m, v in ms:
-            ex, kn, sb = mark(v)
-            rows += (f"<tr><th>{e(name)}<small>{m['n']:,}走</small></th><td><b>{per100(m['in1'])}</b><small>{e(fun_rate(m['in1']))}。くらべる相手は{per100(m['in1_ref'])}</small></td>"
-                     f"<td>{e(ex)}</td><td>{e(sb)}</td></tr>")
-        return ('<div class="tw"><table class="scn lab"><tr><th>条件</th><th>100走で</th><th>①本当?</th><th>③来年も?</th></tr>' + rows + "</table></div>"
-                f"<p class=\"legend\">「100走で」は、100回走ったら{e(subject)}が{e(verb)}回数。くらべる相手は、{e(compare)}。③は前の2年と最近の1年で同じ向きか。</p>")
-    legend = (f"<p class=\"legend\">①は「100レースで{e(subject)}が{e(verb)}回数」(ふだんは{per100(ms[0][1]['in1_ref'])}、{fun_rate(ms[0][1]['in1_ref'])})。"
-              f"②は「オッズがみんなの予想として見立てていた回数」と実際の回数。1号艇はどのレースでも見立てより少し多く勝つ{e(ref_w)}ので、それと同じなら、みんな知っている=配当は堅め。③は前の2年と最近の1年で同じ向きか。</p>")
-    return ('<div class="tw"><table class="scn lab"><tr><th>条件</th><th>①本当?</th><th>②知られてる?</th><th>③来年も?</th></tr>'
-            + rows + "</table></div>" + legend)
+        refl = m.get("ref_label") or default_ref
+        w1, w2 = m["in1_ref"] / top * 100, m["in1"] / top * 100
+        d = (m["in1"] - m["in1_ref"]) * 100
+        tone = "up" if d >= 0.5 else ("down" if d <= -0.5 else "flat")
+        badges = []
+        if v.get("baseline"):
+            badges.append('<span class="bd base">基準</span>')
+        else:
+            badges.append('<span class="bd ok">○ 本物の差</span>' if v.get("real") else '<span class="bd mute">– 差は小さい(ふだん並み)</span>')
+            st_ = v.get("stable")
+            if st_:
+                badges.append('<span class="bd ok">○ 前の2年も最近の1年も同じ向き</span>' if st_.startswith("前の2年") else '<span class="bd mute">– 年によって変わる</span>')
+        odds = ""
+        r_ = m.get("market_ratio")
+        if not no_market and r_ and r_ == r_:
+            e_ = v.get("edge")
+            if "追試中" in v.get("known", ""):
+                badges.append('<span class="bd warn">！ オッズの予想より多い(追試中)</span>')
+            elif e_ == 0:
+                badges.append('<span class="bd mute">オッズも知ってる</span>')
+            elif e_ == 1:
+                badges.append('<span class="bd warn">！ オッズの予想より多い</span>')
+            elif e_ == -1:
+                badges.append('<span class="bd warn">オッズの予想より少ない</span>')
+            exp_ = m["in1"] / r_ * (m.get("market_ref") or 1.0)   # オッズの見込みを、いつものずれ(全体の平均)で直した回数
+            odds = f'<p class="rc-odds">オッズから見込める回数 {_n100(exp_)}回 → 実際 {_n100(m["in1"])}回<small>(オッズのいつものずれを直した値)</small></p>'
+        cards += (f'<div class="rc"><p class="rc-h">{e(name)}<small>{m["n"]:,}{unit}</small></p>'
+                  f'<div class="rc-row"><span>{e(refl)}</span><div class="bar"><i style="width:{w1:.0f}%"></i></div><b>{_n100(m["in1_ref"])}回</b></div>'
+                  f'<div class="rc-row this {tone}"><span>この条件</span><div class="bar"><i style="width:{w2:.0f}%"></i></div><b>{_n100(m["in1"])}回</b></div>'
+                  f'<p class="rc-d {tone}">100{unit}で{e(subject)}が{e(verb)}のは <b>{e(_diff_words(m, verb))}</b></p>'
+                  f'{odds}<div class="rc-b">{"".join(badges)}</div></div>')
+    return f'<div class="rcs">{cards}</div>'
 
 
 def page(t: dict, asof: str) -> str:
@@ -1432,6 +1572,17 @@ def page(t: dict, asof: str) -> str:
 .belief{{margin:0;font:700 clamp(16px,4.2vw,20px)/1.7 var(--serif);border-left:6px solid var(--yellow);padding:4px 0 4px 14px;background:rgba(255,225,0,.18);flex:1 1 auto}}
 .gen-say{{display:flex;gap:12px;align-items:flex-start}} .gen-say svg{{flex:0 0 64px}} .who{{margin:8px 0 0;font-size:12.5px;color:var(--mute);line-height:1.6}}
 .ft-quote.gen p{{border-color:#0b5fb4}} .ft-quote.gen small{{color:#0b5fb4}}
+.rcs{{display:grid;gap:12px}} .rc{{background:var(--card);border:2px solid var(--rule);padding:12px 14px}}
+.rc-h{{margin:0 0 8px;font:700 15.5px/1.5 var(--sans)}} .rc-h small{{margin-left:8px;font-weight:500;font-size:11.5px;color:var(--mute)}}
+.rc-row{{display:grid;grid-template-columns:7.5em 1fr 4.2em;align-items:center;gap:8px;margin:4px 0;font-size:12.5px;color:var(--mute)}}
+.rc-row .bar{{height:14px;background:rgba(0,0,0,.06);border-radius:3px;overflow:hidden}} .rc-row .bar i{{display:block;height:100%;background:#9aa3ab}}
+.rc-row b{{font:700 17px var(--num);color:var(--ink);text-align:right}}
+.rc-row.this span{{color:var(--ink);font-weight:700}} .rc-row.this.up .bar i{{background:var(--red)}} .rc-row.this.down .bar i{{background:#1f6fd1}} .rc-row.this.flat .bar i{{background:#6b7680}}
+.rc-d{{margin:8px 0 4px;font-size:14px}} .rc-d b{{font:400 20px var(--head)}} .rc-d.up b{{color:var(--red)}} .rc-d.down b{{color:#1f6fd1}}
+.rc-odds{{margin:2px 0 6px;font-size:12.5px;color:var(--mute)}} .rc-odds small{{display:block;font-size:11px}}
+.rc-b{{display:flex;flex-wrap:wrap;gap:6px}} .bd{{font-size:11.5px;padding:3px 8px;border-radius:999px;border:1px solid var(--rule)}}
+.bd.ok{{background:#e7f6ec;border-color:#2e8b57;color:#1e6b3f}} .bd.warn{{background:#fff4d6;border-color:#c98a00;color:#7a5200}} .bd.mute{{color:var(--mute)}} .bd.base{{background:#eee}}
+.howto p{{margin:0;font-size:14px;line-height:1.8}}
 .gauge{{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:8px}} .gauge div{{background:var(--card);border:2px solid var(--rule);padding:10px 12px}}
 .gauge b{{display:block;font:400 15px var(--head);color:var(--red)}} .gauge span{{font-size:13px}}
 .td-box{{display:flex;gap:12px;align-items:flex-start;background:var(--yellow);padding:14px 16px;border:3px solid var(--ink)}} .td-box p{{margin:0;font:700 15.5px/1.7 var(--serif)}} .td-box svg{{flex:0 0 48px;width:48px;height:48px}}
@@ -1440,17 +1591,15 @@ def page(t: dict, asof: str) -> str:
 </style></head><body>
 <header class="cover"><div class="lanebar"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cv-in">
 <div class="cv-top"><div class="brand">ミカタ検証ラボ<small>「◯◯理論」を同じ物差しで試す</small></div><div class="issue"><b>LAB</b><br>{e(today)}</div></div>
-<p class="cv-kicker">今週の理論</p><h1 class="cv-h">{e(t['title'])}</h1>
+<p class="cv-kicker">検証する説</p><h1 class="cv-h">{e(t['title'])}</h1>
 <p class="cv-deck">{e(t['lead'])}</p>
 <div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ(カモメの記者)/ 説の持ち込み ゲンさん<br>公式の成績データ 2023-10〜{e(asof)} を独自に集計</span></div></div></header>
 <main class="mag">
 <section class="opener"><span class="label">ゲンさんの説</span><div class="gen-say">{gull_svg(64, bg="#ffffff", cls="gs", who="gen")}<p class="belief">{e(t['belief'])}</p></div>
 <p class="who">ゲンさん=験かつぎ歴40年の大先輩。ストップウォッチ片手に展示を見る目は確か。その説、ミカタがデータで確かめます</p></section>
 <section class="stamp"><span class="label">ミカタの結論</span><div class="st-box"><b>{e(con[0])}</b><p>{e(con[1])}</p></div></section>
-<section><span class="label">3つの物差し</span><div class="gauge"><div><b>① 本当にある?</b><span>「ふだん」と比べて差があるか。同じ数のレースをサイコロで決めても出るくらいの差なら「ふだん並み」</span></div>
-<div><b>② みんな知ってる?</b><span>{'この回は選手ごとの話なので、オッズでは測っていない' if t.get('no_market') else 'オッズは「みんなの予想」。1号艇はどのレースでもオッズの見立てより少し多く来るので、その「全レースの平均」と同じなら、知られている=配当は安い'}</span></div>
-<div><b>③ 来年も同じ?</b><span>前の2年と最近の1年で、同じ向きに出るか。出なければ一時のもの</span></div></div></section>
-{rules}<section><span class="label">結果</span>{measures_html(t['measures'], t.get('subject', '1号艇'), t.get('verb', '勝つ'), t.get('no_market', False), t.get('compare', '全体'))}{tables}</section>{faq}
+<section class="howto"><span class="label">数字の見方</span><p>数字はぜんぶ「100{'走' if t.get('no_market') else 'レース'}あたり何回か」。棒の上が<b>くらべる相手</b>、下が<b>この条件</b>。差がはっきりしていて、たまたまでは出ない差なら「<b>本物の差</b>」のしるしが付きます。{'' if t.get('no_market') else 'オッズ(みんなの予想)も同じ差を見込んでいれば「<b>オッズも知ってる</b>」=配当はそのぶん堅め。'}</p></section>
+{rules}<section><span class="label">結果</span>{measures_html(t['measures'], t.get('subject', '1号艇'), t.get('verb', '勝つ'), t.get('no_market', False), t.get('compare', '全体'), t.get('ref_label'))}{tables}</section>{faq}
 <section class="side"><h3>予想に使うなら</h3><ul>{use}</ul></section>
 <section class="todai"><span class="label">今日のお題</span><div class="td-box">{gull_svg(48, bg="#fff", cls="td")}<p>{e(t.get('challenge', '次に行く場で、この説が本当か自分の目で確かめてみよう'))}</p></div></section>
 <blockquote class="ft-quote">{gull_svg(64, bg="#ffffff", cls="q")}<p><small>ミカタのひと言</small>{e(t['mikata'])}</p></blockquote>
@@ -1463,9 +1612,21 @@ def page(t: dict, asof: str) -> str:
 def note_text(t: dict) -> str:
     con = conclusion(t)
     out = [f"【タイトル案】", f"1. {t['title']}|{t['belief'][:24]}…をデータで検証", f"2. 検証ラボ:{t['title']} 3つの物差しで確かめた", "",
-           "■ゲンさんの説(験かつぎ歴40年の大先輩)", f"「{t['belief']}」", "", f"■ミカタの結論:{con[0]}", con[1], "", "■くわしく", t["lead"], "", "■3つの物差し",
-           "①本当にある?(ふだんと比べて、はっきり差があるか) ②みんな知ってる?(オッズの見立てどおりなら知られている=配当は安い) ③来年も同じ?(前の2年と最近の1年で同じ向きか)", ""]
+           "■ゲンさんの説(験かつぎ歴40年の大先輩)", f"「{t['belief']}」", "", f"■ミカタの結論:{con[0]}", con[1], "", "■くわしく", t["lead"], ""]
+    out += ["■結果(数字はぜんぶ100レース・100走あたりの回数)"]
     for name, m, v in t["measures"]:
+        unit = "走" if t.get("no_market") else "レース"
+        refl = m.get("ref_label") or t.get("ref_label") or ("ふだん" if t.get("no_market") else "全レース")
+        line = f"・{name}: {_n100(m['in1'])}回({refl}は{_n100(m['in1_ref'])}回)→ {_diff_words(m, t.get('verb', '勝つ'))}"
+        tags = [("本物の差" if v.get("real") else "差は小さい")] if not v.get("baseline") else ["基準"]
+        if v.get("stable") and not v.get("baseline"):
+            tags.append("前の2年も最近の1年も同じ向き" if v["stable"].startswith("前の2年") else "年によって変わる")
+        r_ = m.get("market_ratio")
+        if not t.get("no_market") and r_ and r_ == r_:
+            tags.append(f"オッズから見込める回数は{_n100(m['in1'] / r_ * (m.get('market_ref') or 1.0))}回")
+        out.append(line + "。" + "・".join(tags))
+    if False:
+      for name, m, v in t["measures"]:
         ex, kn, sb = mark(v)
         r = m.get("market_ratio")
         odds = (f"オッズの見立ては{per100(m['in1'] / r)}、実際は{per100(m['in1'])}({round((r - 1) * 100):+d}%)" if r and r == r else "オッズのデータは集計中")

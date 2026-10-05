@@ -54,7 +54,7 @@ def load():
     df["split"] = np.where(df["date"] <= d1, "train", np.where(df["date"] <= d2, "valid", "test"))
     df["win"] = (df["finish"] == 1).astype(int)
     # メモリを節約(8GB の手元でも動くように): 使わない文字列の列を落とし、小数は32ビットに
-    keep_obj = {"race_id", "racer_id", "split", "st_flag", "racer_class"}
+    keep_obj = {"race_id", "racer_id", "split", "st_flag", "racer_class", "deadline", "result_code"}
     df = df[[c for c in df.columns if c in keep_obj or c == "date" or pd.api.types.is_numeric_dtype(df[c])]]
     for c in df.columns:
         if df[c].dtype == np.float64:
@@ -418,7 +418,52 @@ def exp_race_level_variants(df):
     return out
 
 
-EXPERIMENTS = {"rl_variants": exp_race_level_variants, "embed_asof": exp_embed_asof, "recent": exp_recent, "pairwise": exp_pairwise, "formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
+def add_wx(df):
+    """過去の天気(締切の時刻): 湿度・気圧の平年差・3時間の気圧変化・暑さ指数・気温(scripts/lab.py の _with_wx と同じ)。"""
+    import lab
+    x = df[["date", "jcd", "deadline"]].copy()
+    x["date"] = x["date"].dt.strftime("%Y-%m-%d")
+    w = lab._with_wx(x, cols=("relative_humidity_2m", "p_anom", "p_3h", "wbgt", "temperature_2m"))
+    for c in ("relative_humidity_2m", "p_anom", "p_3h", "wbgt", "temperature_2m"):
+        df["wx_" + c] = w[c].values.astype("float32")
+    return df
+
+
+def add_body(df):
+    """からだ: 当日体重の直近30走との差、前の走からの日数(休み明け)、最後のフライングから何走目か。"""
+    o = df.sort_values(["racer_id", "date", "rno"]).index
+    d = df.loc[o, ["racer_id", "date", "weight_now", "st_flag"]].copy()
+    wn = d["weight_now"].where(d["weight_now"] > 30)
+    d["w_dev"] = wn - wn.groupby(d["racer_id"]).transform(lambda s_: s_.shift(1).rolling(30, min_periods=10).mean())
+    d["rest_days"] = d.groupby("racer_id")["date"].diff().dt.days
+    f = (d["st_flag"] == "F")
+    k = d.groupby("racer_id").cumcount()
+    last = k.where(f).groupby(d["racer_id"]).ffill().groupby(d["racer_id"]).shift(1)
+    d["f_since"] = (k - last).clip(upper=200).fillna(200)
+    for c in ("w_dev", "rest_days", "f_since"):
+        df[c] = d[c].reindex(df.index).astype("float32")
+    return df
+
+
+def exp_wx(df):
+    base = base_feats(df)
+    df = add_wx(df)
+    return compare("weather_feats", df, base, base + [c for c in df.columns if c.startswith("wx_")], "締切の時刻の天気(湿度・気圧の平年差・気圧変化・暑さ指数・気温)を足す")
+
+
+def exp_body(df):
+    base = base_feats(df)
+    df = add_body(df)
+    return compare("body_feats", df, base, base + ["w_dev", "rest_days", "f_since"], "当日体重の直近30走との差・休み明けの日数・F後の走数を足す")
+
+
+def exp_wx_body(df):
+    base = base_feats(df)
+    df = add_body(add_wx(df))
+    return compare("weather_body_feats", df, base, base + [c for c in df.columns if c.startswith("wx_")] + ["w_dev", "rest_days", "f_since"], "天気+からだの両方")
+
+
+EXPERIMENTS = {"wx": exp_wx, "body": exp_body, "wx_body": exp_wx_body, "rl_variants": exp_race_level_variants, "embed_asof": exp_embed_asof, "recent": exp_recent, "pairwise": exp_pairwise, "formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
                "drop_noise": exp_drop_noise, "race_level": exp_race_level}
 
 
