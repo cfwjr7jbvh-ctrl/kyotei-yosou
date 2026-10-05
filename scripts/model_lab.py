@@ -90,8 +90,21 @@ def fit_predict(df, feats, label="win", seed=0):
     return te, race_probs(te, logit)
 
 
+def base_predict(df, feats):
+    """今の特徴量での予測は毎回同じなので、1回だけ学んでキャッシュに置く(特徴量の一覧が同じときだけ使う)。"""
+    import hashlib
+    key = hashlib.md5(("|".join(feats) + str(len(df))).encode()).hexdigest()[:10]
+    f = CACHE_DIR / f"base_{key}.pkl"
+    if f.exists():
+        pb = pd.read_pickle(f)
+        return df[df["split"] == "test"], pb.values
+    te, pb = fit_predict(df, feats)
+    pd.Series(pb, index=te.index).to_pickle(f)
+    return te, pb
+
+
 def compare(name, df, base_feats, cand_feats, note=""):
-    te, pb = fit_predict(df, base_feats)
+    te, pb = base_predict(df, base_feats)
     _, pc = fit_predict(df, cand_feats)
     lb, lc = win_logloss_per_race(te, pb), win_logloss_per_race(te, pc)
     return summarize(name, te, lb, lc, note, {"base_feats": len(base_feats), "cand_feats": len(cand_feats),
@@ -101,7 +114,6 @@ def compare(name, df, base_feats, cand_feats, note=""):
 def summarize(name, te, lb, lc, note="", extra=None):
     d = (lc - lb).reindex(lb.index).values
     se = d.std(ddof=1) / np.sqrt(len(d))
-    hb = (te.loc[te.groupby("race_id")["p_b"].idxmax(), "win"].mean() if "p_b" in te else None)
     res = {"name": name, "note": note, "races": int(len(d)), "base_logloss": round(float(lb.mean()), 4),
            "cand_logloss": round(float(lc.mean()), 4), "delta": round(float(d.mean()), 5),
            "lo90": round(float(d.mean() - 1.645 * se), 5), "hi90": round(float(d.mean() + 1.645 * se), 5),
@@ -267,7 +279,7 @@ def exp_drop_noise(df):
 
 def exp_race_level(df):
     base = base_feats(df)
-    te, pb = fit_predict(df, base)
+    te, pb = base_predict(df, base)
     lb = win_logloss_per_race(te, pb)
     imp_order = ["st_pred", "rating", "rc_win", "nat_win_rate", "motor_2rate", "exhibit_time", "course", "class_num", "rl_win",
                  "course_win_hist", "mtx_top2", "st_pred_adv_in", "nige_rate", "makuri_rate", "sashi_rate", "ex_st", "rc_avgst", "wind_x"]
@@ -284,7 +296,96 @@ def exp_race_level(df):
     return summarize("race_level_blend", te, lb[common], lm, "6クラスモデルと艇ごとGBDTの対数平均")
 
 
-EXPERIMENTS = {"formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
+def add_embed_asof(df):
+    """埋め込みの as-of 版: 半年ごとに「その前までのデータ」で疎ロジスティックを学び、その半年の行に係数を付ける(学習行が答えを知らない)。"""
+    from scipy import sparse
+    from sklearn.linear_model import LogisticRegression
+    pos = df["course"].where(df["course"].notna(), df["lane"]).astype(int)
+    keys = {"racer": df["racer_id"].astype(str), "motor": df["jcd"].astype(str) + "_" + df["motor_no"].astype(str) + "_" + df["date"].dt.year.astype(str),
+            "vc": df["jcd"].astype(str) + "_" + pos.astype(str), "rc": df["racer_id"].astype(str) + "_" + pos.astype(str)}
+    half = df["date"].dt.year * 2 + (df["date"].dt.month > 6).astype(int)
+    for k in list(keys) + ["all"]:
+        df["emb_" + k] = np.nan
+    for per in sorted(half.unique()):
+        rows, tr = (half == per).values, (half < per).values
+        if tr.sum() < 100000:
+            continue
+        mats = []
+        for k, sr in keys.items():
+            cats = pd.Index(sr[tr].unique())
+            code = cats.get_indexer(sr)
+            m = sparse.csr_matrix((np.where(code >= 0, 1.0, 0.0), (np.arange(len(df)), np.where(code < 0, 0, code))), shape=(len(df), len(cats)))
+            mats.append(m)
+        X = sparse.hstack(mats).tocsr()
+        lr = LogisticRegression(C=0.3, max_iter=200, solver="saga").fit(X[tr], df.loc[tr, "win"])
+        off = 0
+        for k, m in zip(keys, mats):
+            w = lr.coef_[0][off: off + m.shape[1]]; off += m.shape[1]
+            df.loc[rows, "emb_" + k] = np.asarray(m[rows] @ w).ravel()
+        df.loc[rows, "emb_all"] = lr.decision_function(X[rows])
+        log(f"  embed as-of: 期間 {per} 学習 {int(tr.sum())} 行")
+    return df
+
+
+def exp_embed_asof(df):
+    base = base_feats(df)
+    df = add_embed_asof(df)
+    return compare("embed_asof", df, base, base + ["emb_racer", "emb_motor", "emb_vc", "emb_rc", "emb_all"],
+                   "選手・モーター・場×コース・選手×コースの埋め込みを as-of(半年ごと学び直し)で作って足す(D19)")
+
+
+def exp_recent(df):
+    """学習を直近18か月に絞る(古いデータが邪魔をしていないか)。"""
+    base = base_feats(df)
+    te, pb = base_predict(df, base)
+    cut = df.loc[df["split"] != "test", "date"].max() - pd.Timedelta(days=548)
+    d2 = df[(df["split"] == "test") | (df["date"] >= cut)]
+    _, pc = fit_predict(d2, base)
+    return summarize("recent_18m", te, win_logloss_per_race(te, pb), win_logloss_per_race(d2[d2["split"] == "test"], pc),
+                     "学習データを直近18か月だけに絞る")
+
+
+def exp_pairwise(df):
+    """ペアごとのモデル(ブラッドリー・テリー風): 2艇の特徴量の差から「どちらが先着するか」を学び、レース内の総当たりで強さにする。"""
+    base = base_feats(df)
+    te, pb = base_predict(df, base)
+    feats = [c for c in ("st_pred", "rating", "rc_win", "nat_win_rate", "motor_2rate", "exhibit_time", "course", "class_num", "rl_win",
+                         "course_win_hist", "mtx_top2", "nige_rate", "makuri_rate", "sashi_rate", "rc_avgst", "lane", "mt_top2", "rc_top3",
+                         "winrate_growth_180", "tilt", "weight") if c in df]
+    d = df.sort_values(["race_id", "lane"])
+    full = d.groupby("race_id")["lane"].transform("size") == 6
+    d = d[full]
+    X = d[feats].values.astype(np.float32).reshape(-1, 6, len(feats))
+    fin = d["finish"].values.reshape(-1, 6)
+    rid = d["race_id"].values.reshape(-1, 6)[:, 0]
+    sp = d["split"].values.reshape(-1, 6)[:, 0]
+    i, j = np.triu_indices(6, 1)
+    Xp = np.concatenate([X[:, i, :] - X[:, j, :], X[:, i, :]], axis=2).astype(np.float32)  # 差 + 自分
+    yp = (fin[:, i] < fin[:, j]).astype(int)
+    tr = sp != "test"
+    tr_idx = np.where(tr)[0][-60000:]  # メモリのため直近6万レース(=90万ペア)で学ぶ
+    m = gbdt(0, max_iter=300).fit(Xp[tr_idx].reshape(-1, Xp.shape[2]), yp[tr_idx].ravel())
+    del X
+    s = m.decision_function(Xp[~tr].reshape(-1, Xp.shape[2])).reshape(-1, 15)
+    strength = np.zeros((s.shape[0], 6))
+    for k, (a, b) in enumerate(zip(i, j)):
+        strength[:, a] += s[:, k]; strength[:, b] -= s[:, k]
+    strength /= 5
+    P = np.exp(strength - strength.max(1, keepdims=True)); P /= P.sum(1, keepdims=True)
+    win_lane = np.argmin(fin[~tr], axis=1)
+    lc = pd.Series(-np.log(np.clip(P[np.arange(len(P)), win_lane], 1e-6, 1)), index=rid[~tr])
+    lb = win_logloss_per_race(te, pb)
+    common = lb.index.intersection(lc.index)
+    summarize("pairwise_single", te, lb[common], lc[common], "ペアモデル単体(2艇の差を学び、総当たりの平均を強さに)")
+    Pb = te.assign(p=pb).pivot(index="race_id", columns="lane", values="p").reindex(index=common, columns=range(1, 7)).fillna(1e-6)
+    Pc = pd.DataFrame(P, index=rid[~tr]).reindex(common)
+    Pm = np.exp((np.log(Pb.values) + np.log(Pc.values)) / 2); Pm /= Pm.sum(1, keepdims=True)
+    wl = pd.Series(win_lane, index=rid[~tr]).reindex(common).values
+    lm = pd.Series(-np.log(Pm[np.arange(len(common)), wl]), index=common)
+    return summarize("pairwise_blend", te, lb[common], lm, "ペアモデルと艇ごとGBDTの対数平均")
+
+
+EXPERIMENTS = {"embed_asof": exp_embed_asof, "recent": exp_recent, "pairwise": exp_pairwise, "formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
                "drop_noise": exp_drop_noise, "race_level": exp_race_level}
 
 
