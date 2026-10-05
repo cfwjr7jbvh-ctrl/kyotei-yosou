@@ -29,6 +29,7 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 from kyotei import racer_card as rc  # noqa: E402
 from kyotei.card_render import card_image_html  # noqa: E402
+from kyotei.mag import chart_image_html  # noqa: E402
 from kyotei.publish import write_json  # noqa: E402
 import ura_shinbun  # noqa: E402
 
@@ -68,11 +69,13 @@ async def render_png(pages: list[tuple[str, str]]) -> list[bytes]:
     async with async_playwright() as p:
         b = await p.chromium.launch()
         pg = await b.new_page(viewport={"width": 1080, "height": 1350}, device_scale_factor=1)
-        for _, html in pages:
+        for name, html in pages:
+            h = 1920 if name.startswith("早見表") else 1350
+            await pg.set_viewport_size({"width": 1080, "height": h})
             await pg.set_content(html)
             await pg.evaluate("document.fonts.ready")   # 見出しと数字のフォント(Google Fonts)が届くまで待つ
             await pg.wait_for_timeout(300)
-            out.append(await pg.screenshot(clip={"x": 0, "y": 0, "width": 1080, "height": 1350}))
+            out.append(await pg.screenshot(clip={"x": 0, "y": 0, "width": 1080, "height": h}))
         await b.close()
     return out
 
@@ -94,15 +97,20 @@ def main():
     if series:
         d = rc.load_table()
         cards, meta = rc.build(d)
+    allg = series_in_window(today, 60)
     for s in series:
         venue = rc.VENUES.get(s["jcd"], s.get("venue", ""))
         title = short_title(s.get("title") or s.get("title_page", ""), venue, s["grade"])
-        r = ura_shinbun.make(title, [str(x["id"]) for x in s["racers"]], s["jcd"], a.n, "", d, cards, meta)
+        nxt = next((x for x in allg if x["hd"] > s["hd"]), None)
+        nxt_txt = (f"次号は {int(nxt['hd'][4:6])}/{int(nxt['hd'][6:])}〜の{rc.VENUES.get(nxt['jcd'], '')}"
+                   f"「{short_title(nxt.get('title', ''), rc.VENUES.get(nxt['jcd'], ''), nxt['grade'])}」を予定しています。") if nxt else None
+        r = ura_shinbun.make(title, [str(x["id"]) for x in s["racers"]], s["jcd"], a.n, "", d, cards, meta, nxt_txt)
         picks = r["picks"]
         images = []
         if not a.no_images:
             used: set = set()
-            pages = [(f"{c['id']}_{c['name']}.png", card_image_html(c, s["jcd"], f"{s['grade']}{venue} 出場選手カード", used))
+            pages = [("早見表_待ち受け.png", chart_image_html(title, venue, r["wt"]))] + \
+                    [(f"{c['id']}_{c['name']}.png", card_image_html(c, s["jcd"], f"{s['grade']}{venue} 出場選手カード", used))
                      for c, *_x in picks]
             try:
                 pngs = asyncio.run(render_png(pages))

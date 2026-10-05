@@ -202,6 +202,11 @@ def issue_lead(sel: list[dict], picks, trend: dict | None, venue: str | None, na
     return paras
 
 
+USE_STEPS = ["① 出走表が出たら → 「狙い目の早見表」で、得意なコースに入った選手を探す",
+             "② 展示を見たら → 「展示STを信じていい選手」かどうかをチェック",
+             "③ 迷ったら → 注目選手の「ミカタのひと言」を読み返す"]
+
+
 # ---------------------------------------------------------------- 図
 def lane_tile(i: int, cls: str = "lt") -> str:
     return f'<span class="{cls}" style="background:{LANE_BG[i]};color:{LANE_FG[i]}">{i + 1}</span>'
@@ -315,6 +320,10 @@ body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.8 var(--sans)
 .prose{font:500 16.5px/2 var(--serif);max-width:38em}
 .prose p{margin:0 0 1em}
 .prose p.dc::first-letter{float:left;font:400 3.4em/1 var(--head);color:var(--red);margin:.08em .12em 0 0}
+.howto{background:#111;color:#fff;padding:12px 14px 14px;border-left:10px solid var(--red)}
+.howto h3{margin:0 0 6px;font:400 18px var(--head);color:var(--yellow)}
+.howto ol{margin:0;padding-left:1.4em;display:grid;gap:4px;font:700 14.5px/1.6 var(--sans)}
+.howto li::marker{color:var(--yellow);font-family:var(--num)}
 .toc{border-top:4px solid var(--rule);border-bottom:1px solid var(--rule);padding:10px 0}
 .toc h3{margin:0 0 6px;font:400 18px var(--head)}
 .toc ol{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:2px 18px}
@@ -543,6 +552,7 @@ def page(title: str, venue: str | None, picks, sel: list[dict], wt: dict, trend:
 <main class="mag">
 <section class="opener"><span class="label">巻頭 ・ {e(name)}</span><h2>この大会は、ここを見る</h2>
 <div class="prose">{''.join(f'<p{" class=dc" if j == 0 else ""}>{e(p)}</p>' for j, p in enumerate(lead))}</div></section>
+<section class="howto"><h3>現地での使い方</h3><ol>{''.join(f"<li>{e(x[2:])}</li>" for x in USE_STEPS)}</ol></section>
 <nav class="toc"><h3>この号の注目選手</h3><ol>{toc}</ol></nav>
 <div class="sect"><b>注目選手の“型”</b><span>FEATURE</span></div>
 {feats}
@@ -558,3 +568,55 @@ def page(title: str, venue: str | None, picks, sel: list[dict], wt: dict, trend:
 <p>この新聞は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
 <footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ新聞 ・ 文・データ ミカタ(カモメの記者)・ {e(today)}<br>競艇をいろんな角度から。買い目は売りません。</span></footer>
 </main>"""
+
+
+WALL_CSS = """
+*{box-sizing:border-box}
+body{margin:0;width:1080px;height:1920px;background:#f4efdf;color:#111;font-family:"Zen Kaku Gothic New","Noto Sans CJK JP",sans-serif;font-feature-settings:"palt"}
+.w{width:1080px;height:1920px;display:grid;grid-template-rows:16px auto 1fr auto}
+.lanebar{display:grid;grid-template-columns:repeat(6,1fr)}
+.lanebar i:nth-child(1){background:#fff}.lanebar i:nth-child(2){background:#17191c}.lanebar i:nth-child(3){background:#e3141b}
+.lanebar i:nth-child(4){background:#0b5fb4}.lanebar i:nth-child(5){background:#f5d00a}.lanebar i:nth-child(6){background:#12904a}
+.hd{background:#111;color:#fff;padding:34px 50px 30px;border-bottom:10px solid #e60012;display:grid;gap:8px}
+.hd .b{font:400 40px/1 "Dela Gothic One",sans-serif;color:#ffe100;letter-spacing:.04em}
+.hd h1{margin:0;font:400 84px/1.05 "Dela Gothic One",sans-serif}
+.hd p{margin:0;font:700 30px/1.4 "Zen Kaku Gothic New",sans-serif;color:#ddd}
+.hd p b{background:#e60012;color:#fff;font:400 30px/1 "Dela Gothic One",sans-serif;padding:4px 10px;margin-right:12px}
+.rows{display:grid;grid-template-rows:repeat(6,1fr)}
+.row{display:grid;grid-template-columns:170px minmax(0,1fr);border-bottom:4px solid #111}
+.lab{display:grid;place-items:center;align-content:center;gap:8px;border-right:4px solid #111;padding:8px}
+.lt{display:grid;place-items:center;width:112px;height:120px;font:700 92px/1 "Oswald",sans-serif;box-shadow:inset 0 0 0 5px rgba(0,0,0,.55)}
+.lab .lb{font:900 24px/1.2 "Zen Kaku Gothic New",sans-serif;text-align:center}
+.ps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+.p{display:grid;align-content:center;gap:4px;padding:10px 18px;border-left:2px dotted #5e5848}
+.p:first-child{border-left:0;background:rgba(255,225,0,.35)}
+.p b{font:900 38px/1.2 "Zen Kaku Gothic New",sans-serif}
+.p em{font-style:normal;font:700 74px/1 "Oswald",sans-serif;color:#111}
+.p:first-child em{color:#e60012;font-size:88px}
+.p small{font:700 22px "Zen Kaku Gothic New",sans-serif;color:#5e5848}
+.ft{background:#111;color:#ddd;padding:26px 50px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:24px;align-items:center;font:700 25px/1.5 "Zen Kaku Gothic New",sans-serif}
+.ft svg{width:110px;height:110px}
+.ft b{color:#ffe100;font:400 30px "Dela Gothic One",sans-serif}
+"""
+
+
+def chart_image_html(title: str, venue: str | None, wt: dict) -> str:
+    """狙い目の早見表の画像(1080×1920、スマホの待ち受けサイズ)。保存して現地で見る用。"""
+    import re as _re
+    m = _re.match(r"(SG|PG1|G1|G2|G3)\s*(.*)", title)
+    grade, name = (m.group(1), m.group(2)) if m else ("", title)
+    rows = []
+    for crs in range(1, 7):
+        mt = nerai.METRIC[crs]
+        lab = "逃げ切り" if crs == 1 else ("1着率" if mt == "win" else "3着内率")
+        ps = "".join(f'<div class="p"><b>{e(r["name"])}</b><em>{r["rate"]:.0%}</em><small>{r["k"]}/{r["n"]}走</small></div>' for r in wt.get(crs, []))
+        ps += '<div class="p"></div>' * (3 - len(wt.get(crs, [])))
+        rows.append(f'<div class="row"><div class="lab"><span class="lt" style="background:{LANE_BG[crs - 1]};color:{LANE_FG[crs - 1]}">{crs}</span>'
+                    f'<span class="lb">{lab}</span></div><div class="ps">{ps}</div></div>')
+    return f"""<!doctype html><meta charset="utf-8">{FONTS}<style>{WALL_CSS}</style>
+<div class="w"><div class="lanebar"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<div class="hd"><div class="b">ミカタ新聞 ・ 保存版</div><h1>狙い目の早見表</h1>
+<p>{f'<b>{e(grade)}</b>' if grade else ''}{e(venue or '')} {e(name)}</p><p>コースが決まったら、ここを見る</p></div>
+<div class="rows">{''.join(rows)}</div>
+<div class="ft">{gull_svg(110, bg="#f4efdf", cls="wl")}<div><b>出場選手の、そのコースでの成績の上位3人</b><br>
+1〜4コースは1着率、5・6コースは3着内率(過去3年、進入したコースで集計。走数が少ない選手は補正して選出)。舟券は20歳になってから</div></div></div>"""

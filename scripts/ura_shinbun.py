@@ -499,10 +499,16 @@ def title_ideas(title: str, venue: str | None, n_all: int, picks, trend: dict | 
     return [f"{x}({len(x)}字)" for x in out[:5]]
 
 
+USE_STEPS = mag.USE_STEPS
+
+
 def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str] | None = None,
-              waku: list[str] | None = None, trend: list[str] | None = None, trend_raw: dict | None = None) -> str:
-    """note に貼る本文の下書き。考え方(発信方針): 答え(買い目)ではなく、読んだ人が自分で予想するのが楽しくなる「材料」を届ける。
-    無料部分で1人分を丸ごとと場の傾向を見せて中身の質を伝え、有料部分の中身は見出しで見せる。"""
+              waku: list[str] | None = None, trend: list[str] | None = None, trend_raw: dict | None = None,
+              next_issue: str | None = None) -> str:
+    """note に貼る本文の下書き。買う人の心理(発信方針)に沿った順番:
+    1) 数字のフック(巻頭リード)で「へえ」 → 2) 誰向けか・誰向けでないか(買い目は無いと先に言う=安心)
+    → 3) 現地での使い方(使っている自分を想像できる) → 4) 無料で中身の質を証明(注目1・場の傾向・展示ST・早見表の1段だけ)
+    → 5) 推しが載っているか(出場全員の名前)と有料の目次 → 線 → 有料。煽り・ニセの期限は使わない"""
     n_all, n_pick = len(sel), len(picks)
     trust = free_corner or []
 
@@ -517,27 +523,39 @@ def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str]
 
     out = ["【タイトル案】(先頭の数字がフック。スマホの一覧では40字くらいで切れるので、|より前が勝負)"] + \
           [f"{i}. {x}" for i, x in enumerate(title_ideas(title, venue_name, n_all, picks, trend_raw), 1)] + [
-           "", "――――――――――(ここから無料)――――――――――", "",
+           "", "【見出し画像】表紙(ミカタ新聞の1面)か、注目1のカード画像", "",
+           "――――――――――(ここから無料)――――――――――", "",
            *[x for p_ in mag.issue_lead(sel, picks, trend_raw, venue_name, title) for x in (p_, "")],
-           "このノートは買い目を売るものではありません。あなたが自分で予想するときに「へえ、この人はこういう型なのか」と使える材料を集めたものです。",
-           "(もともとは、友達と現地で観戦するときに「この選手ってどんな型?」と話したくて集め始めたデータです)",
-           "", "■この記事でわかること",
-           f"・データで目立つ注目{n_pick}人と、それぞれの“型”",
-           "・狙い目の早見表:コースが決まったら、誰がそのコースで強いかがすぐわかる",
+           "■このノートについて",
+           "買い目は売っていません。あなたが自分で予想するときに「へえ、この人はこういう型なのか」と使える“材料”を集めたノートです。",
+           "(もともとは、友達と現地で観戦するときに「この選手ってどんな型?」と話したくて集め始めたデータです)", "",
+           "こんな人に向いています",
+           "・現地や中継で、自分で予想するのが好きな人",
+           "・推しの選手の“型”を、数字で知りたい人",
+           "・出走表を見ても、どこを見ればいいか迷う人",
+           "向いていない人",
+           "・買い目だけがほしい人(このノートに買い目はありません)", "",
+           "■現地での使い方(3ステップ)", *USE_STEPS, "",
+           "■この記事でわかること",
+           f"・注目{n_pick}人の“型”と、その根拠の数字",
+           "・狙い目の早見表:コースが決まったら、そのコースで強い選手がすぐわかる(スマホの待ち受けサイズの画像つき)",
            "・展示STを信じていい選手" + (f"、{venue_name}の傾向" if trend else ""),
-           "・いま伸びている選手(成長指数)、よく当たるライバル",
-           "・大一番はここが違う(優勝戦・準優・選抜の指数)",
+           "・いま伸びている選手(成長指数)、大一番はここが違う(優勝戦・準優の指数)",
            "・「勝負駆けに強い」「最終レースは荒れる」「3-2.5.6-2.5.6」は本物? ジンクス・オカルト検証",
-           f"・保存版:出場{n_all}人全員のひと言タグ一覧(現地観戦のおともに)", ""]
+           f"・保存版:出場{n_all}人全員のひと言タグ一覧", ""]
     out += pick_lines(1, picks[0])
     if trend:
         out += [f"■{venue_name}の傾向"] + [f"・{x}" for x in trend] + [""]
     if trust:
         out += trust + [""]
-    out += ["■有料パートの中身"]
-    out += [f"・注目{i} {pc['name']}({pt['t']})" for i, (pc, pt, *_r) in enumerate(picks, 1) if i > 1]
     if waku:
-        out.append("・狙い目の早見表(コースが決まったらチェック)")
+        out += ["■狙い目の早見表(1コースの段だけ公開)", waku[0], "→ 2〜6コースの段は有料パートで(まくり・差しの選手がどこに並ぶかが見えてきます)", ""]
+    out += [f"■あなたの推しは載っている? 出場{n_all}人", "/".join(c["name"] for c in sel),
+            "→ 全員の「ひと言タグ」は有料パートの保存版に", ""]
+    out += ["■有料パートの中身"]
+    out += [f"・注目{i} {pc['name']}「{pt['t']}」{mag.stars(pt)}" for i, (pc, pt, *_r) in enumerate(picks, 1) if i > 1]
+    if waku:
+        out.append("・狙い目の早見表(全段)+ スマホの待ち受けサイズの画像")
     out += [f"・{x[1:]}" for x in corners_txt if x.startswith("■") and not x.startswith("■展示ST")]
     out += [f"・保存版:出場{n_all}人のひと言タグ一覧", "",
             "数字はすべて、公式の成績データを自分たちで集計したものです。根拠の数字と判定の基準も全部載せています。", "",
@@ -546,22 +564,23 @@ def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str]
         if i > 1:
             out += pick_lines(i, x)
     if waku:
-        out += ["■狙い目の早見表(コースが決まったらチェック)",
+        out += ["■狙い目の早見表(コースが決まったらチェック)", "〔画像:早見表_待ち受け.png〕(保存してスマホの写真から見られます)",
                 "出走表と展示の進入が出たら、得意なコースに入った選手を探してみてください。"] + waku + [f"※{WAKU_NOTE}", ""]
     out += [x for x in corners_txt if not x.startswith("■展示ST") and x not in trust] + [""]
     out += [f"■保存版:出場{n_all}人のひと言タグ一覧"]
     for c in sel:
-        tags = [t["t"] for t in c["tags"][:2]]
+        tags = [f"{t['t']}{mag.stars(t)}" for t in c["tags"][:2]]
         out.append(f"・{c['name']}({c['class']}・{c['branch']}){' / '.join(tags) if tags else '(目立つタグなし)'}")
-    out += ["", "■この記事のデータについて",
+    out += ["", "■現地での使い方(もう一度)", *USE_STEPS, "",
+            "■この記事のデータについて",
             "・公式の成績データ(番組表・競走成績、2023年10月〜)を自分たちで集計しています。出走表・オッズの表・写真は使っていません",
-            "・「上位◯%」は同じ級別(A1・A2・B級)の中での位置です。3着内率はコースの有利不利を差し引いた値で比べています",
-            "・コースは枠番ではなく、実際に進入したコースで集計しています",
-            "・タグは決まった基準を満たした選手だけに付けています(基準は画像の下と下書きのHTMLに全文)",
+            "・「上位◯%」は同じ級別(A1・A2・B級)の中での位置です。★★★は上位1%、★★は上位5%、★は上位10%",
+            "・3着内率はコースの有利不利を差し引いた値で比べています。コースは枠番ではなく、実際に進入したコースです",
+            "・タグは、時期を変えても同じ選手に出ると確かめた型だけに付けています(基準は全文を下書きに)",
             "・この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません",
             "・舟券の購入は20歳になってから。無理のない範囲で楽しみましょう", "",
-            "■次回予告",
-            "次のSG・G1の出場選手が発表されたら、また“材料”をまとめます。フォローしておくと見逃しません。"]
+            "■次号予告",
+            (next_issue or "次のSG・G1の出場選手が発表されたら、また“材料”をまとめます。") + "フォローしておくと、出たときに通知が届きます。"]
     return "\n".join(out)
 
 
@@ -681,7 +700,8 @@ def jinx_lines() -> list[str]:
     return out
 
 
-def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "", d=None, cards=None, meta=None) -> dict:
+def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "", d=None, cards=None, meta=None,
+         next_issue: str | None = None) -> dict:
     """下書き一式(HTML・note の本文・X の投稿案)と、画像にする注目選手を返す。d・cards・meta を渡せば集計を使い回す。"""
     if d is None:
         d = rc.load_table()
@@ -769,9 +789,9 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
     waku = [f"{crs}コース {label}:" + "、".join(xs) for crs, label, xs in waku_rows(wt) if xs]
     tl = nerai.trend_lines(trend, vname) if trend else None
     th = nerai.trend_headline(trend, vname) if trend else None
-    return {"html": page, "note": note_text(title, vname, picks, sel, txt, trust_lines, waku, tl, trend),
+    return {"html": page, "note": note_text(title, vname, picks, sel, txt, trust_lines, waku, tl, trend, next_issue),
             "x": x_text(title, vname, picks, sel, [c["name"] for c in trust], [], th),
-            "picks": picks, "sel": sel, "missing": missing, "jcd": jcd, "venue": vname}
+            "picks": picks, "sel": sel, "missing": missing, "jcd": jcd, "venue": vname, "wt": wt}
 
 
 def main():

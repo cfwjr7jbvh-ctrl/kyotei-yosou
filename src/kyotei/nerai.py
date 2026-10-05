@@ -78,7 +78,8 @@ def waku_table(sel: list[dict], base: pd.DataFrame, top: int = 3) -> dict[int, l
                 continue
             rows.append({"id": c["id"], "name": c["name"], "n": x["n"], "k": round(x[m] * x["n"]), "rate": x[m],
                          "avg": e["avg_" + m], "score": e["exp_" + m]})
-        out[crs] = sorted(rows, key=lambda r: -r["score"])[:top]
+        # 選ぶのは見込み(偶然の分を差し引いた値)の上位、並べるのは実際の率の順(表の数字が逆転して見えないように)
+        out[crs] = sorted(sorted(rows, key=lambda r: -r["score"])[:top], key=lambda r: -r["rate"])
     return out
 
 
