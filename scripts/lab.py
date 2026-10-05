@@ -59,6 +59,8 @@ def base():
         ql = o.assign(l=o["combo"].str.split("-").str[0].astype(int)).groupby(["race_id", "l"])["q"].sum()
         key = pd.MultiIndex.from_arrays([r["race_id"], r["lane_c1"].fillna(1).astype(int)])
         r["qc1"] = ql.reindex(key).values
+        for k in range(1, 7):   # 枠ごとの「1着になる見込み」(オッズから)
+            r[f"q_l{k}"] = ql.reindex(pd.MultiIndex.from_arrays([r["race_id"], pd.Series(k, index=r.index)])).values
     return ent, r
 
 
@@ -457,8 +459,89 @@ def t_flying(ent, r):
     }
 
 
+def t_combo(ent, r):
+    """型と型の組み合わせで狙い目はあるか。型は前半2年で決め、後半1年のレースで測る(後出しにならないように)。"""
+    e = ent[ent["finish"].between(1, 6) | ent["finish"].isna()].copy()
+    e["course"] = e["course"].fillna(e["lane"])
+    e["yr"] = pd.to_datetime(e["date"]).dt.year
+    pre = e[(e["yr"] < 2025) & e["finish"].between(1, 6)]
+    # 前半2年の型(全体の割合に寄せた率)
+    def shrunk(w, n, prior, k=20):
+        return (w + prior * k) / (n + k)
+    c1 = pre[pre["course"] == 1].groupby("racer_id").agg(n=("finish", "size"), w=("finish", lambda q: (q == 1).sum()))
+    p1 = float(c1["w"].sum() / c1["n"].sum())
+    nige = shrunk(c1["w"], c1["n"], p1)
+    out = pre[pre["course"] >= 2]
+    kim = r.set_index("race_id")["kimarite"] if "kimarite" in r else None
+    if kim is not None:   # 決まり手: 1逃げ 2差し 3まくり 4まくり差し 5抜き 6恵まれ
+        out = out.assign(k=pd.to_numeric(out["race_id"].map(kim), errors="coerce"))
+        mk = out.assign(m=(out["finish"] == 1) & (out["k"] == 3), s_=(out["finish"] == 1) & (out["k"] == 2))
+    else:
+        mk = out.assign(m=False, s_=False)
+    g = mk.groupby("racer_id").agg(n=("m", "size"), m=("m", "sum"), s_=("s_", "sum"))
+    makuri = shrunk(g["m"], g["n"], float(g["m"].sum() / g["n"].sum()))
+    sashi = shrunk(g["s_"], g["n"], float(g["s_"].sum() / g["n"].sum()))
+    st = pre[pre["st"].between(0, 0.5) & pre["st_flag"].isna()].groupby("racer_id")["st"].agg(["mean", "size"])
+    stv = (st["mean"] * st["size"] + 0.16 * 20) / (st["size"] + 20)
+    q = lambda x, a: float(x.quantile(a))  # noqa: E731
+    weak_in, strong_in = set(nige.index[nige <= q(nige, .3)]), set(nige.index[nige >= q(nige, .7)])
+    mk_set = set(makuri.index[makuri >= q(makuri, .8)]); sa_set = set(sashi.index[sashi >= q(sashi, .8)])
+    fast = set(stv.index[stv <= q(stv, .3)])
+    # 後半1年のレース: コースごとの選手
+    late = e[e["yr"] >= 2025]
+    who = late.pivot_table(index="race_id", columns="course", values="racer_id", aggfunc="first")
+    lane_of = late.pivot_table(index="race_id", columns="course", values="lane", aggfunc="first")
+    rr = r[r["race_id"].isin(who.index)].copy().set_index("race_id")
+    for c in (1, 2, 3, 4):
+        rr[f"r{c}"] = who[c].reindex(rr.index) if c in who else np.nan
+        rr[f"l{c}"] = lane_of[c].reindex(rr.index) if c in lane_of else np.nan
+    rr = rr.reset_index()
+    inw, ins = rr["r1"].isin(weak_in), rr["r1"].isin(strong_in)
+    atk3 = rr["r3"].isin(mk_set) & rr["r3"].isin(fast)
+    atk4 = rr["r4"].isin(mk_set) & rr["r4"].isin(fast)
+    sa2 = rr["r2"].isin(sa_set)
+    known = rr["r1"].isin(set(nige.index))
+    # 攻める艇(3コース)が勝つか、のための列
+    rr["w3"] = (rr["win_lane"] == rr["l3"]).astype(float)
+    if "q_l1" in rr:
+        rr["q3"] = [rr.at[i, f"q_l{int(l)}"] if l == l else np.nan for i, l in zip(rr.index, rr["l3"])]
+    mA = measure(rr, inw & atk3, ref=known, col="cc1", qcol="qc1")
+    mB = measure(rr, ins & atk3, ref=known, col="cc1", qcol="qc1")
+    mC = measure(rr, inw & sa2, ref=known, col="cc1", qcol="qc1")
+    mD = measure(rr, inw & (atk3 | atk4) & sa2, ref=known, col="cc1", qcol="qc1")
+    a3 = measure(rr, inw & atk3, ref=rr["l3"].notna(), col="w3", qcol="q3") if "q3" in rr else None
+    ms = [("1コースが逃げ下手 × 3コースにまくり屋(ST速い)", mA, verdicts(mA)), ("1コースが逃げ上手 × 3コースにまくり屋(ST速い)", mB, verdicts(mB)),
+          ("1コースが逃げ下手 × 2コースに差し屋", mC, verdicts(mC)), ("1コースが逃げ下手 × 差し屋と攻め屋の両方", mD, verdicts(mD))]
+    lead = (f"1コースの艇が勝つのは、ふつう100レースで{per100(mA['in1_ref'])}。1コースが逃げ下手で3コースにスタートの速いまくり屋がいると{per100(mA['in1'])}、"
+            f"逃げ上手なら同じ相手でも{per100(mB['in1'])}。逃げ下手の内に差し屋がいると{per100(mC['in1'])}、差し屋と攻め屋がそろうと{per100(mD['in1'])}。"
+            "型の組み合わせは、1コースの強さをはっきり動かす。")
+    a3txt = (f"そのとき3コースのまくり屋が勝つのは100レースで{per100(a3['in1'])}(3コースの艇のふだんは{per100(a3['in1_ref'])})。"
+             + (f"オッズの見立ては{per100(a3['in1'] / a3['market_ratio'])}。" if a3 and a3.get("market_ratio") else "")) if a3 else ""
+    return {
+        "id": "combo", "title": "型と型の組み合わせで狙い目はあるか", "belief": "逃げ下手の1号艇の隣に、スタートの速いまくり屋。こういう並びは荒れる",
+        "subject": "1コースの艇", "lead": lead,
+        "conclusion": ["本当。並びで1コースは大きく変わる",
+                       f"逃げ下手×スタートの速いまくり屋で、1コースは100レース中{per100(mA['in1'])}(ふだん{per100(mA['in1_ref'])})。オッズもそこまでは見込んでいない。逃げ上手なら{per100(mB['in1'])}で、こちらはオッズどおり"],
+        "rules": ["型は、前の2年(2023〜2024年)の成績だけで決めた。測ったのは、そのあとの1年(2025年〜)のレース(後出しにならないように)",
+                  "逃げ下手/上手: 1コースでの逃げ率が下から30%/上から30%。まくり屋・差し屋: 2コース以遠からまくり・差しで勝つ割合が上から20%。ST速い: 平均STが速い方から30%",
+                  "コースは実際の進入で数えた(前づけで変わった場合も、入ったコースの選手で判定)"],
+        "tables": [],
+        "measures": ms,
+        "faq": [("なら、その並びのとき3コースを買えばいい?", a3txt + "組み合わせはオッズにも、ある程度は映っている。①は本当でも、②の「みんな知ってる?」を見てから"),
+                ("1号艇が強ければ、まくり屋がいても平気?", f"逃げ上手の1号艇なら、まくり屋(ST速い)が3コースにいても1コースは{per100(mB['in1'])}。ふだんの{per100(mB['in1_ref'])}と比べてどうかが、この表のいちばんの見どころ"),
+                ("型はどこで見られる?", "ミカタの選手カードの型(イン逃げ番長・まくり屋・差し職人・スタート職人)と同じ考え方。出走表で、1コースと2〜4コースの型の並びを見る")],
+        "use": ["出走表を見たら、まず1コースの逃げの強さ。次に、2コースに差し屋、3・4コースにスタートの速いまくり屋がいるか",
+                "逃げ下手 × 攻め屋の並びは、1号艇を頭から外す候補。ただしオッズも少し動いているので、2着・3着で工夫する",
+                "逃げ上手の1号艇は、攻め屋がいても崩れにくい。そこは素直に"],
+        "mikata": "型は1人ずつ見るより、並びで見るともっとおもしろい。1コースと3コースの型を、指でなぞってみて",
+        "gen": "昔から『逃げ下手の隣にまくり屋は買い』って言うんだよ。数字にしたら、やっぱりそうだろ?",
+        "challenge": "今日の出走表から「逃げ下手の1号艇 × 3コースのまくり屋」のレースを1つ探す。見つけたら、そのレースだけ1号艇を外して予想してみる",
+        "numbers": {"n_weak_in": len(weak_in), "n_makuri": len(mk_set), "n_sashi": len(sa_set), "n_fast": len(fast)},
+    }
+
+
 THEORIES = {t["id"]: t for t in []}
-BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke, "tenji": t_tenji, "flying": t_flying}
+BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke, "tenji": t_tenji, "flying": t_flying, "combo": t_combo}
 
 
 # ---------------------------------------------------------------- 記事
