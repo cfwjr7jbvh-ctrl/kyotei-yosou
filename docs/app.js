@@ -394,7 +394,11 @@ document.addEventListener("click", (e) => {
 // スリットの並びは予想ST(直前は展示ST込み)、進入は直前なら展示の進入。1マークの回り方は決まり手ごとの典型の形で、
 // 実際の航跡のデータではない。着順はそのシナリオの本線(この艇が勝つなら、いちばんありそうな3連単)。
 const AN = { slitX: 150, mx: 292, my: 92, y: (c) => 128 + (c - 1) * 16, endX: [50, 84, 114, 142, 167, 190],
-  T: [0, 1.4, 2.3, 3.3, 4.2, 5.8], hold: 1.6 };
+  T: [0, 1.4, 2.3, 3.3, 4.2, 5.8], hold: 1.6, slitHold: 1.1 };
+// スリットの瞬間は止めて見せる(いちばん熱いところ)。再生時間 → 動きの時間
+const anClock = (t) => t < AN.T[1] ? t : t < AN.T[1] + AN.slitHold ? AN.T[1] : t - AN.slitHold;
+// 艇の形(舳先が +x)。向きは進む方向に合わせて回す
+const BOAT = "M 11 0 L 3 -4.6 L -8 -4.2 L -9.5 0 L -8 4.2 L 3 4.6 Z";
 const anReduce = () => window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 function animHTML(r) {
   const sc = (r.tenkai && r.tenkai.scenarios) || [];
@@ -413,7 +417,7 @@ function animHTML(r) {
       <g class="an-trails"></g><g class="an-boats"></g></svg>
       <button type="button" class="an-re" aria-label="もう一度再生">↻ もう一度</button></div>
     <p class="an-cap"></p>
-    <p class="an-note">動きは決まり手ごとの典型の形です。スリットの並びは予想ST、着順はその勝ち筋の本線。</p></div>`;
+    <p class="an-note">スリットで一瞬止まるのは、各艇の予想ST(内より速いと「攻め」、両隣より遅いと「凹み」)。1マークの回り方は決まり手ごとの典型の形で、着順はその勝ち筋の本線。</p></div>`;
 }
 
 const qb = (a, c, b, n = 24) => Array.from({ length: n + 1 }, (_, k) => {
@@ -489,7 +493,8 @@ function anModel(r, x) {
     "まくり差し": `${x.lane}号艇が内の艇の間を割って、1マークで差し込む`,
   };
   const slit = slitRows(r).filter((s) => s.atk || s.dent).map((s) => `${s.b.lane}号艇${s.atk ? "が攻め" : "が凹み"}`).join("・");
-  return { boats, type, cap: [`スタート: ${slit ? slit + "の隊形" : "予想STの隊形"}`, `1マーク: ${lines[type] || lines["差し"]}`,
+  const fastest = sts.length ? Math.min(...sts) : null;
+  return { boats, type, fastest, cap: [`スタート: ${slit ? slit + "の隊形" : "予想STの隊形"}`, `1マーク: ${lines[type] || lines["差し"]}`,
     `決着: ${order.slice(0, 3).join("-")}(この展開の中で${Math.round((x.best.p_cond || 0) * 100)}%)`] };
 }
 
@@ -498,27 +503,34 @@ function anDraw(el, m, t) {
   const tr = svg.querySelector(".an-trails"), bg = svg.querySelector(".an-boats");
   if (!tr.childElementCount) {
     tr.innerHTML = m.boats.map((b) => `<polyline class="an-tr l${b.lane}" points=""/>`).join("");
-    bg.innerHTML = m.boats.map((b) => `<g class="an-bt l${b.lane}"><circle r="8.5"/><text y="4.2" text-anchor="middle">${b.lane}</text><text class="an-flag" y="-12" text-anchor="middle"></text></g>`).join("");
+    bg.innerHTML = m.boats.map((b) => `<g class="an-bt l${b.lane}"><path class="an-hull" d="${BOAT}"/><text y="3.8" x="-1" text-anchor="middle">${b.lane}</text><text class="an-flag" y="-12" text-anchor="middle"></text></g>`).join("");
   }
+  const tr0 = t, atSlit = t >= T[1] - 0.05 && t < T[1] + AN.slitHold + 0.05;
+  t = anClock(t);
   const phase = t < T[2] ? 0 : t < T[4] ? 1 : 2;
-  svg.querySelector(".an-phase").textContent = ["スタート", "1マーク", "決着"][phase];
+  svg.querySelector(".an-phase").textContent = atSlit ? "スリット！" : ["スタート", "1マーク", "決着"][phase];
   const cap = el.querySelector(".an-cap");
   if (cap.dataset.p !== String(phase)) { cap.dataset.p = phase; cap.textContent = m.cap[phase]; }
   m.boats.forEach((b, i) => {
     const P = b.path, ks = [[T[0], 0], [T[1], P.at[0]], [T[2], P.at[1]], [T[3] + b.d, P.at[2]], [T[4] + b.d, P.at[3]], [T[5], P.at[4]]];
     let s = P.at[4];
     for (let k = 1; k < ks.length; k++) if (t <= ks[k][0]) { const f = (t - ks[k - 1][0]) / (ks[k][0] - ks[k - 1][0]); s = ks[k - 1][1] + Math.max(0, f) * (ks[k][1] - ks[k - 1][1]); break; }
-    const p = anPos(P, s);
-    tr.children[i].setAttribute("points", P.pts.slice(0, p.i + 1).concat([[p.x, p.y]]).map((q) => q[0].toFixed(1) + "," + q[1].toFixed(1)).join(" "));
+    const p = anPos(P, s), q = anPos(P, s + 3);  // 少し先の点から向きを取る
+    const ang = Math.hypot(q.x - p.x, q.y - p.y) > 0.1 ? Math.atan2(q.y - p.y, q.x - p.x) * 180 / Math.PI : 0;
+    tr.children[i].setAttribute("points", P.pts.slice(0, p.i + 1).concat([[p.x, p.y]]).map((q2) => q2[0].toFixed(1) + "," + q2[1].toFixed(1)).join(" "));
     const g = bg.children[i];
     g.setAttribute("transform", `translate(${p.x.toFixed(1)},${p.y.toFixed(1)})`);
-    const flag = t >= T[1] - 0.2 && t < T[3] && b.s ? (b.s.atk ? "攻め" : b.s.dent ? "凹み" : "") : t >= T[5] && b.rank < 3 ? `${b.rank + 1}着` : "";
+    g.querySelector(".an-hull").setAttribute("transform", `rotate(${ang.toFixed(1)})`);
+    // スリットの瞬間: 予想STと「攻め/凹み」。いちばん速い艇は強調。決着: 着順
+    const slitTxt = b.s ? `${fmtST(b.s.st)}${b.s.atk ? " 攻め" : b.s.dent ? " 凹み" : ""}` : "";
+    const flag = atSlit || (t >= T[1] - 0.2 && t < T[3] && b.s && (b.s.atk || b.s.dent)) ? (atSlit ? slitTxt : (b.s.atk ? "攻め" : "凹み"))
+      : t >= T[5] && b.rank < 3 ? `${b.rank + 1}着` : "";
     const fe = g.querySelector(".an-flag");
     if (fe.textContent !== flag) {
       const fin = t >= T[5];  // スリットでは艇の右、決着では艇の上に出す
       fe.textContent = flag;
-      fe.setAttribute("class", "an-flag" + (!fin && b.s && b.s.atk ? " atk" : fin ? " fin" : ""));
-      fe.setAttribute("x", fin ? 0 : 12); fe.setAttribute("y", fin ? -12 : 3.5); fe.setAttribute("text-anchor", fin ? "middle" : "start");
+      fe.setAttribute("class", "an-flag" + (!fin && b.s && b.s.atk ? " atk" : fin ? " fin" : "") + (atSlit && b.s && b.s.st === m.fastest ? " fast" : ""));
+      fe.setAttribute("x", fin ? 0 : 14); fe.setAttribute("y", fin ? -12 : 3.5); fe.setAttribute("text-anchor", fin ? "middle" : "start");
     }
   });
 }
@@ -534,7 +546,7 @@ function anPlay(el, i) {
   el._i = i;
   state.anSel[el.dataset.id] = i;
   state.anSeen.add(el.dataset.id);
-  const end = AN.T[5] + 0.01;
+  const end = AN.T[5] + AN.slitHold + 0.01;
   if (anReduce()) { anDraw(el, m, end); return; }
   const t0 = performance.now();
   const step = (now) => {

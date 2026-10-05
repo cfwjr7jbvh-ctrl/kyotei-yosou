@@ -295,16 +295,17 @@ details.row[open]>summary{border-bottom:1px solid var(--rule)}
 .an-tr.l1{stroke:var(--bar1)} .an-tr.l2{stroke:var(--l2)} .an-tr.l3{stroke:var(--l3)}
 .an-tr.l4{stroke:var(--l4)} .an-tr.l5{stroke:var(--l5)} .an-tr.l6{stroke:var(--l6)}
 @media (prefers-color-scheme:dark){ .an-tr.l2{stroke:var(--l2edge)} }
-.an-bt circle{stroke-width:1.2}
-.an-bt text{font:700 11.5px var(--num)}
-.an-bt.l1 circle{fill:var(--l1);stroke:var(--l1edge)} .an-bt.l1 text{fill:var(--l1i)}
-.an-bt.l2 circle{fill:var(--l2);stroke:var(--l2edge)} .an-bt.l2 text{fill:var(--l2i)}
-.an-bt.l3 circle{fill:var(--l3);stroke:none} .an-bt.l3 text{fill:var(--l3i)}
-.an-bt.l4 circle{fill:var(--l4);stroke:none} .an-bt.l4 text{fill:var(--l4i)}
-.an-bt.l5 circle{fill:var(--l5);stroke:none} .an-bt.l5 text{fill:var(--l5i)}
-.an-bt.l6 circle{fill:var(--l6);stroke:none} .an-bt.l6 text{fill:var(--l6i)}
+.an-bt .an-hull{stroke-width:1.2;stroke-linejoin:round}
+.an-bt text{font:700 10.5px var(--num)}
+.an-bt.l1 .an-hull{fill:var(--l1);stroke:var(--l1edge)} .an-bt.l1 text{fill:var(--l1i)}
+.an-bt.l2 .an-hull{fill:var(--l2);stroke:var(--l2edge)} .an-bt.l2 text{fill:var(--l2i)}
+.an-bt.l3 .an-hull{fill:var(--l3);stroke:none} .an-bt.l3 text{fill:var(--l3i)}
+.an-bt.l4 .an-hull{fill:var(--l4);stroke:none} .an-bt.l4 text{fill:var(--l4i)}
+.an-bt.l5 .an-hull{fill:var(--l5);stroke:none} .an-bt.l5 text{fill:var(--l5i)}
+.an-bt.l6 .an-hull{fill:var(--l6);stroke:none} .an-bt.l6 text{fill:var(--l6i)}
 .an-bt text.an-flag{font:700 9.5px "BIZ UDPGothic",system-ui,sans-serif;fill:var(--mute)}
 .an-bt text.an-flag.atk{fill:var(--mark)} .an-bt text.an-flag.fin{fill:var(--ink)}
+.an-bt text.an-flag.fast{fill:var(--mark);font-size:11px}
 .an-re{position:absolute;right:8px;top:8px;border:1px solid var(--rule);background:var(--deck);border-radius:999px;
   padding:3px 10px;font-size:12px;cursor:pointer}
 .an-cap{margin:6px 0 0;font-size:13.5px;font-weight:700;min-height:1.5em}
