@@ -585,7 +585,7 @@ def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str]
 
 
 def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: list[str], trend_head: str | None = None) -> str:
-    """X の投稿案(3つのスレッド)。1投稿は全角140字以内に収める(超えるときは名前の数を減らす)。"""
+    """X の投稿案(3つのスレッド)。1投稿は X の数え方で280以内(全角2・英数1)に収める(超えるときは名前の数を減らす)。"""
     n_all = len(sel)
     import re as _re
     short = _re.sub(r"第[0-9０-９]+回", "", title)
@@ -596,12 +596,12 @@ def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: l
     def fit(make, names):
         for k in range(min(3, len(names)), -1, -1):
             p = make(names[:k])
-            if len(p) <= 140:
+            if mag.xlen(p) <= 280:
                 return p
         return make([])
     p1 = fit(lambda ns: f"{title}、出場予定{n_all}人をデータで読みました📰\n\n買い目ではなく、予想が楽しくなる“材料”をまとめています。"
                         + ("\n\nまずは「展示STを信じていい選手」👇\n" + "\n".join(f"・{x}" for x in ns) if ns else ""), trust_names)
-    if trust_names and len(p1 + "\n\nみんなは展示ST、どこまで信じる派?") <= 140:
+    if trust_names and mag.xlen(p1 + "\n\nみんなは展示ST、どこまで信じる派?") <= 280:
         p1 += "\n\nみんなは展示ST、どこまで信じる派?"
     if trend_head:
         p2 = trend_head + f"\n\nみんなは{venue_name}の1号艇、どこまで信じる?"
@@ -624,8 +624,8 @@ def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: l
                          "一方で「誰が○○巧者か」は、時期を変えるとほぼ入れ替わる(偶然の幅が大きい)。\n\nみんなは地元選手、買う派?")
     out = []
     for i, p in enumerate((p1, p2, p3, *extra), 1):
-        warn = "  ※140字を超えています" if len(p) > 140 else ""
-        out += [f"--- 投稿{i}({len(p)}字){warn}{'  ※小ネタ(別の日に単独で)' if i > 3 else ''} ---", p, ""]
+        warn = "  ※長すぎます(Xの上限280)" if mag.xlen(p) > 280 else ""
+        out += [f"--- 投稿{i}({mag.xlen(p)}/280){warn}{'  ※小ネタ(別の日に単独で)' if i > 3 else ''} ---", p, ""]
     out.append("画像: 投稿1に注目1人目のカードを添える。投稿2は文字だけでよい(場の傾向の数字が主役)")
     out.append("出し方: noteのリンクは最後の投稿だけ(本文にリンクがあると届きにくい)。平日の12時台か20〜23時、初日の前日の夜がおすすめ。"
                "返信が来たら返す(返信のやりとりがいちばん評価される)")

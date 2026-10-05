@@ -25,6 +25,11 @@ PREF = {1: "群馬", 2: "埼玉", 3: "東京", 4: "東京", 5: "東京", 6: "静
         22: "福岡", 23: "佐賀", 24: "長崎"}
 
 
+def xlen(text: str) -> int:
+    """X の文字数の数え方(全角などは2、英数字・記号は1。上限 280)。"""
+    return sum(1 if ord(ch) < 0x1100 or 0xFF61 <= ord(ch) <= 0xFF9F else 2 for ch in text)
+
+
 def pct(v) -> str:
     return "-" if v is None else f"{v:.0%}"
 

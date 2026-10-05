@@ -672,10 +672,18 @@ function anaRaces() {
   return state.data.races.filter((r) => !finished(r) && r.arashi && r.arashi.in_lose != null && (minsLeft(r) == null || minsLeft(r) > 0))
     .sort((a, b) => b.arashi.in_lose - a.arashi.in_lose).slice(0, 3);
 }
+const xlen = (s) => [...s].reduce((n, ch) => n + ((ch.codePointAt(0) < 0x1100 || (ch.codePointAt(0) >= 0xff61 && ch.codePointAt(0) <= 0xff9f)) ? 1 : 2), 0);
 function anaText(list) {
-  const lines = list.map((r, i) => `${"①②③"[i]} ${r.venue}${r.rno}R(${r.deadline}締切)1号艇が負ける確率${Math.round(r.arashi.in_lose * 100)}%`);
+  const d = jst().date;
+  const lines = list.map((r, i) => `${"①②③"[i]} ${r.venue}${r.rno}R(${r.deadline}) 1号艇が負ける${Math.round(r.arashi.in_lose * 100)}%`);
   const why = list[0] ? anaReasons(list[0]) : [];
-  return `今日いちばん荒れそうなレース🌊\n\n${lines.join("\n")}\n\n${why.length ? `${list[0].venue}${list[0].rno}Rの材料:${why.join("、")}\n\n` : ""}荒れそう=当てやすい、ではないのでご注意を。みんなはどのレースが荒れると思う?`;
+  const head = `今日の荒れそうなレース🌊 ${+d.slice(5, 7)}/${+d.slice(8)}\n\n${lines.join("\n")}`;
+  for (let k = why.length; k >= 0; k--) {
+    const w = k ? `\n\n${list[0].venue}${list[0].rno}R:${why.slice(0, k).join("、")}` : "";
+    const body = `${head}${w}\n\n荒れそう=当てやすい、ではないです。どのレースが荒れると思う?`;
+    if (xlen(body) <= 280) return body;
+  }
+  return `${head}\n\nどのレースが荒れると思う?`;
 }
 function anaHTML() {
   const list = anaRaces();
