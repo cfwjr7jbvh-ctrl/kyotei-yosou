@@ -562,7 +562,10 @@ def feature_columns(df: pd.DataFrame, stage: str = "late") -> list[str]:
                "race_time",  # race_time はレース結果(未来の情報)なので特徴量にしない
                "ex_course", "p_wind", "p_wave"}  # course・wind・wave に入れ替え済み(重複)
     cols = [c for c in df.columns if c not in exclude and pd.api.types.is_numeric_dtype(df[c])
-            and df[c].notna().mean() > 0.5 and not c.startswith(("rcc_", "_"))]
+            and df[c].notna().mean() > 0.5 and not c.startswith(("rcc_", "_"))
+            # 展示STから作った特徴量は使わない(検証ラボ exst: 今日の展示STのずれは本番STのずれとほぼ無関係、相関0.01。
+            # model_lab drop_ex_st で外すと logloss -0.00067、90%区間 -0.00125〜-0.00009)。列は表示用に残す
+            and "ex_st" not in c and "st_pred" not in c]
     if stage == "early":
         cols = [c for c in cols if not any(c.startswith(p) for p in LATE_ONLY)]
     return cols
