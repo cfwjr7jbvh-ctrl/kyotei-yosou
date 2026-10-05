@@ -131,6 +131,8 @@ def add_history(df: pd.DataFrame) -> pd.DataFrame:
     df["rc_avgfin"] = _smoothed(df["rc_fin"], df["rc_has"], 3.5, 5)
     df["rc_avgst"] = _smoothed(df["rc_st"], df["rc_hst"], 0.16, 5)
     df["rc_fcount"] = df["rc_fl"].fillna(0)
+    df = add_f_since(df)
+    df = add_body_hist(df)
     # スタートの安定度(STのばらつき。小さいほど安定)
     msq = _smoothed(df["rc_st2"], df["rc_hst"], 0.16 ** 2 + 0.05 ** 2, 5)
     df["rc_stsd"] = np.sqrt(np.maximum(msq - df["rc_avgst"] ** 2, 1e-4))
@@ -271,6 +273,53 @@ class OnlineRating:
         np.add.at(self.lane, lanes - 1, self.lane_lr * grad)
 
 
+def add_f_since(df: pd.DataFrame) -> pd.DataFrame:
+    """最後のフライングから何走目か(その走より前のデータだけ)。
+
+    検証(scripts/lab.py flying、2026-10-05): F直後10走はSTが平均+0.033秒・3着内率-8ポイント、11〜40走は+0.019秒・-3ポイント、
+    41走目以降はほぼ戻る。rc_fcount(180日のF・L回数)より「どれだけ最近か」が効くはず。
+    - f_since    : 最後のFから何走目か(Fが無ければ 200、200で頭打ち)
+    - f_recent   : exp(-f_since/15)(直後ほど1に近い、Fが無ければ0)
+    """
+    if "st_flag" not in df and "result_code" not in df:
+        return df
+    fl = pd.Series(False, index=df.index)
+    for c in ("st_flag", "result_code"):
+        if c in df:
+            fl |= df[c].astype(str) == "F"
+    order = df.sort_values(["racer_id", "date", "rno"] if "rno" in df else ["racer_id", "date"]).index
+    d = pd.DataFrame({"r": df.loc[order, "racer_id"].values, "f": fl.loc[order].values}, index=order)
+    d["k"] = d.groupby("r").cumcount()
+    last = d["k"].where(d["f"]).groupby(d["r"]).ffill()
+    last = last.groupby(d["r"]).shift(1)          # その走より前の行までの、最後のF
+    since = (d["k"] - last).clip(upper=200).fillna(200)
+    df["f_since"] = since.reindex(df.index).values
+    df["f_recent"] = np.where(df["f_since"] >= 200, 0.0, np.exp(-df["f_since"] / 15))
+    return df
+
+
+def add_body_hist(df: pd.DataFrame) -> pd.DataFrame:
+    """からだの調子(その走より前のデータだけ)。
+
+    検証(scripts/lab.py weight・rest、model_lab body 2026-10-05: logloss -0.00105、90%区間が0をまたがない):
+    - rest_days : 前の走からの日数(同じ日の2走目は0)。休み明けは3着内-3.3ポイント、連戦は+2.6
+    - w_avg30  : 直近30走の当日体重の平均(10走未満は空)。本番の体重との差 w_dev は直前情報が来てから add_late で作る
+    """
+    if "racer_id" not in df or "date" not in df:
+        return df
+    keys = ["racer_id", "date", "rno"] if "rno" in df else ["racer_id", "date"]
+    o = df.sort_values(keys).index
+    g = df.loc[o, "racer_id"]
+    dd = pd.to_datetime(df.loc[o, "date"])
+    df["rest_days"] = dd.groupby(g.values).diff().dt.days.reindex(df.index).values
+    if "weight_now" in df:
+        wn = pd.to_numeric(df.loc[o, "weight_now"], errors="coerce")
+        wn = wn.where(wn > 30)
+        avg = wn.groupby(g.values).transform(lambda s_: s_.shift(1).rolling(30, min_periods=10).mean())
+        df["w_avg30"] = avg.reindex(df.index).values
+    return df
+
+
 def add_rating(df: pd.DataFrame) -> pd.DataFrame:
     df = df.sort_values(["date", "race_id", "lane"]).reset_index(drop=True)
     rating = OnlineRating()
@@ -401,7 +450,7 @@ def add_matchups(df: pd.DataFrame, pos: pd.Series) -> pd.DataFrame:
 GRADE_WORDS = [("優勝", 6), ("準優", 5), ("ドリーム", 4), ("特選", 3), ("特賞", 3), ("選抜", 3),
                ("予選", 2), ("一般", 1)]
 LATE_ONLY = ("exhibit", "course", "wind", "wave", "ex_st", "tilt", "in_", "out_", "st_adv",
-             "st_pred", "weight_diff", "vw_", "mu_", "air_temp", "water_temp", "temp_")
+             "st_pred", "weight_diff", "w_dev", "vw_", "mu_", "air_temp", "water_temp", "temp_")
 
 
 def race_grade(s) -> int:
@@ -487,6 +536,9 @@ def add_late(df: pd.DataFrame) -> pd.DataFrame:
         df["ex_st_flying"] = (df["ex_st"] < 0).astype(float).where(df["ex_st"].notna())
     if "weight_now" in df:
         df["weight_diff"] = df["weight_now"] - df["weight"]
+        if "w_avg30" in df:   # 当日体重と、その選手の直近30走の平均との差(重い日は3着内-4.3ポイント)
+            wn = pd.to_numeric(df["weight_now"], errors="coerce")
+            df["w_dev"] = wn.where(wn > 30) - df["w_avg30"]
     if "wind_dir" in df and "wind" in df:
         ang = (pd.to_numeric(df["wind_dir"], errors="coerce") - 1) * np.pi / 8
         df["wind_x"] = df["wind"] * np.cos(ang)
@@ -509,9 +561,13 @@ def feature_columns(df: pd.DataFrame, stage: str = "late") -> list[str]:
                "boat_no", "racer_name", "branch", "rating_strength", "deadline", "result_code",
                "st_flag", "race_type", "weight_now", "kimarite", "series_str",
                "race_time",  # race_time はレース結果(未来の情報)なので特徴量にしない
-               "ex_course", "p_wind", "p_wave"}  # course・wind・wave に入れ替え済み(重複)
+               "ex_course", "p_wind", "p_wave",
+               "w_avg30"}  # ex_course 等は course・wind・wave に入れ替え済み(重複)。w_avg30 は w_dev を作るためだけ
     cols = [c for c in df.columns if c not in exclude and pd.api.types.is_numeric_dtype(df[c])
-            and df[c].notna().mean() > 0.5 and not c.startswith(("rcc_", "_"))]
+            and df[c].notna().mean() > 0.5 and not c.startswith(("rcc_", "_"))
+            # 展示STから作った特徴量は使わない(検証ラボ exst: 今日の展示STのずれは本番STのずれとほぼ無関係、相関0.01。
+            # model_lab drop_ex_st で外すと logloss -0.00067、90%区間 -0.00125〜-0.00009)。列は表示用に残す
+            and "ex_st" not in c and "st_pred" not in c]
     if stage == "early":
         cols = [c for c in cols if not any(c.startswith(p) for p in LATE_ONLY)]
     return cols
