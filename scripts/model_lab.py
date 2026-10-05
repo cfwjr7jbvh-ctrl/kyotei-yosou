@@ -470,7 +470,16 @@ def exp_exst(df):
     return compare("drop_ex_st", df, base, [c for c in base if c not in exf], f"展示STから作った特徴量を外す: {exf}")
 
 
-EXPERIMENTS = {"exst": exp_exst, "wx": exp_wx, "body": exp_body, "wx_body": exp_wx_body, "rl_variants": exp_race_level_variants, "embed_asof": exp_embed_asof, "recent": exp_recent, "pairwise": exp_pairwise, "formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
+def exp_body_exst(df):
+    """からだ(体重のずれ・休み・F後)を足し、展示STの特徴量を外す(exp/20261006-body-exst と同じ組み合わせ)。"""
+    base = base_feats(df)
+    df = add_body(df)
+    exf = [c for c in base if "ex_st" in c or "st_pred" in c]
+    cand = [c for c in base if c not in exf] + ["w_dev", "rest_days", "f_since"]
+    return compare("body_drop_exst", df, base, cand, "からだの特徴量を足し、展示STの特徴量を外す")
+
+
+EXPERIMENTS = {"body_exst": exp_body_exst, "exst": exp_exst, "wx": exp_wx, "body": exp_body, "wx_body": exp_wx_body, "rl_variants": exp_race_level_variants, "embed_asof": exp_embed_asof, "recent": exp_recent, "pairwise": exp_pairwise, "formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
                "drop_noise": exp_drop_noise, "race_level": exp_race_level}
 
 
