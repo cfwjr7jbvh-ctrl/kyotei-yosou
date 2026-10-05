@@ -1,114 +1,103 @@
-"""「型」の紋章(ワッペン)。選手カードのタグの横・画像・新聞に付ける、うち独自の小さなマーク。
+"""「型」の紋章。選手カードのタグの横・画像・新聞に付ける、うち独自の小さなマーク。
 
 本人の顔(写真・似顔絵)はパブリシティ権の問題があるので使わない。代わりに「型」を絵にして、推しの型を集める楽しさを出す。
-形: 盾型のワッペン。上の帯に型の短い名前、真ん中に絵(2色)、太い縁取り(刺繍っぽく)。viewBox 0 0 100 112。
+第3案(2026-10-05): ピクトグラム。色の丸に白い太いシルエット1つ。道路標識のように、ぱっと見で分かることを最優先。
+型ごとに色が決まっていて、集めると並べたくなる統一感。文字は入れない(名前はキャプションで)。viewBox 0 0 100 100。
 """
 from __future__ import annotations
 
 INK = "#14212c"
-CREAM = "#f8f2df"
-SHIELD = "M 50 4 L 92 14 L 92 58 C 92 84 72 100 50 108 C 28 100 8 84 8 58 L 8 14 Z"
-# 型ごとの差し色(帯)と、絵の2色目
-STYLE = {
-    "スタート職人": ("#c8141c", "#ffd23f"), "展示STを信じていい": ("#0b5fb4", "#8ed0ff"), "本番で踏み込む": ("#e8571a", "#ffd23f"),
-    "イン逃げ番長": ("#14212c", "#ffd23f"), "差し職人": ("#0b7a3b", "#bfe5c0"), "まくり屋": ("#c8141c", "#8ed0ff"),
-    "まくり差しの職人": ("#7b3fb8", "#e6d3ff"), "外からでも届く": ("#0b5fb4", "#ffd23f"), "前づけの仕掛け人": ("#b8860b", "#fff0b3"),
-    "展示は控えめ、本番で化ける": ("#7b3fb8", "#ffd23f"), "上り調子": ("#e8571a", "#8ed0ff"), "舟券に絡む安定感": ("#0b7a3b", "#ffd23f"),
+COLORS = {
+    "スタート職人": "#d7191c", "展示STを信じていい": "#1f6fd1", "本番で踏み込む": "#f05a1a", "イン逃げ番長": "#14212c",
+    "差し職人": "#1a9b4a", "まくり屋": "#c2185b", "まくり差しの職人": "#7b3fb8", "外からでも届く": "#0b8ca8",
+    "前づけの仕掛け人": "#c98a00", "展示は控えめ、本番で化ける": "#9c27b0", "上り調子": "#e65100", "舟券に絡む安定感": "#2e7d32",
 }
 SHORT = {"スタート職人": "ST職人", "展示STを信じていい": "展示", "本番で踏み込む": "踏込", "イン逃げ番長": "逃げ", "差し職人": "差し", "まくり屋": "まくり",
          "まくり差しの職人": "まく差", "外からでも届く": "外伸び", "前づけの仕掛け人": "前づけ", "展示は控えめ、本番で化ける": "化け", "上り調子": "上昇",
          "舟券に絡む安定感": "安定"}
+W = "#ffffff"
+_S = f'fill="none" stroke="{W}" stroke-linecap="round" stroke-linejoin="round"'
+BOAT = "M 18 50 L 34 42 L 70 44 L 86 50 L 70 56 L 34 58 Z"   # 舟のシルエット(舳先が右)
 
-# 絵(中央 50,66 のあたり、幅60くらい)。{c}=差し色 {c2}=2色目 {k}=墨
+# 白いシルエット。線の太さは 9〜11 でそろえる
 _ART = {
-    # ストップウォッチ。針は12時ぴったり、まわりに「ピタッ」の火花
-    "スタート職人": ('<circle cx="50" cy="68" r="21" fill="{c2}" stroke="{k}" stroke-width="4"/><circle cx="50" cy="68" r="15" fill="#fff" stroke="{k}" stroke-width="2.5"/>'
-                 '<path d="M 50 47 L 50 40 M 43 40 L 57 40" stroke="{k}" stroke-width="4.5" stroke-linecap="round"/>'
-                 '<path d="M 50 68 L 50 56" stroke="{c}" stroke-width="4" stroke-linecap="round"/><circle cx="50" cy="68" r="3" fill="{c}"/>'
-                 '<path d="M 22 52 L 28 56 M 20 64 L 27 64 M 78 52 L 72 56 M 80 64 L 73 64" stroke="{c}" stroke-width="3.5" stroke-linecap="round"/>'),
-    # 虫めがねで舟を見る(展示を見れば分かる)+チェック
-    "展示STを信じていい": ('<circle cx="44" cy="64" r="17" fill="{c2}" stroke="{k}" stroke-width="4"/>'
-                   '<path d="M 32 66 L 48 66 L 56 62 L 48 58 Z" fill="{k}"/>'
-                   '<path d="M 57 76 L 70 89" stroke="{k}" stroke-width="7" stroke-linecap="round"/>'
-                   '<path d="M 62 46 L 68 52 L 80 40" fill="none" stroke="{c}" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>'),
-    # 舟がラインを突き抜ける、後ろに炎
-    "本番で踏み込む": ('<path d="M 58 44 L 58 90" stroke="{k}" stroke-width="3.5" stroke-dasharray="6 5" stroke-linecap="round"/>'
-                 '<path d="M 24 60 C 30 58 36 56 42 56 L 46 56 L 46 76 L 42 76 C 36 76 30 74 24 72 Z" fill="{c}" stroke="{k}" stroke-width="3"/>'
-                 '<path d="M 46 56 L 70 60 L 80 66 L 70 72 L 46 76 Z" fill="{c2}" stroke="{k}" stroke-width="3.5" stroke-linejoin="round"/>'
-                 '<path d="M 24 66 L 10 60 L 18 66 L 8 72 L 22 70 Z" fill="{c}"/>'),
-    # 王冠をのせた「1」がブイのそばで小さく回る
-    "イン逃げ番長": ('<circle cx="70" cy="70" r="8" fill="{c2}" stroke="{k}" stroke-width="3"/>'
-                 '<path d="M 20 84 L 52 84 A 14 14 0 0 0 52 56 L 40 56" fill="none" stroke="{k}" stroke-width="6" stroke-linecap="round"/>'
-                 '<path d="M 40 48 L 34 56 L 40 64" fill="none" stroke="{k}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'
-                 '<path d="M 20 48 L 24 34 L 32 42 L 38 30 L 44 42 L 52 34 L 56 48 Z" fill="{c2}" stroke="{k}" stroke-width="3" stroke-linejoin="round"/>'),
-    # 外の艇が膨らんだ内側を、刃のような矢で刺す
-    "差し職人": ('<path d="M 18 86 L 54 86 A 24 24 0 0 0 54 38 L 44 38" fill="none" stroke="{c2}" stroke-width="7" stroke-linecap="round"/>'
-             '<path d="M 18 86 L 54 86 A 24 24 0 0 0 54 38 L 44 38" fill="none" stroke="{k}" stroke-width="3" stroke-dasharray="1 7" stroke-linecap="round"/>'
-             '<path d="M 22 72 L 54 72 A 10 10 0 0 0 54 52 L 46 52" fill="none" stroke="{c}" stroke-width="6" stroke-linecap="round"/>'
-             '<path d="M 50 44 L 40 52 L 50 60 Z" fill="{c}" stroke="{c}" stroke-width="2" stroke-linejoin="round"/>'),
-    # 大きな波しぶきの矢で外から一気に
-    "まくり屋": ('<path d="M 24 86 L 58 86 A 26 26 0 0 0 58 34 L 46 34" fill="none" stroke="{c}" stroke-width="8" stroke-linecap="round"/>'
-            '<path d="M 50 24 L 40 34 L 50 44" fill="none" stroke="{c}" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>'
-            '<path d="M 26 70 L 50 70 A 10 10 0 0 0 50 50" fill="none" stroke="{k}" stroke-width="3.5" stroke-opacity=".5" stroke-linecap="round"/>'
-            '<path d="M 72 38 C 78 40 82 46 80 52 M 78 30 C 86 34 90 42 88 50" fill="none" stroke="{c2}" stroke-width="3.5" stroke-linecap="round"/>'),
-    # 2艇の間を縫う S の線
-    "まくり差しの職人": ('<path d="M 18 48 L 44 48 M 18 80 L 44 80" stroke="{k}" stroke-width="7" stroke-opacity=".35" stroke-linecap="round"/>'
-                 '<path d="M 14 64 C 36 64 36 40 56 40 C 72 40 78 50 78 64 C 78 78 70 86 56 86" fill="none" stroke="{c}" stroke-width="6.5" stroke-linecap="round"/>'
-                 '<path d="M 64 78 L 54 86 L 64 94" fill="none" stroke="{c}" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"/>'
-                 '<circle cx="56" cy="40" r="4" fill="{c2}" stroke="{k}" stroke-width="2"/>'),
-    # 6本のレーン、いちばん外の「6」から真ん中へ長く届く矢
-    "外からでも届く": ('<path d="M 20 40 L 20 88 M 31 40 L 31 88 M 42 40 L 42 88 M 53 40 L 53 88 M 64 40 L 64 88" stroke="{k}" stroke-width="2.5" stroke-opacity=".35"/>'
-                '<circle cx="74" cy="80" r="9" fill="{c2}" stroke="{k}" stroke-width="3"/><text x="74" y="85" font-family="Dela Gothic One, sans-serif" font-size="13" fill="{k}" text-anchor="middle">6</text>'
-                '<path d="M 74 70 L 74 54 L 26 54" fill="none" stroke="{c}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'
-                '<path d="M 34 46 L 24 54 L 34 62" fill="none" stroke="{c}" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'),
-    # 外の枠から内へ、スタート前に斜めに入る(点線のラインの手前で)
-    "前づけの仕掛け人": ('<path d="M 18 40 L 82 40" stroke="{k}" stroke-width="3.5" stroke-dasharray="6 5" stroke-linecap="round"/>'
-                 '<circle cx="76" cy="84" r="7" fill="{c2}" stroke="{k}" stroke-width="3"/>'
-                 '<path d="M 70 80 L 38 58" stroke="{c}" stroke-width="7" stroke-linecap="round"/>'
-                 '<path d="M 38 72 L 34 55 L 51 54" fill="none" stroke="{c}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>'
-                 '<circle cx="26" cy="48" r="7" fill="{c}" stroke="{k}" stroke-width="3"/>'),
-    # さなぎ(小さい丸)から、ちょうちょ
-    "展示は控えめ、本番で化ける": ('<ellipse cx="26" cy="80" rx="6" ry="9" fill="{c2}" stroke="{k}" stroke-width="3"/>'
-                       '<path d="M 32 72 C 40 64 48 60 56 58" fill="none" stroke="{k}" stroke-width="2.5" stroke-dasharray="3 4" stroke-linecap="round"/>'
-                       '<path d="M 62 56 C 50 40 36 48 46 58 C 36 66 50 76 62 62 Z" fill="{c}" stroke="{k}" stroke-width="3" stroke-linejoin="round"/>'
-                       '<path d="M 62 56 C 74 40 88 48 78 58 C 88 66 74 76 62 62 Z" fill="{c}" stroke="{k}" stroke-width="3" stroke-linejoin="round"/>'
-                       '<path d="M 62 50 L 62 68" stroke="{k}" stroke-width="4" stroke-linecap="round"/><circle cx="56" cy="52" r="3" fill="{c2}"/><circle cx="68" cy="52" r="3" fill="{c2}"/>'),
-    # ロケットみたいに右肩上がり
-    "上り調子": ('<path d="M 14 88 L 86 88" stroke="{k}" stroke-width="3.5" stroke-linecap="round"/>'
-             '<path d="M 18 82 L 34 66 L 46 74 L 64 50" fill="none" stroke="{c}" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>'
-             '<path d="M 56 42 L 76 36 L 70 56 Z" fill="{c}" stroke="{k}" stroke-width="3" stroke-linejoin="round"/>'
-             '<path d="M 22 50 L 30 50 M 18 58 L 26 58" stroke="{c2}" stroke-width="4" stroke-linecap="round"/>'),
-    # いかり(安定)と3段の台
-    "舟券に絡む安定感": ('<path d="M 14 88 L 14 70 L 34 70 L 34 88 M 34 88 L 34 56 L 58 56 L 58 88 M 58 88 L 58 76 L 80 76 L 80 88 M 10 88 L 88 88" fill="none" stroke="{k}" stroke-width="3.5" stroke-linejoin="round"/>'
-                 '<path d="M 46 30 L 46 50 M 38 36 L 54 36 M 34 44 C 36 52 42 54 46 54 C 50 54 56 52 58 44" fill="none" stroke="{c}" stroke-width="4.5" stroke-linecap="round"/>'
-                 '<circle cx="46" cy="27" r="3.5" fill="none" stroke="{c}" stroke-width="3"/>'
-                 '<path d="M 66 40 L 72 46 L 84 34" fill="none" stroke="{c2}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>'),
+    # ストップウォッチ。針は12時
+    "スタート職人": (f'<circle cx="50" cy="56" r="24" {_S} stroke-width="9"/><path d="M 50 32 L 50 22 M 40 22 L 60 22" {_S} stroke-width="9"/>'
+                 f'<path d="M 50 56 L 50 40" {_S} stroke-width="9"/><circle cx="50" cy="56" r="5" fill="{W}"/>'),
+    # 目(見たまま信じていい)
+    "展示STを信じていい": (f'<path d="M 14 50 C 30 26 70 26 86 50 C 70 74 30 74 14 50 Z" {_S} stroke-width="9"/>'
+                   f'<circle cx="50" cy="50" r="11" fill="{W}"/>'),
+    # 舟がラインを突き抜ける、後ろに勢いの線
+    "本番で踏み込む": (f'<path d="M 64 18 L 64 82" {_S} stroke-width="6" stroke-dasharray="9 8"/>'
+                 f'<path d="{BOAT}" fill="{W}" transform="translate(8 0)"/>'
+                 f'<path d="M 8 40 L 20 40 M 4 50 L 18 50 M 8 60 L 20 60" {_S} stroke-width="6"/>'),
+    # 「1」が王冠をかぶっている
+    "イン逃げ番長": (f'<path d="M 24 38 L 30 22 L 40 32 L 50 18 L 60 32 L 70 22 L 76 38 Z" fill="{W}"/>'
+                 f'<path d="M 38 56 L 50 46 L 50 84 M 36 84 L 64 84" {_S} stroke-width="10"/>'),
+    # 外の弧(細)の内側を、太い矢で刺す
+    "差し職人": (f'<path d="M 14 80 L 54 80 A 24 24 0 0 0 54 32 L 44 32" {_S} stroke-width="5" stroke-opacity=".55"/>'
+             f'<path d="M 18 64 L 54 64 A 10 10 0 0 0 54 44 L 44 44" {_S} stroke-width="10"/>'
+             f'<path d="M 50 34 L 40 44 L 50 54" {_S} stroke-width="10"/>'),
+    # 外から大きく回り込む太い矢
+    "まくり屋": (f'<path d="M 18 82 L 56 82 A 30 30 0 0 0 56 22 L 44 22" {_S} stroke-width="11"/>'
+            f'<path d="M 52 12 L 40 22 L 52 32" {_S} stroke-width="11"/>'
+            f'<circle cx="50" cy="56" r="6" fill="{W}" fill-opacity=".7"/>'),
+    # 2つの点の間を縫う S
+    "まくり差しの職人": (f'<circle cx="30" cy="34" r="7" fill="{W}" fill-opacity=".7"/><circle cx="30" cy="66" r="7" fill="{W}" fill-opacity=".7"/>'
+                 f'<path d="M 12 50 C 40 50 40 24 60 24 C 76 24 82 36 82 50 C 82 64 76 76 60 76" {_S} stroke-width="10"/>'
+                 f'<path d="M 68 66 L 58 76 L 68 86" {_S} stroke-width="10"/>'),
+    # 右端から真ん中の的へ、長い矢
+    "外からでも届く": (f'<circle cx="30" cy="50" r="16" {_S} stroke-width="7"/><circle cx="30" cy="50" r="4" fill="{W}"/>'
+                f'<path d="M 90 50 L 52 50" {_S} stroke-width="10"/><path d="M 62 38 L 50 50 L 62 62" {_S} stroke-width="10"/>'),
+    # 外の枠から内へ、斜めに入る太い矢(上は点線のライン)
+    "前づけの仕掛け人": (f'<path d="M 16 24 L 84 24" {_S} stroke-width="6" stroke-dasharray="9 8"/>'
+                 f'<path d="M 78 82 L 36 46" {_S} stroke-width="11"/><path d="M 36 64 L 32 42 L 54 40" {_S} stroke-width="11"/>'),
+    # ちょうちょ
+    "展示は控えめ、本番で化ける": (f'<path d="M 50 50 C 36 26 12 30 24 50 C 12 70 36 74 50 50 Z" fill="{W}"/>'
+                       f'<path d="M 50 50 C 64 26 88 30 76 50 C 88 70 64 74 50 50 Z" fill="{W}"/>'
+                       f'<path d="M 50 30 L 50 72" {_S} stroke-width="7"/><path d="M 50 32 L 42 20 M 50 32 L 58 20" {_S} stroke-width="5"/>'),
+    # 右肩上がりの矢
+    "上り調子": (f'<path d="M 14 78 L 36 56 L 50 68 L 78 34" {_S} stroke-width="11"/>'
+             f'<path d="M 60 32 L 80 32 L 80 52" {_S} stroke-width="11"/>'),
+    # いかり
+    "舟券に絡む安定感": (f'<circle cx="50" cy="22" r="8" {_S} stroke-width="7"/><path d="M 50 30 L 50 84 M 32 42 L 68 42" {_S} stroke-width="9"/>'
+                 f'<path d="M 18 60 C 20 78 34 86 50 86 C 66 86 80 78 82 60 M 18 60 L 30 66 M 82 60 L 70 66" {_S} stroke-width="9"/>'),
 }
 
 
-def emblem_svg(tag: str, size: int = 40, cls: str = "emb") -> str:
-    """型の紋章。知らないタグなら空文字。size は幅(高さは 1.12 倍)。"""
+ALIAS = {"急成長中": "上り調子"}
+
+
+def emblem_svg(tag: str, size: int = 40, cls: str = "emb", ring: bool = True) -> str:
+    """型の紋章。知らないタグなら空文字。"""
+    tag = ALIAS.get(tag, tag)
     art = _ART.get(tag)
     if not art:
         return ""
-    c, c2 = STYLE.get(tag, (INK, "#ffd23f"))
-    uid = f"em{abs(hash(tag)) % 100000}{size}"
-    return (f'<svg class="{cls}" viewBox="0 0 100 112" width="{size}" height="{round(size * 1.12)}" role="img" aria-label="{tag}の紋章">'
-            f'<defs><clipPath id="{uid}"><path d="{SHIELD}"/></clipPath></defs>'
-            f'<path d="{SHIELD}" fill="{CREAM}" stroke="{INK}" stroke-width="5" stroke-linejoin="round"/>'
-            f'<g clip-path="url(#{uid})"><rect x="0" y="0" width="100" height="30" fill="{c}"/>'
-            f'<text x="50" y="25" font-family="Dela Gothic One, sans-serif" font-size="15" fill="#fff" text-anchor="middle">{SHORT.get(tag, "")}</text>'
-            + art.format(c=c, c2=c2, k=INK) + "</g>"
-            f'<path d="{SHIELD}" fill="none" stroke="{INK}" stroke-width="5" stroke-linejoin="round"/>'
-            f'<path d="M 50 9 L 87 18 L 87 57 C 87 80 69 95 50 102 C 31 95 13 80 13 57 L 13 18 Z" fill="none" stroke="#fff" stroke-width="1.6" stroke-dasharray="3 3" stroke-opacity=".9"/>'
-            "</svg>")
+    c = COLORS.get(tag, INK)
+    return (f'<svg class="{cls}" viewBox="0 0 100 100" width="{size}" height="{size}" role="img" aria-label="{tag}の紋章">'
+            f'<circle cx="50" cy="50" r="48" fill="{c}"/>'
+            + (f'<circle cx="50" cy="50" r="44" fill="none" stroke="{W}" stroke-opacity=".35" stroke-width="2"/>' if ring else "")
+            + art + "</svg>")
 
 
 def sheet_html() -> str:
-    """12個を並べた見本(確認用)。"""
+    """12個を並べた見本(確認用)。小さい表示も並べる。"""
     cells = "".join(f'<div class="cell">{emblem_svg(t, 128)}<b>{t}</b></div>' for t in _ART)
+    small = "".join(emblem_svg(t, 28) for t in _ART)
     return ('<!doctype html><html lang="ja"><head><meta charset="utf-8"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=Zen+Kaku+Gothic+New:wght@700&display=swap">'
             '<style>body{margin:0;background:#f4efdf;font-family:"Zen Kaku Gothic New",sans-serif;padding:24px}h1{font:400 26px "Dela Gothic One",sans-serif;margin:0 0 16px}'
             '.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}.cell{background:#fff;border:3px solid #14212c;padding:14px 8px;display:flex;flex-direction:column;align-items:center;gap:8px}'
-            '.cell b{font-size:13.5px;text-align:center}</style></head><body><h1>ミカタの「型」の紋章 12種(第2案: 盾のワッペン)</h1>'
-            f'<div class="grid">{cells}</div></body></html>')
+            '.cell b{font-size:13.5px;text-align:center}.small{margin-top:18px;display:flex;gap:6px;align-items:center;background:#fff;padding:10px;border:3px solid #14212c}.small span{font-size:13px;margin-right:6px}</style></head><body>'
+            '<h1>ミカタの「型」の紋章 12種(第3案: ピクトグラム)</h1>'
+            f'<div class="grid">{cells}</div><div class="small"><span>タグの横の大きさ(28px):</span>{small}</div></body></html>')
+
+
+def js_module() -> str:
+    """アプリ用(docs/emblems.js)。window.EMBLEM(tag, size) で同じ絵を出す。"""
+    import json
+    data = {t: {"c": COLORS[t], "a": _ART[t]} for t in _ART}
+    return ("// 自動生成: python -c 'from kyotei.emblem import js_module; print(js_module())' > docs/emblems.js\n"
+            f"const EMBLEMS = {json.dumps(data, ensure_ascii=False)};\nconst EMBLEM_ALIAS = {json.dumps(ALIAS, ensure_ascii=False)};\n"
+            "function emblem(tag, size = 22) {\n  tag = EMBLEM_ALIAS[tag] || tag;\n  const d = EMBLEMS[tag];\n  if (!d) return \"\";\n"
+            "  return `<svg class=\"emb\" viewBox=\"0 0 100 100\" width=\"${size}\" height=\"${size}\" role=\"img\" aria-label=\"${tag}の紋章\"><circle cx=\"50\" cy=\"50\" r=\"48\" fill=\"${d.c}\"/>${d.a}</svg>`;\n}\n")

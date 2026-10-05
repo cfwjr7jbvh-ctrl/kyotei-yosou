@@ -320,7 +320,7 @@ function cardHTML(c, race, lane) {
   const m = CARDS.meta || {};
   const g = (m.groups || {})[c.grp] || c.grp;
   const rule = (t) => (m.rules || {})[t] || (t.endsWith("巧者") ? (m.rules || {})["(場名)巧者"] : t === "急成長中" ? (m.rules || {})["上り調子"] : "");
-  const tags = c.tags.map((t) => `<li><span class="tg">${esc(t.t)}</span><span class="why">${esc(t.why)}</span>
+  const tags = c.tags.map((t) => `<li><span class="tg">${typeof emblem === "function" ? emblem(t.t, 22) : ""}${esc(t.t)}</span><span class="why">${esc(t.why)}</span>
     <details class="rule"><summary>基準</summary>${esc(rule(t.t))}</details></li>`).join("");
   const k = c.kim;
   const kimRow = (name, x, unit) => `<tr><th>${name}</th><td>${x.w}<small>勝</small> / ${x.n}<small>走</small></td><td>${unit}</td><td>${pctTop(x.grp)}</td></tr>`;

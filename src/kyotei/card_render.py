@@ -56,6 +56,11 @@ def catch(c: dict, jcd: int | None = None, used: set | None = None) -> tuple[str
 GEN_RING = "#0b5fb4"
 
 
+def _emb(tag: str, size: int) -> str:
+    from .emblem import emblem_svg
+    return emblem_svg(tag, size, cls="emb")
+
+
 def gull_svg(size: int = 104, ring: str = "#c8141c", bg: str = "#eef1e4", cls: str = "gull", who: str = "mikata") -> str:
     """カモメのアイコン(輪の中の顔)。公式のキャラとは無関係の自作。カード画像・下書き・アプリで共通。
 
@@ -111,9 +116,11 @@ body{margin:0;width:1080px;height:1350px;background:#f4efdf;color:#111;font-fami
 .name{font:400 118px/1.02 "Dela Gothic One",sans-serif;letter-spacing:.02em;margin-top:6px}
 .gull svg{display:block;width:132px;height:132px;transform:rotate(-6deg)}
 .tagrow{padding:22px 56px 0}
+.tagrow{display:flex;align-items:center;gap:22px}
+.embs{margin-left:auto;display:flex;align-items:center;gap:6px;flex:0 0 auto} .embs small{display:none}
 .tag{display:inline-flex;align-items:center;gap:18px;background:#e60012;color:#fff;padding:12px 26px 14px;transform:skewX(-10deg);box-shadow:8px 8px 0 #111}
 .tag > *{transform:skewX(10deg)}
-.tag b{font:400 54px/1.1 "Dela Gothic One",sans-serif}
+.tag b{font:400 50px/1.1 "Dela Gothic One",sans-serif;white-space:nowrap}
 .tag i{font-style:normal;color:#ffe100;font-size:40px;letter-spacing:4px}
 .why{padding:20px 56px 0;font:800 30px/1.5 "Shippori Mincho",serif;border-left:0}
 .why span{background:linear-gradient(transparent 62%,#ffe100 62%)}
@@ -163,6 +170,8 @@ def card_image_html(c: dict, jcd: int | None = None, kicker: str = "データで
         f'<div class="cb"><span class="lt" style="background:{LANE_BG[i]};color:{LANE_FG[i]}">{i + 1}</span>'
         f'<div class="tr"><i class="t3" style="width:{(x["top3"] or 0) * 100:.0f}%"></i><i class="w" style="width:{(x["win"] or 0) * 100:.0f}%"></i></div>'
         f'<span class="cn"><b>{pc(x["win"])}</b> / {pc(x["top3"])}</span></div>' for i, x in enumerate(c["courses"]))
+    other_tags = [x["t"] for x in c["tags"] if x["t"] != t0 and _emb(x["t"], 10)][:4]
+    others = (f'<div class="embs"><small>ほかの型</small>{"".join(_emb(x, 44) for x in other_tags)}</div>') if other_tags else ""
     import re as _re
     m = _re.match(r"(SG|PG1|G1|G2|G3)\s*(.*)", kicker)
     kick = f"<b>{e(m.group(1))}</b>{e(m.group(2))}" if m else e(kicker)
@@ -172,7 +181,7 @@ def card_image_html(c: dict, jcd: int | None = None, kicker: str = "データで
   <div class="top"><div class="brand">ミカタ新聞</div><div class="kicker">{kick}</div></div>
   <div class="head"><div><div class="meta">{e(c['class'] or '')} ・ {e(c['branch'] or '')}支部 ・ {int(c['age'] or 0)}歳</div><div class="name">{e(c['name'])}</div></div>
     <div class="gull">{gull_svg(132, bg="#f4efdf", cls="img")}</div></div>
-  <div class="tagrow"><div class="tag"><b>{e(t0)}</b><i>{st_}</i></div></div>
+  <div class="tagrow">{_emb(t0, 96)}<div class="tag"><b>{e(t0)}</b><i>{st_}</i></div>{others}</div>
   <div class="why"><span>{e(why0)}</span></div>
   <div>
     <div class="mid"><div><div class="big"><b>{e(num)}</b><small>{e(lbl)}</small></div>

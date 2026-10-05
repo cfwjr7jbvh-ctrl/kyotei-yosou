@@ -15,6 +15,7 @@ import math
 
 from . import nerai
 from . import racer_card as rc
+from .emblem import emblem_svg  # noqa: E402
 from .card_render import gull_svg, radar_svg
 from .xtext import xlen  # noqa: F401
 
@@ -382,6 +383,7 @@ body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.8 var(--sans)
 .ft-quote p small{display:block;font:700 11px var(--sans);color:var(--red);letter-spacing:.1em}
 .ft-side{background:#111;color:#fff;padding:10px 14px;font:700 14px/1.7 var(--sans)}
 .ft-side b{display:block;color:var(--yellow);font:400 15px var(--head)}
+.emb{vertical-align:middle;margin-right:6px;flex:0 0 auto}
 .ft-tags{list-style:none;margin:0;padding:8px 0 0;border-top:1px dashed var(--mute);display:grid;gap:4px}
 .ft-tags li{font-size:12.5px;color:var(--mute)}
 .ft-tags li b{color:var(--ink);font-size:13.5px;margin-right:6px}
@@ -479,13 +481,13 @@ def feature(i: int, c: dict, t: dict, heads: list[str], bc: dict | None) -> str:
     num, lbl = big_stat(c, t)
     paras = body(c, t, bc)
     prose = "".join(f'<p{" class=dc" if j == 0 and not p[:1].isdigit() else ""}>{e(p)}</p>' for j, p in enumerate(paras))
-    tags = "".join(f"<li><b>{e(x['t'])}<i>{stars(x)}</i></b>{e(x['why'])}</li>" for x in c["tags"][:5])
+    tags = "".join(f"<li>{emblem_svg(x['t'], 20)}<b>{e(x['t'])}<i>{stars(x)}</i></b>{e(x['why'])}</li>" for x in c["tags"][:5])
     alt = "".join(f"<li>{e(h)}</li>" for h in heads[1:])
     side = (f'<div class="ft-side"><b>狙い目のコース</b>{bc["c"]}コースに入ったら注目。{bc["n"]}走で1着率{bc["win"]:.0%}・3着内率{bc["top3"]:.0%}'
             f'({g}の{bc["c"]}コース平均は{bc["avg_top3"]:.0%})</div>') if bc else ""
     return f"""<article class="feat" id="r{c['id']}">
 <div class="ft-head"><span class="ft-no">{i:02d}</span><div><span class="ft-meta">{e(c['class'] or '')} ・ {e(c['branch'] or '')}支部 ・ {int(c['age'] or 0)}歳</span><h2>{e(c['name'])}</h2></div></div>
-<div class="ft-tag"><b>{e(t['t'])}</b><i>{stars(t)}</i></div>
+<div class="ft-tag">{emblem_svg(t['t'], 44)}<b>{e(t['t'])}</b><i>{stars(t)}</i></div>
 <h3 class="ft-catch"><span class="mk">{e(heads[0])}</span></h3>
 <p class="ft-deck">{e(deck(c, t))}</p>
 <div class="ft-grid"><div class="prose">{prose}</div>
@@ -544,11 +546,11 @@ def page(title: str, venue: str | None, picks, sel: list[dict], wt: dict, trend:
     name = title[len(grade):].strip() if grade else title
     lead = issue_lead(sel, picks, trend, venue, name)
     toc = "".join(f'<li><a href="#r{c["id"]}"><span class="n">{i:02d}</span><span><span class="nm">{e(c["name"])}</span>'
-                  f'<span class="tg">{e(t["t"])} {stars(t)}</span></span></a></li>' for i, (c, t, *_x) in enumerate(picks, 1))
+                  f'<span class="tg">{emblem_svg(t["t"], 18)}{e(t["t"])} {stars(t)}</span></span></a></li>' for i, (c, t, *_x) in enumerate(picks, 1))
     feats = "\n".join(feature(i, c, t, heads, bc) for i, (c, t, heads, com, bc) in enumerate(picks, 1))
     sides_html = "".join(f'<section class="side"><h3>{e(h)}</h3>{b}</section>' for h, b in sides)
     shown = list(dict.fromkeys(("上り調子" if x["t"] == "急成長中" else x["t"]) for c, *_x in picks for x in c["tags"][:5]))
-    basis = "".join(f"<dt>{e(k)}</dt><dd>{e(rules[k])}</dd>" for k in shown if k in rules)
+    basis = "".join(f"<dt>{emblem_svg(k, 22)}{e(k)}</dt><dd>{e(rules[k])}</dd>" for k in shown if k in rules)
     return f"""<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><title>ミカタ新聞 {e(title)}</title>
 {FONTS}<style>{CSS}</style></head><body>
 {f'<div class="note-top">{e(note)}</div>' if note else ''}
