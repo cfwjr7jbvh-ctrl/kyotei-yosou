@@ -1,0 +1,12 @@
+{
+ "name": "race_level_k36",
+ "note": "RaceLevel k=36 枠順 vs k=24 枠順",
+ "races": 33528,
+ "base_logloss": 1.1755,
+ "cand_logloss": 1.1722,
+ "delta": -0.0033,
+ "lo90": -0.0045,
+ "hi90": -0.0021,
+ "verdict": "改善(偶然ではなさそう)",
+ "made": "2026-10-05 18:04"
+}

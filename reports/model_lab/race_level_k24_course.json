@@ -1,0 +1,12 @@
+{
+ "name": "race_level_k24_course",
+ "note": "RaceLevel k=24 進入コース順 vs k=24 枠順",
+ "races": 33528,
+ "base_logloss": 1.1755,
+ "cand_logloss": 1.1795,
+ "delta": 0.00405,
+ "lo90": 0.00252,
+ "hi90": 0.00559,
+ "verdict": "悪化",
+ "made": "2026-10-05 18:07"
+}

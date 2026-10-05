@@ -1,0 +1,21 @@
+{
+ "name": "embed_asof",
+ "note": "選手・モーター・場×コース・選手×コースの埋め込みを as-of(半年ごと学び直し)で作って足す(D19)",
+ "races": 33528,
+ "base_logloss": 1.2131,
+ "cand_logloss": 1.2117,
+ "delta": -0.00144,
+ "lo90": -0.00213,
+ "hi90": -0.00075,
+ "verdict": "改善(偶然ではなさそう)",
+ "made": "2026-10-05 17:55",
+ "base_feats": 147,
+ "cand_feats": 152,
+ "added": [
+  "emb_all",
+  "emb_motor",
+  "emb_racer",
+  "emb_rc",
+  "emb_vc"
+ ]
+}

@@ -385,7 +385,40 @@ def exp_pairwise(df):
     return summarize("pairwise_blend", te, lb[common], lm, "ペアモデルと艇ごとGBDTの対数平均")
 
 
-EXPERIMENTS = {"embed_asof": exp_embed_asof, "recent": exp_recent, "pairwise": exp_pairwise, "formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
+def exp_race_level_variants(df):
+    """RaceLevel(models.py)の形を変えて比べる: 特徴量の数 k、枠順ではなく進入コース順に並べる。基準は k=24 枠順。"""
+    import importlib.util, os
+    # RaceLevel がまだ main に無いときは、環境変数 RL_MODELS に改良案ブランチの models.py の場所を指定する
+    spec = importlib.util.spec_from_file_location("kyotei.rl_models", os.environ.get("RL_MODELS", ROOT / "src/kyotei/models.py"))
+    rl_models = importlib.util.module_from_spec(spec); spec.loader.exec_module(rl_models)
+    base = base_feats(df)
+    te = df[df["split"] == "test"]
+
+    def run(k, by_course):
+        RaceLevel = rl_models.RaceLevel
+        RaceLevel.k = k
+        d = df
+        if by_course:  # 進入コース順に並べ替える(lane 列を一時的にコースに)
+            d = df.copy()
+            pos = d["course"].where(d["course"].notna(), d["lane"]).astype(int)
+            dup = d.assign(pos=pos).duplicated(["race_id", "pos"], keep=False)
+            d.loc[~dup, "lane"] = pos[~dup]  # 同じコースが2艇いるレースは枠順のまま
+        m = RaceLevel(base).fit(d[d["split"] != "test"])
+        p = m.predict_proba(d[d["split"] == "test"])
+        return win_logloss_per_race(te.assign(lane=d.loc[te.index, "lane"]) if by_course else te, p)
+
+    lb = run(24, False)
+    out = {}
+    import os
+    ks = [int(x) for x in os.environ.get("RL_KS", "12,36,48").split(",")]
+    for k, bc in [(k, False) for k in ks] + ([(24, True)] if "RL_COURSE" in os.environ else []):
+        lc = run(k, bc)
+        r = summarize(f"race_level_k{k}{'_course' if bc else ''}", te, lb, lc, f"RaceLevel k={k} {'進入コース順' if bc else '枠順'} vs k=24 枠順")
+        out[r["name"]] = r["delta"]
+    return out
+
+
+EXPERIMENTS = {"rl_variants": exp_race_level_variants, "embed_asof": exp_embed_asof, "recent": exp_recent, "pairwise": exp_pairwise, "formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
                "drop_noise": exp_drop_noise, "race_level": exp_race_level}
 
 

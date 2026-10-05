@@ -1,0 +1,12 @@
+{
+ "name": "race_level_k100",
+ "note": "RaceLevel k=100 枠順 vs k=24 枠順",
+ "races": 33528,
+ "base_logloss": 1.1755,
+ "cand_logloss": 1.1655,
+ "delta": -0.00995,
+ "lo90": -0.01204,
+ "hi90": -0.00786,
+ "verdict": "改善(偶然ではなさそう)",
+ "made": "2026-10-05 18:15"
+}

@@ -1,0 +1,12 @@
+{
+ "name": "race_level_k12",
+ "note": "RaceLevel k=12 枠順 vs k=24 枠順",
+ "races": 33528,
+ "base_logloss": 1.1755,
+ "cand_logloss": 1.179,
+ "delta": 0.00352,
+ "lo90": 0.00227,
+ "hi90": 0.00478,
+ "verdict": "悪化",
+ "made": "2026-10-05 18:03"
+}
