@@ -212,10 +212,15 @@ class RaceLevel:
     def _wide(self, df):
         X, mask, fin, uniq, idx, ridx, pos = _race_tensor(df, self.feats)
         W = np.concatenate([X.reshape(len(X), -1), mask.astype(float)], axis=1)
+        if getattr(self, "keep", None) is not None:  # 学習時に全部欠損だった列は落とす(sklearn の binning が落ちる)
+            W = W[:, self.keep]
         return W, mask, fin, uniq, idx, ridx, pos
 
     def fit(self, df):
+        self.keep = None
         W, mask, fin, *_ = self._wide(df)
+        self.keep = ~np.all(np.isnan(W), axis=0)
+        W = W[:, self.keep]
         f = np.nan_to_num(fin, nan=99)
         ok = (f.min(1) == 1)
         y = np.argmin(f[ok], axis=1)
@@ -237,6 +242,75 @@ class RaceLevel:
         P /= P.sum(1, keepdims=True)
         out = pd.Series(P[ridx, pos], index=idx).reindex(df.index).values
         return race_normalize(out, df["race_id"].values)
+
+
+class RaceCond:
+    """2着・3着の条件付きレース単位モデル(D21)。
+
+    6艇の特徴量を横に並べたものに「1着の枠」(3着は「1着・2着の枠」)の one-hot を足し、2着(3着)の枠を6クラスで学ぶ。
+    cond(df) は各レースについて log P(2着=j | 1着=i) の 6x6 と log P(3着=k | 1着=i, 2着=j) の 6x6x6 を返す。
+    スタッカー(ensemble.Stacker)が2着・3着の条件付きロジットの特徴量としてこれを足し、重みを学ぶ。
+    手元の試し: 本当の1着を知ったときの2着の誤差 1.423(1着確率を除いて正規化)→1.360。
+    """
+    name = "race_cond"
+
+    def __init__(self, feats, seed=0):
+        self.rl = RaceLevel(feats, seed)
+        self.seed = seed
+
+    def _clf(self):
+        if lgb is not None:
+            return lgb.LGBMClassifier(objective="multiclass", n_estimators=300, learning_rate=0.05, num_leaves=31,
+                                      min_child_samples=50, subsample=0.8, subsample_freq=1, colsample_bytree=0.5,
+                                      reg_lambda=1.0, random_state=self.seed, verbose=-1)
+        return HistGradientBoostingClassifier(max_iter=300, learning_rate=0.06, max_leaf_nodes=31,
+                                              min_samples_leaf=50, l2_regularization=1.0, random_state=self.seed)
+
+    @staticmethod
+    def _oh(idx, n):
+        E = np.zeros((n, 6))
+        E[np.arange(n), idx] = 1.0
+        return E
+
+    def fit(self, df):
+        self.rl.keep = None
+        W, mask, fin, *_ = self.rl._wide(df)
+        self.rl.keep = ~np.all(np.isnan(W), axis=0)
+        W = W[:, self.rl.keep]
+        f = np.nan_to_num(fin, nan=99)
+        o = np.argsort(f, axis=1)[:, :3]
+        n = len(W)
+        ok2 = (f <= 2).sum(1) == 2
+        X2 = np.concatenate([W, self._oh(o[:, 0], n)], axis=1)
+        self.m2 = self._clf().fit(X2[ok2], o[ok2, 1])
+        ok3 = (f <= 3).sum(1) == 3
+        X3 = np.concatenate([W, self._oh(o[:, 0], n), self._oh(o[:, 1], n)], axis=1)
+        self.m3 = self._clf().fit(X3[ok3], o[ok3, 2])
+        return self
+
+    def _probs(self, m, X, mask, drop):
+        P = np.full((len(X), 6), 1e-9)
+        P[:, m.classes_] = m.predict_proba(X)
+        P = np.where(mask, P, 1e-9)
+        for d in drop:
+            P[np.arange(len(X)), d] = 1e-9
+        return np.log(P / P.sum(1, keepdims=True))
+
+    def cond(self, df):
+        """(race_id の配列, L2 (n,6,6), L3 (n,6,6,6))。L2[r, i, j] = log P(2着=j | 1着=i)、L3[r, i, j, k] = log P(3着=k | 1着=i, 2着=j)。"""
+        W, mask, fin, uniq, *_ = self.rl._wide(df)
+        n = len(W)
+        L2 = np.zeros((n, 6, 6))
+        L3 = np.zeros((n, 6, 6, 6))
+        for i in range(6):
+            oi = self._oh(np.full(n, i), n)
+            L2[:, i, :] = self._probs(self.m2, np.concatenate([W, oi], axis=1), mask, [np.full(n, i)])
+            for j in range(6):
+                if j == i:
+                    continue
+                oj = self._oh(np.full(n, j), n)
+                L3[:, i, j, :] = self._probs(self.m3, np.concatenate([W, oi, oj], axis=1), mask, [np.full(n, i), np.full(n, j)])
+        return uniq, L2, L3
 
 
 def available_models():
