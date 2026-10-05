@@ -196,9 +196,13 @@ RACE_LEVEL_PRIORITY = ["st_pred2", "st_pred", "rating", "rc_win", "nat_win_rate"
 
 
 class RaceLevel:
-    """レース単位の6クラスモデル。各艇の特徴量(優先順の上位 k 個)を枠順に横へ並べ、勝った枠を直接学ぶ。"""
+    """レース単位の6クラスモデル。各艇の特徴量を枠順に横へ並べ、勝った枠を直接学ぶ。
+
+    手元の試し(1着logloss): 特徴量を上位12個→1.179、24個→1.176、48個→1.170、72個→1.166、全部(約150個)→1.162 と、
+    多いほど良かったので全部使う(k=None)。進入コース順に並べるのは枠順より悪かった(枠の情報が落ちる)。
+    """
     name = "race_level"
-    k = 24
+    k = None  # None=全部。数を絞るときは優先順(RACE_LEVEL_PRIORITY)の上位から
 
     def __init__(self, feats, seed=0):
         pri = [c for c in RACE_LEVEL_PRIORITY if c in feats]
@@ -216,8 +220,8 @@ class RaceLevel:
         ok = (f.min(1) == 1)
         y = np.argmin(f[ok], axis=1)
         if lgb is not None:
-            self.m = lgb.LGBMClassifier(objective="multiclass", n_estimators=500, learning_rate=0.03, num_leaves=31,
-                                        min_child_samples=50, subsample=0.8, subsample_freq=1, colsample_bytree=0.8,
+            self.m = lgb.LGBMClassifier(objective="multiclass", n_estimators=400, learning_rate=0.04, num_leaves=31,
+                                        min_child_samples=50, subsample=0.8, subsample_freq=1, colsample_bytree=0.5,
                                         reg_lambda=1.0, random_state=self.seed, verbose=-1)
         else:
             self.m = HistGradientBoostingClassifier(max_iter=400, learning_rate=0.05, max_leaf_nodes=31,
