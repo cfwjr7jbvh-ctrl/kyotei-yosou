@@ -17,14 +17,14 @@ permissions:
 jobs:
   lab:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
         with:
           model: "false"
       - run: |
-          if [ -n "${{ inputs.theory }}" ]; then python scripts/lab.py --theory "${{ inputs.theory }}" --out "$RUNNER_TEMP/lab"; else python scripts/lab.py --next --out "$RUNNER_TEMP/lab"; fi
+          if [ -n "${{ inputs.theory }}" ]; then python scripts/lab.py --theory "${{ inputs.theory }}" --out "$RUNNER_TEMP/lab"; else python scripts/lab.py --theory all --out "$RUNNER_TEMP/lab"; fi
       - name: コミット
         run: |
           git config user.name "github-actions[bot]"

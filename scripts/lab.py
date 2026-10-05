@@ -540,8 +540,371 @@ def t_combo(ent, r):
     }
 
 
+# ---------------------------------------------------------------- からだと暦(2026-10-05 追加)
+# 体・疲れ・移動・暦の「よく言われること」を同じ物差しで。選手ごとの話は「本人のふだん」との差で見る
+# (強い選手がどこでも良く見える、を避ける)。表の数字は「本人のふだんとの差を、全体の平均(100走で約50回)に足したもの」。
+BRANCH_JCD = {"群馬": 1, "埼玉": 2, "東京": 4, "静岡": 6, "愛知": 8, "三重": 9, "福井": 10, "滋賀": 11, "大阪": 12, "兵庫": 13,
+              "徳島": 14, "香川": 15, "岡山": 16, "広島": 17, "山口": 18, "福岡": 20, "佐賀": 23, "長崎": 24}
+VENUE_XY = {1: (36.405, 139.312), 2: (35.814, 139.656), 3: (35.683, 139.870), 4: (35.579, 139.741), 5: (35.624, 139.591),
+            6: (34.711, 137.593), 7: (34.827, 137.235), 8: (34.878, 136.837), 9: (34.698, 136.521), 10: (36.230, 136.146),
+            11: (35.021, 135.886), 12: (34.609, 135.479), 13: (34.723, 135.433), 14: (34.185, 134.610), 15: (34.296, 133.790),
+            16: (34.465, 133.814), 17: (34.318, 132.306), 18: (34.054, 131.796), 19: (33.967, 130.946), 20: (33.904, 130.819),
+            21: (33.887, 130.671), 22: (33.595, 130.395), 23: (33.453, 129.972), 24: (32.916, 129.955)}
+SAME = "本人のふだん(全体の平均にそろえてある)"
+
+
+def _adj(ent):
+    """1行=1艇。c1 = 全体の3着内率 + 本人のふだんとの差(コースの有利不利も差し引き)。"""
+    x = ent[ent["finish"].between(1, 6)].copy()
+    x["course"] = x["course"].fillna(x["lane"])
+    x["top3"] = (x["finish"] <= 3).astype(float)
+    x["res"] = x["top3"] - x.groupby("course")["top3"].transform("mean")
+    x["res_own"] = x["res"] - x.groupby("racer_id")["res"].transform("mean")
+    base_ = float(x["top3"].mean())
+    x["c1"] = base_ + x["res_own"]
+    x["upset"] = 0.0
+    dd = pd.to_datetime(x["date"])
+    x["late"] = dd.dt.year >= 2025
+    x["month"], x["day"] = dd.dt.month, dd.dt.day
+    x["dt"] = dd
+    x["date"] = x["date"].astype(str)
+    return x
+
+
+def _gap(x, ca, cb, minn=15, by="month"):
+    """「この人は◯◯に強い」が人ごとに続くか: 選手ごとの(条件aの上積み−条件bの上積み)を、月(日)の奇数・偶数で比べた相関。"""
+    res = []
+    for par in (1, 0):
+        y = x[x[by] % 2 == par]
+        a = y[ca.loc[y.index]].groupby("racer_id")["res_own"].agg(["size", "mean"])
+        b = y[cb.loc[y.index]].groupby("racer_id")["res_own"].agg(["size", "mean"])
+        j = a.join(b, lsuffix="_a", rsuffix="_b", how="inner")
+        j = j[(j.size_a >= minn) & (j.size_b >= minn)]
+        res.append(j.mean_a - j.mean_b)
+    jj = pd.concat(res, axis=1, keys=["o", "e"]).dropna()
+    return (float(jj.o.corr(jj.e)) if len(jj) > 30 else float("nan")), int(len(jj))
+
+
+def _pp(m):
+    """ふだんとの差をポイントで(+2.3)。"""
+    return f"{(m['in1'] - m['in1_ref']) * 100:+.1f}"
+
+
+def _person(r_):
+    v, n = r_
+    return f"時期を変えると{sim_words(v)}({n}人で確認)"
+
+
+def t_rest(ent, r):
+    """休み明け・連戦・忙しさ。"""
+    x = _adj(ent).sort_values(["racer_id", "dt", "rno"]).reset_index(drop=True)
+    days = x.groupby("racer_id")["dt"].diff().dt.days
+    x["gap"] = days
+    # 休み明け: 30日以上あいた後の最初の3走 / 連戦: 前の走から2日以内に別の場で走る(節をまたいだ連戦)
+    first_after = x["gap"] >= 30
+    x["k_after"] = first_after.groupby(x["racer_id"]).cumsum()
+    x["n_in"] = x.groupby(["racer_id", "k_after"]).cumcount()
+    back = (x["k_after"] > 0) & (x["n_in"] < 3) & x.groupby(["racer_id", "k_after"])["gap"].transform("first").ge(30)
+    long_back = back & x.groupby(["racer_id", "k_after"])["gap"].transform("first").ge(90)
+    x["prev_jcd"] = x.groupby("racer_id")["jcd"].shift(1)
+    renzoku = (x["gap"] <= 2) & (x["prev_jcd"] != x["jcd"])
+    # 直近7日の走数(忙しさ)
+    busy = x.set_index("dt").groupby("racer_id")["c1"].transform(lambda s_: s_.rolling("7D").count())
+    x["busy"] = busy.values
+    normal = (~back) & (~renzoku)
+    mb = measure(x, back, ref=normal)
+    ml = measure(x, long_back, ref=normal)
+    mr = measure(x, renzoku, ref=normal)
+    mbz = measure(x, x["busy"] >= 12, ref=x["busy"].between(4, 8))
+    pb = _gap(x, back, normal, 6)
+    ms = [("30日以上の休み明け、最初の3走", mb, verdicts(mb)), ("90日以上の長い休み明け", ml, verdicts(ml)),
+          ("前の節から中1日以内で別の場へ(連戦)", mr, verdicts(mr)), ("直近7日で12走以上(忙しい)", mbz, verdicts(mbz))]
+    real_back = verdicts(mb)["real"] or verdicts(ml)["real"]
+    con = (["休み明けは少し鈍る。連戦はむしろ好調", f"90日以上の休み明けは{_pp(ml)}ポイント、30日以上なら{_pp(mb)}。前の節から中1日以内の連戦は{_pp(mr)}で、疲れより勢いが勝っている"]
+           if real_back else ["休み明けも連戦も、思ったより平気", f"休み明け{_pp(mb)}・連戦{_pp(mr)}ポイント。選手は思ったより、すぐ戻ってくる"])
+    return {
+        "id": "rest", "title": "休み明けと連戦、どっちが響く?", "belief": "休み明けは勘が戻ってない。連戦は疲れがたまる。どっちも買いにくい",
+        "subject": "その選手", "verb": "3着以内に入る", "no_market": True, "compare": SAME,
+        "lead": f"休み明け(30日以上あいた後の最初の3走)は、本人のふだんと比べて{_pp(mb)}ポイント。90日以上の長い休みだと{_pp(ml)}。"
+                f"前の節から中1日以内で別の場へ移る連戦は{_pp(mr)}、7日で12走以上の忙しい時期は{_pp(mbz)}。",
+        "conclusion": con, "tables": [], "measures": ms,
+        "rules": ["数字は、その選手の「ふだん」とくらべた差。強い選手も弱い選手も、自分自身とくらべている",
+                  "休み明けの理由(けが、F休み、出産、ただの休み)はデータでは分からないので、まとめて見ている"],
+        "faq": [("休み明けに弱い人はいる?", f"選手ごとの「休み明けの落ち方」は、{_person(pb)}"),
+                ("長い休み明けは、何走で戻る?", "休み明けの最初の3走で見ている。4走目以降はふだんの数字とほとんど区別がつかない"),
+                ("連戦がむしろ良いのはなぜ?", f"中1日で次の節に来るのは、前の節を最後まで走った(勝ち上がった)選手が多い。調子のいい選手が、そのまま次へ来ている。疲れは見えなかった"),
+                ("忙しい週は落ちる?", f"7日で12走以上は{_pp(mbz)}ポイント。ただ、忙しい週は1日2走の日が多く、2走目は番組の作りで相手が強くなりやすい(『1走目と2走目』の回)。疲れとは分けられない")],
+        "use": ["長い休み明け(前の節が3か月以上前)の選手は、最初の3走は少し割り引く",
+                "連戦の選手を「疲れてそう」で外すのは、データ的にはもったいない。むしろ勢いがある"],
+        "mikata": "休み明けはちょっとだけ鈍る、連戦はむしろ好調。勢いって、データにも出るんだね",
+        "gen": "休み明けの選手には、俺は初日だけは目をつむる。2日目からが本番よ" if real_back else "休み明けでも走れるのか。プロってのはすげえな。でも俺は、なんとなく初日は外すね",
+        "challenge": "今日の出走表で、前の節がいちばん昔の選手を探す。その人の1走目のスタートを見てみよう",
+        "numbers": {"back": mb["in1"] - mb["in1_ref"], "long_back": ml["in1"] - ml["in1_ref"], "renzoku": mr["in1"] - mr["in1_ref"], "person_back": pb[0]},
+    }
+
+
+def t_travel(ent, r):
+    """遠征の距離。"""
+    x = _adj(ent)
+    home = x["branch"].map(BRANCH_JCD)
+    lat1 = home.map(lambda j: VENUE_XY.get(j, (np.nan, np.nan))[0]); lon1 = home.map(lambda j: VENUE_XY.get(j, (np.nan, np.nan))[1])
+    lat2 = x["jcd"].map(lambda j: VENUE_XY[int(j)][0]); lon2 = x["jcd"].map(lambda j: VENUE_XY[int(j)][1])
+    rad = np.pi / 180
+    a_ = np.sin((lat2 - lat1) * rad / 2) ** 2 + np.cos(lat1 * rad) * np.cos(lat2 * rad) * np.sin((lon2 - lon1) * rad / 2) ** 2
+    x["km"] = 6371 * 2 * np.arcsin(np.sqrt(a_))
+    x = x[x["km"].notna()]
+    near = x["km"] < 60
+    mid = x["km"].between(60, 300)
+    far = x["km"].between(300, 600)
+    vfar = x["km"] >= 600
+    m0, m1, m2, m3 = (measure(x, c) for c in (near, mid, far, vfar))
+    pf = _gap(x, vfar | far, near | mid, 20)
+    ms = [("地元の近く(60km未満)", m0, verdicts(m0)), ("60〜300km", m1, verdicts(m1)), ("300〜600km", m2, verdicts(m2)), ("600km以上の大遠征", m3, verdicts(m3))]
+    return {
+        "id": "travel", "title": "遠征は不利なのか", "belief": "地元は水面を知っているから強い。遠くから来た選手は、移動の疲れもあって不利だ",
+        "subject": "その選手", "verb": "3着以内に入る", "no_market": True, "compare": "その選手の全部の走(全体の平均にそろえてある)",
+        "lead": f"所属する支部(住んでいる地域)から開催場までの距離で分けた。地元の近くは本人のふだんより{_pp(m0)}ポイント、"
+                f"60〜300kmは{_pp(m1)}、300〜600kmは{_pp(m2)}、600km以上の大遠征は{_pp(m3)}。",
+        "conclusion": ["地元は少しだけ強い。遠さは関係ない", f"地元の近くは{_pp(m0)}ポイント。60kmを超えると、隣の県でも九州から関東でも同じ({_pp(m1)}〜{_pp(m3)})。移動の疲れは見えなかった"],
+        "tables": [], "measures": ms,
+        "rules": ["距離は、所属支部の県にあるレース場から開催場までの直線距離(住所は使っていない)",
+                  "数字は、その選手のふだんとくらべた差"],
+        "faq": [("遠征に弱い人はいる?", f"選手ごとの「遠くでの落ち方」は、{_person(pf)}"),
+                ("地元が強いのは、水面を知っているから?", "60kmを超えるとどれだけ遠くても同じなので、移動の疲れではなさそう。地元の水面に慣れている・応援がある、のほうが近い。データだけでは分けられない")],
+        "use": ["地元の選手は、ほんの少しだけ上に見る。遠征の選手を『遠いから』で下げる必要はない",
+                "差は小さいので、モーターや展示のほうを先に見る"],
+        "mikata": "遠征は関係なかった。プロの体力ってすごい。地元の声援でちょっとだけ上がるのは、なんだかいい話だよね",
+        "gen": "地元のファンの前で負けられねえ、って気持ちは数字じゃ測れねえよ。俺は地元を買う",
+        "challenge": "今日の出走表で、いちばん遠くから来た選手を見つける。支部の場所と開催場を地図で見くらべてみよう",
+        "numbers": {"near": m0["in1"] - m0["in1_ref"], "vfar": m3["in1"] - m3["in1_ref"], "person_far": pf[0]},
+    }
+
+
+def t_weight(ent, r):
+    """当日の体重の増減と、夏の重量級。"""
+    x = _adj(ent)
+    x["dw"] = (x["weight_now"] - x["weight"]).where((x["weight_now"] - x["weight"]).abs() <= 6)
+    x = x.sort_values(["racer_id", "dt", "rno"])
+    wn = x["weight_now"].where(x["weight_now"] > 30)
+    own = wn.groupby(x["racer_id"]).transform(lambda s_: s_.shift(1).rolling(30, min_periods=10).mean())   # 直近30走の平均(長い目の増減は除く)
+    x["dwo"] = wn - own
+    light = x["dwo"] <= -1.5; heavy = x["dwo"] >= 1.5; usual = x["dwo"].abs() < 0.5
+    ml, mh = measure(x, light, ref=usual), measure(x, heavy, ref=usual)
+    wq = x.groupby("racer_id")["weight_now"].transform("mean")
+    big = wq >= wq.quantile(0.67); small = wq <= wq.quantile(0.33)
+    hot, cold = x["air_temp"] >= 28, x["air_temp"] <= 12
+    mbh, mbc = measure(x, big & hot, ref=big), measure(x, small & hot, ref=small)
+    pw = _gap(x, hot, cold, 15, by="day")
+    ms = [("当日の体重が本人のふだんより1.5kg以上軽い", ml, verdicts(ml)), ("1.5kg以上重い", mh, verdicts(mh)),
+          ("重い選手(体重の重い方の3分の1)× 28℃以上", mbh, verdicts(mbh)), ("軽い選手 × 28℃以上", mbc, verdicts(mbc))]
+    return {
+        "id": "weight", "title": "夏は重い選手が不利って本当?", "belief": "暑いとエンジンの力が落ちる。だから夏は体重の軽い選手が有利だ",
+        "subject": "その選手", "verb": "3着以内に入る", "no_market": True, "compare": SAME,
+        "lead": f"28℃以上の暑い日、体重の重い選手は本人のふだんより{_pp(mbh)}ポイント、軽い選手は{_pp(mbc)}。向きは説のとおり、でも小さい。"
+                f"それより効いていたのは当日の体重。直近30走の平均より1.5kg以上軽い日は{_pp(ml)}、重い日は{_pp(mh)}。",
+        "conclusion": ["夏の重量級は少しだけ本当。もっと効くのは『当日の体重』",
+                       f"暑い日の重い選手{_pp(mbh)}・軽い選手{_pp(mbc)}ポイントに対して、当日の体重がふだんより軽い日{_pp(ml)}・重い日{_pp(mh)}。体重計の数字は、出走表のなかでも見落とされがち"],
+        "tables": [], "measures": ms,
+        "rules": ["体重は直前情報の当日体重。登録の体重とのずれが6kgを超える記録は、入力ミスとみて外した",
+                  "選手の体重は最低体重が決まっていて、足りない分はおもり(重量調整)を積む。だから軽すぎる選手の有利には上限がある"],
+        "faq": [("暑さに強い・弱い選手はいる?", f"選手ごとの「暑い日−寒い日」の差は、{_person(pw)}"),
+                ("当日の体重が軽いのは、調子がいいから?", "減量がうまくいった日なのか、体調で落ちたのかは、データだけでは分からない。ただ、軽い日のほうが成績がいい向きは、前の2年と最近の1年で同じだった"),
+                ("どこで見られる?", "直前情報の『体重』。出走表の体重(登録)ではなく、当日の体重をふだんとくらべる")],
+        "use": ["直前情報の体重が、その選手のふだんより1.5kg以上軽い → 少し上に。重い → 少し下に",
+                "真夏の日中は、重い選手をほんの少しだけ下に"],
+        "mikata": "説は正しかった、ほんの少しだけ。それより体重計の数字が効いていたのは、ちょっとした発見だね",
+        "gen": "だろ? 夏は軽いのを買う。それに当日の体重か……体重計を見に行く楽しみが増えたな",
+        "challenge": "暑い日の出走表で、いちばん重い選手といちばん軽い選手を見つけて、どっちが先にゴールするか見てみよう",
+        "numbers": {"big_hot": mbh["in1"] - mbh["in1_ref"], "small_hot": mbc["in1"] - mbc["in1_ref"], "person_heat": pw[0]},
+    }
+
+
+def t_dayno(ent, r):
+    """節の何日目に強い?(初日・中日・最終日)"""
+    x = _adj(ent)
+    last = x.groupby(["jcd", "racer_id"])["day_no"].transform("max")
+    d1, d2, d4, dl = x["day_no"] == 1, x["day_no"].between(2, 3), x["day_no"] == 4, (x["day_no"] >= 5) & (x["day_no"] == last)
+    title = x["race_type"].astype(str)
+    fin = dl & ~title.str.contains("優勝|準優")      # 最終日の一般戦(予選落ちの選手が多い)
+    m1, m2, m4, mf = (measure(x, c) for c in (d1, d2, d4, fin))
+    p1 = _gap(x, d1, x["day_no"].between(2, 4), 12)
+    pf = _gap(x, fin, x["day_no"].between(2, 4), 6)
+    ms = [("節の初日", m1, verdicts(m1)), ("2・3日目", m2, verdicts(m2)), ("4日目", m4, verdicts(m4)), ("最終日の一般戦(予選で落ちた選手など)", mf, verdicts(mf))]
+    return {
+        "id": "dayno", "title": "節の何日目に強い?", "belief": "初日は様子見、最終日の一般戦は気が抜けてる。選手には得意な日がある",
+        "subject": "その選手", "verb": "3着以内に入る", "no_market": True, "compare": SAME,
+        "lead": f"本人のふだんとくらべて、節の初日は{_pp(m1)}ポイント、2・3日目は{_pp(m2)}、4日目は{_pp(m4)}、"
+                f"最終日の一般戦は{_pp(mf)}。",
+        "conclusion": ["日によって少し違う。でも人ごとの得意はない", f"初日{_pp(m1)}、最終日の一般戦{_pp(mf)}ポイント。「初日に強い人」は{sim_words(p1[0])}"],
+        "tables": [], "measures": ms,
+        "rules": ["節(ひとつの大会)はふつう4〜6日間。前半は予選、終盤に準優勝戦・優勝戦。予選で落ちた選手は最終日に一般戦を走る",
+                  "数字は、その選手のふだんとくらべた差"],
+        "faq": [("初日に強い人、最終日に強い人はいる?", f"初日の得意は{_person(p1)}。最終日の一般戦の得意は{_person(pf)}"),
+                ("最終日の一般戦は、気が抜けている?", f"最終日の一般戦は{_pp(mf)}ポイントで、気が抜けるどころか少し上。予選で落ちた選手どうしの組み合わせなので、相手もそれほど強くないから")],
+        "use": ["「この人は初日に強い」は、あまり当てにしない", "最終日の一般戦は『気が抜ける』と決めつけない。相手も同じ予選落ちの選手"],
+        "mikata": "得意な日、ありそうでなかった。毎日がまっさらなんだね",
+        "gen": "それでも俺は初日だけは、エンジンの気配を見るために買わずに眺めるね。それが楽しいんだよ",
+        "challenge": "初日の展示タイムをメモしておいて、3日目にもう一度くらべる。モーターの『育ち方』が見えるよ",
+        "numbers": {"d1": m1["in1"] - m1["in1_ref"], "last_ippan": mf["in1"] - mf["in1_ref"], "person_d1": p1[0]},
+    }
+
+
+def t_twice(ent, r):
+    """1日2走の日、1走目と2走目。朝昼夜。1走目を引きずる?"""
+    x = _adj(ent).sort_values(["racer_id", "date", "rno"])
+    x["nth"] = x.groupby(["racer_id", "date"]).cumcount() + 1
+    two = x.groupby(["racer_id", "date"])["rno"].transform("size") == 2
+    first = x[two & (x["nth"] == 1)].set_index(["racer_id", "date"])["finish"]
+    x["first_fin"] = pd.MultiIndex.from_arrays([x["racer_id"], x["date"]]).map(first).values
+    s2 = two & (x["nth"] == 2)
+    m1, m2 = measure(x, two & (x["nth"] == 1), ref=two), measure(x, s2, ref=two)
+    mg, mb = measure(x, s2 & (x["first_fin"] == 1), ref=s2), measure(x, s2 & (x["first_fin"] >= 4), ref=s2)
+    hh = pd.to_numeric(x["deadline"].astype(str).str.extract(r"(\d{1,2}):")[0], errors="coerce")
+    morning, night, noon = hh < 12, hh >= 18, hh.between(12, 15)
+    pn = _gap(x, morning, noon, 20); pt = _gap(x, two & (x["nth"] == 1), s2, 15); pd_ = _gap(x[s2], (x["first_fin"] >= 4)[s2], (x["first_fin"] <= 3)[s2], 10)
+    mm, mn = measure(x, morning), measure(x, night)
+    ms = [("1日2走の日の1走目", m1, verdicts(m1)), ("2走目", m2, verdicts(m2)), ("1走目が1着だった日の2走目", mg, verdicts(mg)), ("1走目が4〜6着だった日の2走目", mb, verdicts(mb))]
+    return {
+        "id": "twice", "title": "1走目と2走目、どっちが得意?", "belief": "1走目で負けると引きずる。それに、朝に強い人・夜に強い人がいる",
+        "subject": "その選手", "verb": "3着以内に入る", "no_market": True, "compare": "1日2走の日の全体(本人のふだんにそろえてある)",
+        "lead": f"1日2走の日、1走目は{_pp(m1)}ポイント、2走目は{_pp(m2)}。1走目が1着の日の2走目は{_pp(mg)}、4〜6着の日は{_pp(mb)}。"
+                f"時間帯では、朝(〜11時台)は{(mm['in1'] - mm['in1_ref']) * 100:+.1f}、夜(18時〜)は{(mn['in1'] - mn['in1_ref']) * 100:+.1f}。",
+        "conclusion": ["差はある。でも「人ごとの得意」ではない", f"2走目が低いのは、後半のレースほど相手が強い番組の作りのせい。1走目が悪い日の2走目が低いのは、同じモーター・同じ調整の『その日の足』が両方に出ているから"],
+        "tables": [], "measures": ms,
+        "rules": ["1日に2回走る日がある(多くは前半と後半に1回ずつ)。後半のレースほど、強い選手同士の組み合わせが多い",
+                  "時間帯は締切の時刻で分けた。朝の早いレース(モーニング)や夜のレース(ナイター)は場によって違う"],
+        "faq": [("1走目と2走目、得意な人はいる?", f"選手ごとの差は{_person(pt)}"),
+                ("朝に強い人・夜に強い人は?", f"朝−昼の得意は{_person(pn)}"),
+                ("1走目を引きずる人は?", f"「悪かった日の2走目の落ち方」は{_person(pd_)}。引きずるかどうかは、その日の足しだい")],
+        "use": ["1走目が悪かった選手の2走目は、気持ちではなく『足が弱い日』として少し割り引く",
+                "朝型・夜型で選手を分けるのは、データ的にはおすすめしない"],
+        "mikata": "引きずっているように見えるのは、足のせい。選手の気持ちは、たぶん切り替わってるよ",
+        "gen": "いや、1走目で大負けしたやつの顔は、2走目のピットで分かるんだよ。……まあ、データがそう言うなら半分信じる",
+        "challenge": "1日2走の選手を1人決めて、1走目の展示タイムと2走目の展示タイムを並べてみる。足の変化が見えたら上級者",
+        "numbers": {"first": m1["in1"] - m1["in1_ref"], "second": m2["in1"] - m2["in1_ref"], "after_bad": mb["in1"] - mb["in1_ref"]},
+    }
+
+
+def t_tilt(ent, r):
+    """チルトを跳ねた選手。"""
+    x = _adj(ent)
+    out = x["course"] >= 4
+    hi, mid, low = x["tilt"] >= 1.5, x["tilt"].between(0.5, 1.0), x["tilt"] <= 0
+    mh, mm, ml = measure(x, out & hi, ref=out & low), measure(x, out & mid, ref=out & low), measure(x, (x["course"] <= 2) & hi, ref=(x["course"] <= 2) & low)
+    ms = [("4〜6コースでチルト1.5度以上(跳ねた)", mh, verdicts(mh)), ("4〜6コースでチルト0.5〜1度", mm, verdicts(mm)), ("1・2コースでチルト1.5度以上", ml, verdicts(ml))]
+    return {
+        "id": "tilt", "title": "チルトを跳ねた選手は来るのか", "belief": "チルトを上げた(跳ねた)選手は伸びる。外から一発がある",
+        "subject": "その選手", "verb": "3着以内に入る", "no_market": True, "compare": "同じコースでチルトを上げていないとき(本人のふだんにそろえてある)",
+        "lead": f"4〜6コースでチルトを1.5度以上に上げた選手は、上げていないときとくらべて{_pp(mh)}ポイント。0.5〜1度なら{_pp(mm)}。"
+                f"内(1・2コース)で跳ねると{_pp(ml)}。",
+        "conclusion": (["本当。跳ねた選手は来る。外ならなおさら", f"4〜6コースで1.5度以上は{_pp(mh)}ポイント、内でも{_pp(ml)}。跳ねるのは足に自信がある日、というのも混ざっていそう"]
+                       if verdicts(mh)["real"] and mh["in1"] > mh["in1_ref"] else ["ふだんと同じ。跳ねても劇的には変わらない", f"4〜6コースで1.5度以上は{_pp(mh)}ポイント"]),
+        "tables": [], "measures": ms,
+        "rules": ["チルト: エンジンの取り付け角度。上げる(跳ねる)と直線の伸びが良くなるかわりに、ターンが流れやすくなる",
+                  "ふだんは-0.5度か0度の選手が多い。1.5度以上は全体の1%ほど"],
+        "faq": [("跳ねる選手はいつも跳ねる?", "チルトをよく上げる選手は決まっていて、展示タイム番長にも多い。直線の伸びで勝負するタイプ"),
+                ("チルトを上げたから来るの? 足がいいから上げるの?", f"両方ありそう。内のコースで跳ねても{_pp(ml)}なので、『足に自信がある日に跳ねる』分も入っている。データだけでは分けられない")],
+        "use": ["出走表の直前情報でチルトを見る。外のコースで1.5度以上なら、まくりの一発を頭に入れる"],
+        "mikata": "チルトの数字を見るだけで、選手の作戦が分かる。直前情報のいちばん楽しい行かもしれないね",
+        "gen": "跳ねたやつは、腹をくくってる。そういう選手は応援したくなるんだよな",
+        "challenge": "今日の直前情報でチルトが一番高い選手を探して、1周目のバックストレッチで伸びるか見てみよう",
+        "numbers": {"out_hi": mh["in1"] - mh["in1_ref"], "in_hi": ml["in1"] - ml["in1_ref"]},
+    }
+
+
+def _moon(dates: pd.Series) -> pd.Series:
+    """月齢(0=新月、約14.8=満月)。2000-01-06 18:14 UTC の新月から朔望月 29.530589 日で数える。"""
+    t = (pd.to_datetime(dates) + pd.Timedelta(hours=12) - pd.Timestamp("2000-01-06 18:14")).dt.total_seconds() / 86400
+    return t % 29.530589
+
+
+def t_moon(ent, r):
+    """満月は荒れる?(オカルト枠)"""
+    x = r.copy()
+    age = _moon(x["date"])
+    full, new = (age - 14.77).abs() <= 1.2, (age <= 1.2) | (age >= 28.3)
+    mf, mn = measure(x, full), measure(x, new)
+    uf, un, ua = float(x[full]["upset"].mean()), float(x[new]["upset"].mean()), float(x["upset"].mean())
+    ms = [("満月の日(前後1日)", mf, verdicts(mf)), ("新月の日(前後1日)", mn, verdicts(mn))]
+    return {
+        "id": "moon", "title": "満月の夜は荒れるのか", "belief": "満月の日は潮も人も騒ぐ。だから荒れる",
+        "lead": f"満月の日(前後1日)に1号艇が勝つのは100レースで{per100(mf['in1'])}、新月の日は{per100(mn['in1'])}、全体は{per100(mf['in1_ref'])}。"
+                f"3連単で30番人気以下が来た割合は、満月{uf:.1%}・新月{un:.1%}・全体{ua:.1%}。",
+        "conclusion": (["ふだんと同じ。月は関係なかった", "満月でも新月でも、1号艇の強さも荒れ方も、ふだんとほとんど同じ"]
+                       if not (verdicts(mf)["real"] or verdicts(mn)["real"]) else ["差があった", f"満月{per100(mf['in1'])}・新月{per100(mn['in1'])}"]),
+        "tables": [], "measures": ms,
+        "rules": ["月齢は日付から計算(正午の月齢)。満月・新月の前後1日をまとめた",
+                  "海の近くの場は、月で潮の満ち引きが変わる。でも潮は満月と新月の両方で大きくなるので、ここでは月の形そのものを見ている"],
+        "faq": [("潮の影響はないの?", "潮位は満月・新月の両方で大きく動く(大潮)。どちらも1号艇の数字はふだん並みだった。潮の時間帯ごとの検証は、潮位のデータを集めてから別にやる")],
+        "use": ["月で予想を変える必要はない。……でも満月の夜に1つだけ穴を買うのは、ありだと思う"],
+        "mikata": "月は関係なかった。でも満月の夜のナイターって、それだけで特別な気分になるよね",
+        "gen": "データがどう言おうが、満月の夜は穴を1点だけ買う。それが俺の流儀よ。外れたら月のせいにできるしな",
+        "challenge": "次の満月の日を調べて、その日のナイターで1レースだけ『月の穴』を予想してみよう。外れても笑える",
+        "numbers": {"in1_full": mf["in1"], "in1_new": mn["in1"], "upset_full": uf, "upset_new": un, "upset_all": ua},
+    }
+
+
+def t_manshu(ent, r):
+    """万舟のあとは荒れる?(流れ)"""
+    x = r.sort_values(["date", "jcd", "rno"]).copy()
+    x["man"] = (pd.to_numeric(x["tri_pay"], errors="coerce") >= 10000).astype(float)
+    prev = x.groupby(["date", "jcd"])["man"].shift(1)
+    prev2 = x.groupby(["date", "jcd"])["man"].shift(2)
+    a1, a2 = (prev == 1), (prev == 1) & (prev2 == 1)
+    m1, m2, m0 = measure(x, a1.fillna(False)), measure(x, a2.fillna(False)), measure(x, (prev == 0).fillna(False))
+    man1, man2, man0 = float(x[a1.fillna(False)]["man"].mean()), float(x[a2.fillna(False)]["man"].mean()), float(x[(prev == 0).fillna(False)]["man"].mean())
+    ms = [("前のレースが万舟", m1, verdicts(m1)), ("2つ続けて万舟のあと", m2, verdicts(m2)), ("前のレースが万舟でない", m0, verdicts(m0))]
+    real = abs(man1 - man0) >= 0.02
+    return {
+        "id": "manshu", "title": "万舟のあとは、また荒れる?", "belief": "万舟が出た日は『荒れる流れ』。次も穴を狙え",
+        "lead": f"同じ日・同じ場で、前のレースが万舟(3連単1万円以上)だったとき、次のレースも万舟になったのは{man1:.1%}。"
+                f"前が万舟でなかったときは{man0:.1%}、2つ続けて万舟のあとは{man2:.1%}。1号艇が勝つのは100レースで{per100(m1['in1'])}(全体{per100(m1['in1_ref'])})。",
+        "conclusion": (["少しだけ本当。でも理由は『流れ』じゃない", f"万舟のあとの万舟は{man1:.1%}(ふだん{man0:.1%})。荒れやすい場・荒れやすい天気の日は続けて荒れる、というだけ"]
+                       if real else ["ふだんと同じ。流れはなかった", f"万舟のあとの万舟は{man1:.1%}、ふだんは{man0:.1%}"]),
+        "tables": [], "measures": ms,
+        "rules": ["同じ日・同じ場の、ひとつ前のレースの結果で分けた", "万舟は3連単の払戻が1万円以上"],
+        "faq": [("風が強い日は続けて荒れるのでは?", "そのとおりで、荒れやすい日(風・波・場)は1日を通して荒れやすい。前のレースが万舟だったことそのものが、次を荒らすわけではない"),
+                ("じゃあ、荒れた日は穴を狙っていい?", "荒れた理由が天気なら、その日は穴を少し多めに。でも『流れ』だけを理由にするのは、データ的にはおすすめしない")],
+        "use": ["万舟が続いたら、まず風と波を確認。原因が天気なら、次のレースも荒れ気味に見る",
+                "原因が分からないなら、次のレースはまっさらに"],
+        "mikata": "流れに見えるものの正体は、だいたい天気。でも流れに乗って穴を買う楽しさは、データじゃ消せないよね",
+        "gen": "流れってのはあるんだよ。……天気のことだったのか。まあ、呼び方なんてどっちでもいい",
+        "challenge": "万舟が出たら、その日の風と波をメモ。次のレースが荒れたら、天気のせいか流れのせいか友達と議論しよう",
+        "numbers": {"man_after_man": man1, "man_after_not": man0, "man_after_2": man2},
+    }
+
+
+def t_lucky7(ent, r):
+    """ラッキー7のモーター(オカルト枠)。"""
+    x = _adj(ent)
+    mno = pd.to_numeric(x["motor_no"], errors="coerce")
+    seven = (mno % 10) == 7
+    same = mno % 10 == x["lane"]
+    m7, ms_ = measure(x, seven), measure(x, same)
+    p7 = float(x[seven]["motor_2rate"].mean()); pa = float(x["motor_2rate"].mean())
+    ms = [("モーター番号の末尾が7", m7, verdicts(m7)), ("モーター番号の末尾と艇番が同じ", ms_, verdicts(ms_))]
+    return {
+        "id": "lucky7", "title": "ラッキー7のモーターは当たり?", "belief": "モーター番号の末尾が7なら、なんかいい。艇番と同じ数字もツイてる",
+        "subject": "その選手", "verb": "3着以内に入る", "no_market": True, "compare": SAME,
+        "lead": f"モーター番号の末尾が7の選手は、本人のふだんとくらべて{_pp(m7)}ポイント。末尾が艇番と同じ数字なら{_pp(ms_)}。"
+                f"末尾7のモーターの2連率の平均は{p7:.1f}%(全体{pa:.1f}%)。",
+        "conclusion": (["ふだんと同じ。7は普通の数字だった", "モーター番号の末尾で成績は変わらない。モーターの良し悪しは2連率と展示で見る"]
+                       if not verdicts(m7)["real"] else ["差があった", f"末尾7は{_pp(m7)}ポイント"]),
+        "tables": [], "measures": ms,
+        "rules": ["モーターは節の前日に抽選で選手に割り当てられる。番号は場ごとの通し番号"],
+        "faq": [("じゃあ何で選べばいい?", "モーターの2連率(出走表にある)と、今節の展示タイム。番号ではなく、数字の中身を見る")],
+        "use": ["モーター番号は気にしない。でも推しが7番を引いたら、ちょっとうれしい、くらいで"],
+        "mikata": "7は普通だった。でも、うれしい気持ちで見るレースは楽しいから、それでいいと思う",
+        "gen": "7を引いたやつは顔が明るい。顔が明るいやつは、なんかやる。……データには出ねえけどな",
+        "challenge": "今日の出走表で、末尾7のモーターの選手を探して『ラッキー7枠』として応援してみよう",
+        "numbers": {"seven": m7["in1"] - m7["in1_ref"], "same": ms_["in1"] - ms_["in1_ref"], "motor2_seven": p7, "motor2_all": pa},
+    }
+
+
 THEORIES = {t["id"]: t for t in []}
-BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke, "tenji": t_tenji, "flying": t_flying, "combo": t_combo}
+BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke, "tenji": t_tenji, "flying": t_flying, "combo": t_combo,
+            "rest": t_rest, "travel": t_travel, "weight": t_weight, "dayno": t_dayno, "twice": t_twice, "tilt": t_tilt,
+            "moon": t_moon, "manshu": t_manshu, "lucky7": t_lucky7}
 
 
 # ---------------------------------------------------------------- 記事
@@ -692,13 +1055,28 @@ def main():
         for k in BUILDERS:
             print(k, "済" if (REP / f"{k}.json").exists() else "")
         return
-    tid = a.theory or (next((k for k in BUILDERS if not (REP / f"{k}.json").exists()), None) if a.next else None)
-    if not tid:
+    if a.theory == "all":
+        tids = list(BUILDERS)
+    elif a.theory:
+        tids = a.theory.split(",")
+    else:
+        tids = [next((k for k in BUILDERS if not (REP / f"{k}.json").exists()), None)] if a.next else []
+    tids = [t_ for t_ in tids if t_]
+    if not tids:
         print("作る理論がありません"); return
     ent, r = base()
+    for tid in tids:
+        try:
+            build_one(tid, ent, r, a.out)
+        except Exception as ex:  # noqa: BLE001  1本の失敗でほかを止めない
+            import traceback
+            print("失敗:", tid, ex); traceback.print_exc()
+
+
+def build_one(tid, ent, r, outdir):
     t = BUILDERS[tid](ent, r)
     asof = str(r["date"].max())
-    out = pathlib.Path(a.out); out.mkdir(parents=True, exist_ok=True)
+    out = pathlib.Path(outdir); out.mkdir(parents=True, exist_ok=True)
     (out / f"lab_{tid}.html").write_text(page(t, asof), encoding="utf-8")
     (out / f"lab_{tid}.txt").write_text(note_text(t), encoding="utf-8")
     (out / f"lab_{tid}_x.txt").write_text(x_text(t), encoding="utf-8")
