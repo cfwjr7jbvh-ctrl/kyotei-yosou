@@ -1045,6 +1045,8 @@ async function renderUraOne(box, key) {
   <p class="ura-note">${uraMeta(d)} ・ 集計 ${esc(d.asof)}${d.missing && d.missing.length ? ` ・ 見つからない選手 ${d.missing.length}人` : ""}</p>
   <div class="ura-sec"><h3>記事(確認用)</h3><p>出す前に、見出しと数字を読んで直してください。</p>
     <div class="ura-btns"><button id="ura-open">別のタブで開く</button><button class="sub" id="ura-inline">ここで読む</button></div><div id="ura-frame"></div></div>
+  <div class="ura-sec"><h3>友達に共有</h3><p>リンクを知っている人だけが読めるページを送ります(パスワード不要)。LINEなどの共有画面が開きます。</p>
+    <div class="ura-btns"><button id="ura-share">LINEなどで共有</button><button class="sub" id="ura-share-copy">リンクをコピー</button></div><p class="ura-note" id="ura-share-url"></p></div>
   <div class="ura-sec"><h3>note の本文</h3><p>無料と有料の切れ目の線が入っています。タイトル案は冒頭。</p>
     <div class="ura-btns"><button id="ura-copy-note">本文をコピー</button></div></div>
   <div class="ura-sec"><h3>X の投稿案</h3>${posts.map((p) =>
@@ -1064,6 +1066,20 @@ async function renderUraOne(box, key) {
     e.target.textContent = f.innerHTML ? "閉じる" : "ここで読む";
   };
   $("#ura-copy-note").onclick = (e) => copyText(d.note, e.target);
+  const shareURL = async () => {
+    const raw = await crypto.subtle.exportKey("raw", KEY);
+    const k = await crypto.subtle.importKey("raw", raw, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+    const sig = new Uint8Array(await crypto.subtle.sign("HMAC", k, new TextEncoder().encode("share:" + key)));
+    const tok = [...sig].map((b) => b.toString(16).padStart(2, "0")).join("").slice(0, 20);
+    return `${location.origin}/s/${key}/${tok}`;
+  };
+  $("#ura-share").onclick = async (e) => {
+    const url = await shareURL();
+    $("#ura-share-url").textContent = url;
+    if (navigator.share) { try { await navigator.share({ title: d.title, text: `ミカタ新聞 ${d.title}`, url }); } catch (err) { } }
+    else copyText(url, e.target);
+  };
+  $("#ura-share-copy").onclick = async (e) => { const url = await shareURL(); $("#ura-share-url").textContent = url; copyText(url, e.target); };
   $$("[data-copy]", box).forEach((b) => b.onclick = () => copyText(posts.find((p) => p.n === b.dataset.copy).body, b));
   $("#ura-imgs-load").onclick = async (e) => {
     e.target.disabled = true;

@@ -70,6 +70,7 @@ export async function onRequest(context) {
   const secret = env.APP_PASSWORD;
   if (!secret) return new Response("APP_PASSWORD が未設定です(Cloudflare の環境変数で設定してください)", { status: 503 });
 
+  if (url.pathname.startsWith("/s/")) return next();   // 記事の共有ページ(リンクを知っている人だけ。functions/s/)
   if (url.pathname === "/__login" && request.method === "POST") {
     let pw = "";
     try { pw = String((await request.json()).password || ""); } catch (e) { }
