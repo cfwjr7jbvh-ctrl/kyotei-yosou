@@ -1,0 +1,29 @@
+name: 選手期別成績をとる
+
+# 公式のレーサー期別成績(年2回)を data/racers に。5月・11月に新しい期が出る
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 21 1 5,11 *"   # 5月・11月の2日 6:30 JST
+
+permissions:
+  contents: write
+
+jobs:
+  racers:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q requests
+      - run: which 7z || sudo apt-get install -y p7zip-full
+      - run: python scripts/fetch_racers.py
+      - name: コミット
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/commit_files.sh "[CI Skip] data: 選手期別成績" data/racers/*
