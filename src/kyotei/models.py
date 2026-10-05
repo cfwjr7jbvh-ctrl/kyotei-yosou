@@ -8,6 +8,8 @@
 - RankModel     : LightGBMのランキング学習(着順そのものを学習、lightgbmがある場合のみ)
 - PLLogit       : 条件付きロジット/Plackett-Luce(線形・解釈しやすく過学習しにくい)
 - RatingModel   : オンラインレーティング(枠効果+選手の強さ)だけを使う単純モデル
+- RaceLevel     : レースを1つの標本にして6艇ぶんの特徴量を横に並べ、「どの枠が勝つか」を6クラスで直接学ぶ
+                  (艇ごとのモデルでは拾いにくい「相手との組み合わせ」を見る。手元の試しで1着の誤差 1.212→1.178)
 """
 from __future__ import annotations
 
@@ -187,8 +189,58 @@ class RatingModel:
         return race_softmax(df["rating_strength"].values, df["race_id"].values)
 
 
+RACE_LEVEL_PRIORITY = ["st_pred2", "st_pred", "rating", "rc_win", "nat_win_rate", "motor_2rate", "exhibit_time", "course", "class_num",
+                       "rl_win", "course_win_hist", "mtx_top2", "nige_rate", "makuri_rate", "sashi_rate", "ex_st", "rc_avgst", "wind_x",
+                       "mt_top2", "rc_top3", "winrate_growth_180", "tilt", "weight", "loc_win_rate", "boat_2rate", "rating_growth_180",
+                       "makurizashi_rate", "course_st_hist", "st_bias", "wind", "wave", "lane"]
+
+
+class RaceLevel:
+    """レース単位の6クラスモデル。各艇の特徴量を枠順に横へ並べ、勝った枠を直接学ぶ。
+
+    手元の試し(1着logloss): 特徴量を上位12個→1.179、24個→1.176、48個→1.170、72個→1.166、全部(約150個)→1.162 と、
+    多いほど良かったので全部使う(k=None)。進入コース順に並べるのは枠順より悪かった(枠の情報が落ちる)。
+    """
+    name = "race_level"
+    k = None  # None=全部。数を絞るときは優先順(RACE_LEVEL_PRIORITY)の上位から
+
+    def __init__(self, feats, seed=0):
+        pri = [c for c in RACE_LEVEL_PRIORITY if c in feats]
+        self.feats = (pri + [c for c in feats if c not in pri])[: self.k]
+        self.seed = seed
+
+    def _wide(self, df):
+        X, mask, fin, uniq, idx, ridx, pos = _race_tensor(df, self.feats)
+        W = np.concatenate([X.reshape(len(X), -1), mask.astype(float)], axis=1)
+        return W, mask, fin, uniq, idx, ridx, pos
+
+    def fit(self, df):
+        W, mask, fin, *_ = self._wide(df)
+        f = np.nan_to_num(fin, nan=99)
+        ok = (f.min(1) == 1)
+        y = np.argmin(f[ok], axis=1)
+        if lgb is not None:
+            self.m = lgb.LGBMClassifier(objective="multiclass", n_estimators=400, learning_rate=0.04, num_leaves=31,
+                                        min_child_samples=50, subsample=0.8, subsample_freq=1, colsample_bytree=0.5,
+                                        reg_lambda=1.0, random_state=self.seed, verbose=-1)
+        else:
+            self.m = HistGradientBoostingClassifier(max_iter=400, learning_rate=0.05, max_leaf_nodes=31,
+                                                    min_samples_leaf=50, l2_regularization=1.0, random_state=self.seed)
+        self.m.fit(W[ok], y)
+        return self
+
+    def predict_proba(self, df):
+        W, mask, fin, uniq, idx, ridx, pos = self._wide(df)
+        P = np.full((len(W), 6), 1e-6)
+        P[:, self.m.classes_] = self.m.predict_proba(W)
+        P = np.where(mask, P, 1e-6)
+        P /= P.sum(1, keepdims=True)
+        out = pd.Series(P[ridx, pos], index=idx).reindex(df.index).values
+        return race_normalize(out, df["race_id"].values)
+
+
 def available_models():
-    ms = [GBDTWin, GBDTPlace, PLLogit, RatingModel]
+    ms = [GBDTWin, GBDTPlace, PLLogit, RatingModel, RaceLevel]
     if lgb is not None:
         ms.insert(2, RankModel)
     return ms
