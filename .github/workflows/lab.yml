@@ -9,7 +9,7 @@ on:
         description: "理論の id(空なら、まだ作っていないものを1本)"
         default: ""
   schedule:
-    - cron: "50 22 * * 1"   # 月曜 7:50 JST
+    - cron: "50 22 * * 1"   # 火曜 7:50 JST(UTC の月曜 22:50)
 
 permissions:
   contents: write
