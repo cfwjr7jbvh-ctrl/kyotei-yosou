@@ -1,0 +1,19 @@
+{
+ "name": "accident_rate",
+ "note": "今期の事故率の目安・期末までの日数・期末×事故率を足す(J15)",
+ "races": 33528,
+ "base_logloss": 1.2124,
+ "cand_logloss": 1.2121,
+ "delta": -0.00035,
+ "lo90": -0.0009,
+ "hi90": 0.00019,
+ "verdict": "差なし(偶然の範囲)",
+ "made": "2026-10-06 07:16",
+ "base_feats": 137,
+ "cand_feats": 140,
+ "added": [
+  "acc_end",
+  "acc_rate",
+  "days_left"
+ ]
+}

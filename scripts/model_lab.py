@@ -479,7 +479,49 @@ def exp_body_exst(df):
     return compare("body_drop_exst", df, base, cand, "からだの特徴量を足し、展示STの特徴量を外す")
 
 
-EXPERIMENTS = {"body_exst": exp_body_exst, "exst": exp_exst, "wx": exp_wx, "body": exp_body, "wx_body": exp_wx_body, "rl_variants": exp_race_level_variants, "embed_asof": exp_embed_asof, "recent": exp_recent, "pairwise": exp_pairwise, "formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
+def add_accident(df):
+    """J15: 今期の事故率の目安(その走より前)、期末までの日数、期末×事故率。"""
+    rc = df["result_code"].astype(str)
+    dt = pd.to_datetime(df["date"])
+    mo, yr = dt.dt.month, dt.dt.year
+    per = np.where(mo.between(5, 10), yr.astype(str) + "A", (yr + (mo >= 11)).astype(str) + "B")
+    d = pd.DataFrame({"r": df["racer_id"].values, "per": per, "dt": dt.values, "rno": df["rno"].values,
+                      "pts": rc.map({"F": 20, "L1": 20, "K1": 10, "S1": 10, "S2": 15}).fillna(0).values,
+                      "cnt": rc.isin(["01", "02", "03", "04", "05", "06", "1", "2", "3", "4", "5", "6", "F", "L1", "K1", "S1", "S2"]).astype(float).values},
+                     index=df.index).sort_values(["r", "dt", "rno"])
+    g = d.groupby(["r", "per"])
+    cp, cc = g["pts"].cumsum() - d["pts"], g["cnt"].cumsum() - d["cnt"]
+    d["acc_rate"] = (cp / cc.where(cc >= 10)).astype("float32")
+    end = pd.to_datetime(np.where(pd.Series(d["per"]).str.endswith("A").values, pd.Series(d["per"]).str[:4] + "-10-31", pd.Series(d["per"]).str[:4] + "-04-30"))
+    d["days_left"] = (pd.Series(end, index=d.index) - pd.to_datetime(d["dt"])).dt.days.astype("float32")
+    for c in ("acc_rate", "days_left"):
+        df[c] = d[c].reindex(df.index).values
+    df["acc_end"] = (df["acc_rate"] * (df["days_left"] <= 42)).astype("float32")
+    return df
+
+
+def add_kado(df):
+    """J16: カドの一撃。4号艇のふだんのST(rc_avgst)と、1〜3号艇の最速のふだんのSTの差(レース全体に配る)。"""
+    piv = df.pivot_table(index="race_id", columns="lane", values="rc_avgst", aggfunc="first")
+    gap = piv.get(4) - piv[[c for c in (1, 2, 3) if c in piv]].min(axis=1)
+    df["kado_gap"] = df["race_id"].map(gap).astype("float32")
+    df["kado_self"] = df["kado_gap"].where(df["lane"] == 4).astype("float32")
+    return df
+
+
+def exp_accident(df):
+    base = base_feats(df)
+    df = add_accident(df)
+    return compare("accident_rate", df, base, base + ["acc_rate", "days_left", "acc_end"], "今期の事故率の目安・期末までの日数・期末×事故率を足す(J15)")
+
+
+def exp_kado(df):
+    base = base_feats(df)
+    df = add_kado(df)
+    return compare("kado_gap", df, base, base + ["kado_gap", "kado_self"], "カド(4号艇)のふだんのSTと内3艇の最速の差を足す(J16)")
+
+
+EXPERIMENTS = {"accident": exp_accident, "kado": exp_kado, "body_exst": exp_body_exst, "exst": exp_exst, "wx": exp_wx, "body": exp_body, "wx_body": exp_wx_body, "rl_variants": exp_race_level_variants, "embed_asof": exp_embed_asof, "recent": exp_recent, "pairwise": exp_pairwise, "formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
                "drop_noise": exp_drop_noise, "race_level": exp_race_level}
 
 
