@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       what:
-        description: "morning / evening / thread / test"
+        description: "morning / evening / thread / test / stats"
         default: "test"
       key:
         description: "thread のとき: 場コード_初日(例 04_20261013)"
@@ -18,6 +18,7 @@ on:
   schedule:
     - cron: "40 0 * * *"    # 9:40 JST 朝(荒れそうなレース。朝の予想のあと)
     - cron: "0 11 * * *"    # 20:00 JST 夜(注目選手カード)
+    - cron: "30 13 * * 1,4" # 22:30 JST 月・木: 反応と返信を取る(stats)
 
 permissions:
   contents: write
@@ -48,10 +49,14 @@ jobs:
         run: |
           WHAT="${{ inputs.what }}"
           if [ -z "$WHAT" ] || [ "${{ github.event_name }}" = "schedule" ]; then
-            H=$(TZ=Asia/Tokyo date +%H); if [ "$H" -lt 15 ]; then WHAT=morning; else WHAT=evening; fi
+            H=$(TZ=Asia/Tokyo date +%H)
+            if [ "$H" -ge 22 ]; then WHAT=stats; elif [ "$H" -lt 15 ]; then WHAT=morning; else WHAT=evening; fi
+          fi
+          mkdir -p reports/x_drafts
+          if [ "$WHAT" = "stats" ]; then
+            python scripts/x_stats.py 2>&1 | tee reports/x_drafts/last_stats.txt; exit "${PIPESTATUS[0]}"
           fi
           ARGS=("$WHAT"); [ -n "${{ inputs.key }}" ] && ARGS+=(--key "${{ inputs.key }}")
-          mkdir -p reports/x_drafts
           python scripts/x_post.py "${ARGS[@]}" 2>&1 | tee reports/x_drafts/last_run.txt
           exit "${PIPESTATUS[0]}"
       - name: 下書きと投稿の記録をコミット(失敗しても記録は残す)
@@ -59,4 +64,4 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          bash scripts/commit_files.sh "[CI Skip] X: 下書き・投稿の記録" reports/x_drafts/*
+          bash scripts/commit_files.sh "[CI Skip] X: 下書き・投稿の記録・反応" reports/x_drafts/* reports/x_stats.json docs/data/x_replies.json

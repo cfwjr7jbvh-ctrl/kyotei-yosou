@@ -992,6 +992,25 @@ function uraMeta(it) {
   const hd = `${+it.hd.slice(4, 6)}/${+it.hd.slice(6)}`;
   return `${esc(it.venue)} ${hd}〜 ・ 出場${it.n}人 ・ 注目${(it.picks || []).length}人`;
 }
+async function xStatsHTML() {
+  let st = null, rep = null;
+  try { st = await (await fetch("reports/x_stats.json?t=" + Date.now())).json(); } catch (e) { }
+  try { rep = await getJSON("api/data/x_replies.json"); } catch (e) { }
+  if (!st && !rep) return "";
+  let html = "";
+  if (st && st.by_kind) {
+    const rows = Object.entries(st.by_kind).sort((a, b) => b[1].impressions - a[1].impressions).map(([k, v]) =>
+      `<tr><td>${esc(k)}</td><td>${v.n}</td><td>${v.impressions}</td><td>${v.likes}</td><td>${v.replies}</td><td>${v.bookmarks}</td><td>${v.profile_clicks ?? "-"}</td></tr>`).join("");
+    html += `<div class="ura-sec"><h3>X の反応(投稿の種類ごとの平均)<small> ${esc(st.asof || "")}${st.followers != null ? ` ・ フォロワー ${st.followers}` : ""}</small></h3>
+      <div class="scroll"><table class="tbl"><thead><tr><th>種類</th><th>本</th><th>表示</th><th>いいね</th><th>返信</th><th>保存</th><th>プロフ</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  }
+  if (rep && rep.replies && rep.replies.length) {
+    html += `<div class="ura-sec"><h3>返信待ち(${rep.replies.length}件)</h3>` + rep.replies.slice(0, 20).map((r) =>
+      `<div class="ura-post"><div class="n"><span>@${esc(r.from)} ${esc((r.at || "").slice(5, 16).replace("T", " "))}</span><a href="${esc(r.url)}" target="_blank" rel="noopener">開く</a></div>${esc(r.text)}</div>`).join("") + `</div>`;
+  }
+  return html;
+}
+
 async function renderUra() {
   const box = $("#tab-ura");
   if (URA.open) return renderUraOne(box, URA.open);
@@ -1001,7 +1020,8 @@ async function renderUra() {
     return;
   }
   const items = URA.index.items || [];
-  let html = `<p class="ura-note">SG・G1 の初日の${URA.index.days_before}日前から、毎朝作り直します(${esc(URA.index.asof)})。note の本文、X の投稿、選手カードの画像をここからコピー・保存できます。</p>`;
+  let html = await xStatsHTML();
+  html += `<p class="ura-note">SG・G1 の初日の${URA.index.days_before}日前から、毎朝作り直します(${esc(URA.index.asof)})。note の本文、X の投稿、選手カードの画像をここからコピー・保存できます。</p>`;
   html += items.length ? `<div class="ura-list">` + items.map((it) =>
     `<button class="ura-item" data-key="${esc(it.key)}"><span class="g">${esc(it.grade)}</span><span class="t">${esc(it.title)}</span><span class="m">${uraMeta(it)}</span></button>`).join("") + `</div>`
     : `<div class="empty">いま対象の節はありません。</div>`;
