@@ -1,0 +1,50 @@
+{
+ "adopt": false,
+ "delta": {
+  "early.win_logloss": 0.0,
+  "early.tri_logloss": -0.0064,
+  "late.win_logloss": 0.0,
+  "late.tri_logloss": -0.0057
+ },
+ "per_race_ci90": {
+  "early.win_logloss": {
+   "races": 33707,
+   "mean": 0.0,
+   "lo90": 0.0,
+   "hi90": 0.0
+  },
+  "early.tri_logloss": {
+   "races": 33707,
+   "mean": -0.00633,
+   "lo90": -0.00743,
+   "hi90": -0.00522
+  },
+  "late.win_logloss": {
+   "races": 33707,
+   "mean": 0.0,
+   "lo90": 0.0,
+   "hi90": 0.0
+  },
+  "late.tri_logloss": {
+   "races": 33707,
+   "mean": -0.00574,
+   "lo90": -0.00681,
+   "hi90": -0.00467
+  }
+ },
+ "ev_roi_lo90": {
+  "base": 0.6545,
+  "candidate": 0.0
+ },
+ "market_gap_tri": {
+  "base": [
+   3.6955801505072743,
+   3.7030553951734206
+  ],
+  "candidate": [
+   3.694941779681344,
+   3.7030553951734206
+  ]
+ },
+ "reason": "不採用: 期待値の検証が悪化"
+}
