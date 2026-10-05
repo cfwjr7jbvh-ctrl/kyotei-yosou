@@ -1,0 +1,55 @@
+{
+ "adopt": true,
+ "delta": {
+  "early.win_logloss": -0.0016,
+  "early.tri_logloss": -0.0015,
+  "late.win_logloss": -0.0013,
+  "late.tri_logloss": -0.0032
+ },
+ "per_race_ci90": {
+  "early.win_logloss": {
+   "races": 33707,
+   "mean": -0.00157,
+   "lo90": -0.00226,
+   "hi90": -0.00087
+  },
+  "early.tri_logloss": {
+   "races": 33707,
+   "mean": -0.00157,
+   "lo90": -0.00276,
+   "hi90": -0.00038
+  },
+  "late.win_logloss": {
+   "races": 33707,
+   "mean": -0.00124,
+   "lo90": -0.00195,
+   "hi90": -0.00052
+  },
+  "late.tri_logloss": {
+   "races": 33707,
+   "mean": -0.00314,
+   "lo90": -0.00444,
+   "hi90": -0.00184
+  }
+ },
+ "ev_roi_lo90": {
+  "base": 0.535,
+  "candidate": 0.4566,
+  "row": "ev_filtered@1.0"
+ },
+ "blend_tri_logloss": {
+  "base": 3.694941779681344,
+  "candidate": 3.6930648934062664
+ },
+ "market_gap_tri": {
+  "base": [
+   3.694941779681344,
+   3.7030553951734206
+  ],
+  "candidate": [
+   3.6930648934062664,
+   3.7030553951734206
+  ]
+ },
+ "reason": "採用: 誤差が改善し、悪化した指標なし"
+}
