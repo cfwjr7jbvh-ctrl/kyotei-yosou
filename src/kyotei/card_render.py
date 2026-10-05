@@ -119,5 +119,5 @@ def card_image_html(c: dict, jcd: int | None = None, kicker: str = "データで
     <div class="kv"><div><span>3着内率</span><b>{c['top3']:.0%}</b></div><div><span>1コース逃げ率</span><b>{nige}</b></div>
       <div><span>平均ST</span><b>{st}</b><small>{e(rc.top(c['st']['grp'])) if c['st']['grp'] is not None else ''}</small></div></div></div>
   <div class="tags">{tags}</div>
-  <div class="foot">公式の成績データ({e(c['period'][0][:7].replace('-', '/'))}〜{e(c['asof'][:7].replace('-', '/'))}、{c['n']}走)を独自に集計。上位%とチャートは{e(g)}の中での位置</div>
+  <div class="foot">公式の成績データ({e(c['period'][0][:7].replace('-', '/'))}〜{e(c['asof'][:7].replace('-', '/'))}、{c['n']}走)を独自に集計。上位%とチャートは{e(g)}の中での位置。舟券は20歳になってから</div>
 </div>"""

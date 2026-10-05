@@ -43,7 +43,7 @@ def load_table(since: str | None = None) -> pd.DataFrame:
             "motor_no", "motor_2rate", "day_no", "finish", "course", "st", "st_flag", "exhibit_time", "ex_st"]
     d = ent[[c for c in keep if c in ent.columns]].copy()
     d["race_id"] = d["race_id"].astype(str)
-    r = races[["race_id", "race_title", "kimarite", "wind", "wave"]].copy()
+    r = races[[c for c in ("race_id", "race_title", "kimarite", "wind", "wave", "tri_pay", "tri_pop") if c in races.columns]].copy()
     r["race_id"] = r["race_id"].astype(str)
     d = d.merge(r.drop_duplicates("race_id"), on="race_id", how="left")
     d = d[d["course"].between(1, 6)]

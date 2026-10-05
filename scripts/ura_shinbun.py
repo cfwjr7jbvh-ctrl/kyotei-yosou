@@ -19,6 +19,7 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+from kyotei import nerai  # noqa: E402
 from kyotei import racer_card as rc  # noqa: E402
 from kyotei.card_render import radar_svg  # noqa: E402
 
@@ -189,7 +190,16 @@ def lane_tile(i: int) -> str:
     return f'<span class="lt" style="background:{LANE_BG[i]};color:{LANE_FG[i]}">{i + 1}</span>'
 
 
-def card_block(c: dict, t: dict, heads: list[str], com: str, idx: int) -> str:
+def course_line(bc: dict | None, c: dict) -> str:
+    """選手ごとの「狙い目のコース」(同じ級別の平均より3着内率が一番上回るコース)。"""
+    if not bc:
+        return ""
+    g = rc.GROUP_NAME.get(c["grp"], "")
+    return (f"{bc['c']}コースに入ったら注目:{bc['n']}走で1着率{bc['win']:.0%}・3着内率{bc['top3']:.0%}"
+            f"({g}の{bc['c']}コース平均は1着率{bc['avg_win']:.0%}・3着内率{bc['avg_top3']:.0%})")
+
+
+def card_block(c: dict, t: dict, heads: list[str], com: str, idx: int, bc: dict | None = None) -> str:
     k = c["kim"]
     pc = lambda v: "-" if v is None else f"{v:.0%}"  # noqa: E731
     crs = "".join(f"<tr><th>{x['c']}</th><td>{x['n']}</td><td>{pc(x['win'])}</td><td>{pc(x['top3'])}</td></tr>" for x in c["courses"])
@@ -203,6 +213,7 @@ def card_block(c: dict, t: dict, heads: list[str], com: str, idx: int) -> str:
   <div class="pick-body">
     <div class="pick-text"><p class="com">{e(com)}</p>
       {f'<p class="hint"><b>予想のヒント</b>{e(hint(t))}</p>' if hint(t) else ''}
+      {f'<p class="hint"><b>狙い目のコース</b>{e(course_line(bc, c))}</p>' if bc else ''}
       <ul class="tags">{tags}</ul></div>
     <figure class="pick-card">{radar_svg(c['radar'])}
       <figcaption>{e(g)}の中での位置(100がトップ)</figcaption>
@@ -273,11 +284,59 @@ figcaption{font-size:11.5px;color:var(--mute)}
 .basis dt{font-weight:700;color:var(--ink)}
 .basis dd{margin:0}
 .foot{font-size:12px;color:var(--mute);border-top:1px solid var(--rule);padding-top:10px}
+.nerai{background:var(--card);border-radius:8px;padding:14px 16px;border-top:6px solid var(--stamp);display:grid;gap:10px}
+.nerai h3{margin:0;font:400 21px/1.3 var(--head)}
+.nerai > p{margin:0;font-size:13px;color:var(--mute)}
+.waku{border-collapse:collapse;width:100%;font-size:13.5px;font-variant-numeric:tabular-nums}
+.waku th,.waku td{padding:6px 6px;border-bottom:1px solid var(--rule);text-align:left;vertical-align:top}
+.waku th{white-space:nowrap;font-weight:700}
+.waku th small{display:block;font-weight:400;color:var(--mute);font-size:11.5px}
+.waku td span{display:inline-block;margin-right:12px;white-space:nowrap}
+.waku td em{font-style:normal;font:700 15px var(--num)}
+.waku td small{color:var(--mute);font-size:11.5px}
+.trend ul{margin:0;padding-left:1.1em;display:grid;gap:4px;font-size:14px}
+.dist{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;align-items:end;max-width:420px;height:120px;margin-top:4px}
+.dist div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:3px;height:100%}
+.dist i{display:block;width:70%;background:var(--ink);border-radius:3px 3px 0 0}
+.dist b{font:700 13px var(--num)}
 """
 
 
-def render(title: str, venue_name: str | None, picks, all_cards, corners: list[tuple[str, str]], meta: dict, note: str) -> str:
-    blocks = "\n".join(card_block(c, t, heads, com, i + 1) for i, (c, t, heads, com) in enumerate(picks))
+WAKU_NOTE = "進入したコースごとの成績(過去3年、その出場選手の中で上位3人)。1〜4コースは1着率、5・6コースは3着内率。"\
+            f"{nerai.MIN_N}走以上の選手から、回数が少ない選手は同じ級別の平均に寄せて順位を付けています"
+
+
+def waku_rows(wt: dict) -> list[tuple[int, str, list[str]]]:
+    rows = []
+    for crs in range(1, 7):
+        m = nerai.METRIC[crs]
+        label = "逃げ切り(1着率)" if crs == 1 else nerai.METRIC_NAME[m] + ("(頭まで)" if m == "win" else "(3着の候補)")
+        rows.append((crs, label, [f"{r['name']} {r['rate']:.0%}({r['k']}/{r['n']})" for r in wt.get(crs, [])]))
+    return rows
+
+
+def nerai_html(wt: dict, trend: dict | None, venue: str | None) -> str:
+    rows = "".join(
+        f"<tr><th>{lane_tile(crs - 1)} コース<small>{e(label)}</small></th><td>"
+        + "".join(f"<span>{e(r['name'])} <em>{r['rate']:.0%}</em><small>({r['k']}/{r['n']})</small></span>" for r in wt.get(crs, []))
+        + "</td></tr>" for crs, label, _ in waku_rows(wt))
+    out = f"""<section class="nerai"><h3>狙い目の早見表(コースが決まったらチェック)</h3>
+<p>出走表と展示の進入が出たら、得意なコースに入った選手を探してみてください。{e(WAKU_NOTE)}</p>
+<table class="waku">{rows}</table></section>"""
+    if trend and venue:
+        tp = trend["top"] if trend["top"].get("n", 0) >= 100 else trend["all"]
+        lbl = "トップ級のレース" if tp is trend["top"] else "全レース"
+        bars = "".join(f'<div><b>{tp["dist"][k]:.0%}</b><i style="height:{round(tp["dist"][k] * 130)}px"></i>{lane_tile(k - 1)}</div>'
+                       for k in range(1, 7))
+        out += f"""<section class="nerai trend"><h3>{e(venue)}の傾向</h3>
+<ul>{''.join(f'<li>{e(x)}</li>' for x in nerai.trend_lines(trend, venue))}</ul>
+<p>1着になったコースの割合({e(lbl)}、{tp['n']}レース)</p><div class="dist">{bars}</div></section>"""
+    return out
+
+
+def render(title: str, venue_name: str | None, picks, all_cards, corners: list[tuple[str, str]], meta: dict, note: str,
+           nerai_block: str = "") -> str:
+    blocks = "\n".join(card_block(c, t, heads, com, i + 1, bc) for i, (c, t, heads, com, bc) in enumerate(picks))
     cor = "".join(f'<section class="corner"><h3>{e(h)}</h3>{body}</section>' for h, body in corners)
     def rule_key(name):
         if name.endswith("好相性"):
@@ -299,53 +358,66 @@ def render(title: str, venue_name: str | None, picks, all_cards, corners: list[t
 <p>{e(venue_name + '開催 ・ ' if venue_name else '')}注目選手 {len(picks)}人 ・ 集計 {e(meta['period'][0])}〜{e(meta['asof'])} ・ 下書き {today}</p></div></header>
 <p class="lead">{note}公式の予想紙・スポーツ紙とは別の切り口で、選手の「型」と「相性」をデータで読む下書きです。数字はすべて公式の成績データを自分たちで集計したもので、<b>見出しはどれも下の基準を満たした数字に基づいています</b>。</p>
 {blocks}
+{nerai_block}
 <div class="corners">{cor}</div>
 <section class="corner basis"><h3>タグの基準</h3><dl>{basis}</dl>
 <p style="margin-top:8px">「上位X%」は同じ級別(A1・A2・B級)の中での位置。3着内率の「上積み」は、コースごとの全体の3着内率を差し引いた値。回数が少ない数字は全体や本人の普段の値に寄せて計算しています。</p></section>
-<p class="foot">この下書きは選手の傾向を楽しむための読み物で、舟券の的中や利益を約束するものではありません。公式の成績データ(番組表・競走成績)を自分たちで集計した数字とグラフだけを使っています。</p>
+<p class="foot">この下書きは選手の傾向を楽しむための読み物で、舟券の的中や利益を約束するものではありません。公式の成績データ(番組表・競走成績)を自分たちで集計した数字とグラフだけを使っています。舟券の購入は20歳になってから。</p>
 </div>"""
 
 
-def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str] | None = None) -> str:
+def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str] | None = None,
+              waku: list[str] | None = None, trend: list[str] | None = None) -> str:
     """note に貼る本文の下書き。考え方(発信方針): 答え(買い目)ではなく、読んだ人が自分で予想するのが楽しくなる「材料」を届ける。
-    無料部分で1人分を丸ごと見せて中身の質を伝え、有料部分の中身は見出しで見せる。"""
+    無料部分で1人分を丸ごとと場の傾向を見せて中身の質を伝え、有料部分の中身は見出しで見せる。"""
     n_all, n_pick = len(sel), len(picks)
     fi = next((i for i, (_, t, *_r) in enumerate(picks) if t["cat"] == "venue"), 0)
     picks = [picks[fi]] + [x for k, x in enumerate(picks) if k != fi]  # 無料で見せる1人を注目1に
-    free_i = 0
     trust = free_corner or []
+
+    def pick_lines(i, x):
+        c, t, heads, com, bc = x
+        out = [f"■注目{i}{'(無料で公開)' if i == 1 else ''} {c['name']}({c['class']}・{c['branch']})",
+               f"〔画像:{c['id']}_{c['name']}.png〕", f"【{heads[0]}】", com]
+        if hint(t):
+            out.append(f"予想のヒント:{hint(t)}")
+        if bc:
+            out.append(f"狙い目のコース:{course_line(bc, c)}")
+        return out + [""]
+
     out = ["【タイトル案】",
            f"1. 【ウラ新聞】{title}|出場{n_all}人をデータで読む 予想が楽しくなる“材料”集",
-           f"2. {title}の出場{n_all}人、データで分かる“型”まとめ",
-           f"3. 【保存版】{title} 全{n_all}人のひと言タグと注目{n_pick}人",
+           f"2. {title}の出場{n_all}人、データで分かる“型”と狙い目のコース",
+           f"3. 【保存版】{title} 全{n_all}人のひと言タグとコース別の早見表",
            "", "――――――――――(ここから無料)――――――――――", "",
            f"{title}{'(' + venue_name + ')' if venue_name else ''}の出場予定{n_all}人を、過去3年・約17万レースの成績から読みました。",
            "このノートは買い目を売るものではありません。あなたが自分で予想するときに「へえ、この人はこういう型なのか」と使える材料を集めたものです。",
+           "(もともとは、友達と現地で観戦するときに「この選手ってどんな型?」と話したくて集め始めたデータです)",
            "", "■この記事でわかること",
            f"・データで目立つ注目{n_pick}人と、それぞれの“型”",
-           "・展示STを信じていい選手",
+           "・狙い目の早見表:コースが決まったら、誰がそのコースで強いかがすぐわかる",
+           "・展示STを信じていい選手" + (f"、{venue_name}の傾向" if trend else ""),
            f"・{venue_name + 'と' if venue_name else ''}相性のいい選手、勝負駆けや荒れ水面に強い選手、よく当たるライバル",
            f"・保存版:出場{n_all}人全員のひと言タグ一覧(現地観戦のおともに)", ""]
-    c, t, heads, com = picks[free_i]
-    out += [f"■注目1(無料で公開):{c['name']}({c['class']}・{c['branch']})", f"〔画像:{c['id']}_{c['name']}.png〕", f"【{heads[0]}】", com]
-    if hint(t):
-        out += [f"予想のヒント:{hint(t)}"]
-    out += [""]
+    out += pick_lines(1, picks[0])
+    if trend:
+        out += [f"■{venue_name}の傾向"] + [f"・{x}" for x in trend] + [""]
     if trust:
         out += trust + [""]
     out += ["■有料パートの中身"]
-    out += [f"・注目{i} {pc['name']}({pt['t']})" for i, (pc, pt, *_r) in enumerate(picks, 1) if i - 1 != free_i]
+    out += [f"・注目{i} {pc['name']}({pt['t']})" for i, (pc, pt, *_r) in enumerate(picks, 1) if i > 1]
+    if waku:
+        out.append("・狙い目の早見表(コースが決まったらチェック)")
     out += [f"・{x[1:]}" for x in corners_txt if x.startswith("■") and not x.startswith("■展示ST")]
     out += [f"・保存版:出場{n_all}人のひと言タグ一覧", "",
             "数字はすべて、公式の成績データを自分たちで集計したものです。根拠の数字と判定の基準も全部載せています。", "",
             "――――――――――(ここから有料:note の有料エリアの線をここに)――――――――――", ""]
-    for i, (c, t, heads, com) in enumerate(picks, 1):
-        if i - 1 == free_i:
-            continue
-        out += [f"■注目{i} {c['name']}({c['class']}・{c['branch']})", f"〔画像:{c['id']}_{c['name']}.png〕", f"【{heads[0]}】", com]
-        if hint(t):
-            out += [f"予想のヒント:{hint(t)}"]
-        out += [""]
+    for i, x in enumerate(picks, 1):
+        if i > 1:
+            out += pick_lines(i, x)
+    if waku:
+        out += ["■狙い目の早見表(コースが決まったらチェック)",
+                "出走表と展示の進入が出たら、得意なコースに入った選手を探してみてください。"] + waku + [f"※{WAKU_NOTE}", ""]
     out += [x for x in corners_txt if not x.startswith("■展示ST") and x not in trust] + [""]
     out += [f"■保存版:出場{n_all}人のひと言タグ一覧"]
     for c in sel:
@@ -354,33 +426,133 @@ def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str]
     out += ["", "■この記事のデータについて",
             "・公式の成績データ(番組表・競走成績、2023年10月〜)を自分たちで集計しています。出走表・オッズの表・写真は使っていません",
             "・「上位◯%」は同じ級別(A1・A2・B級)の中での位置です。3着内率はコースの有利不利を差し引いた値で比べています",
+            "・コースは枠番ではなく、実際に進入したコースで集計しています",
             "・タグは決まった基準を満たした選手だけに付けています(基準は画像の下と下書きのHTMLに全文)",
-            "・この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません", "",
+            "・この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません",
+            "・舟券の購入は20歳になってから。無理のない範囲で楽しみましょう", "",
             "■次回予告",
             "次のSG・G1の出場選手が発表されたら、また“材料”をまとめます。フォローしておくと見逃しません。"]
     return "\n".join(out)
 
 
-def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: list[str]) -> str:
-    """X の投稿案(3つのスレッド)。1投稿は全角140字以内に収める。"""
+def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: list[str], trend_head: str | None = None) -> str:
+    """X の投稿案(3つのスレッド)。1投稿は全角140字以内に収める(超えるときは名前の数を減らす)。"""
     n_all = len(sel)
     import re as _re
     short = _re.sub(r"第[0-9０-９]+回", "", title)
     short = _re.sub(r"[(（].*?[)）]", "", short)
     short = _re.sub(r"^\s*(SG|PG1|G1|GⅠ|G2|GⅡ|G3|GⅢ)\s*", "", short).strip()
-    tag = "#" + "".join(ch for ch in short if ch not in " 　") if short else ""
-    posts = [
-        f"{title}、出場予定{n_all}人をデータで読みました📰\n\n買い目ではなく、予想が楽しくなる“材料”をまとめています。\n\nまずは「展示STを信じていい選手」👇\n" + "\n".join(f"・{x}" for x in trust_names[:3]),
-        (f"{venue_name}と相性がいい選手(3着内率が普段より上)\n" + "\n".join(f"・{x}" for x in venue_names[:3])) if venue_names else
-        f"注目選手のカードを1枚だけ先に公開。{picks[0][0]['name']}は「{picks[0][1]['t']}」",
-        f"注目{len(picks)}人の“型”と、全{n_all}人のひと言タグ一覧はnoteにまとめました(現地観戦のおともに)\n\n(noteのURL)\n\n#競艇 #ボートレース {tag}",
-    ]
+    tag = "#" + "".join(ch for ch in short if ch not in " 　・") if short else ""
+
+    def fit(make, names):
+        for k in range(min(3, len(names)), -1, -1):
+            p = make(names[:k])
+            if len(p) <= 140:
+                return p
+        return make([])
+    p1 = fit(lambda ns: f"{title}、出場予定{n_all}人をデータで読みました📰\n\n買い目ではなく、予想が楽しくなる“材料”をまとめています。"
+                        + ("\n\nまずは「展示STを信じていい選手」👇\n" + "\n".join(f"・{x}" for x in ns) if ns else ""), trust_names)
+    if trust_names and len(p1 + "\n\nみんなは展示ST、どこまで信じる派?") <= 140:
+        p1 += "\n\nみんなは展示ST、どこまで信じる派?"
+    if trend_head:
+        q = f"\n\nみんなは{venue_name}の1号艇、どこまで信じる?"
+        p2 = fit(lambda ns: trend_head + ("\n\n" + f"{venue_name}と相性がいい選手👇\n" + "\n".join(f"・{x}" for x in ns) if ns else "") + q,
+                 venue_names)
+    elif venue_names:
+        p2 = fit(lambda ns: f"{venue_name}と相性がいい選手(3着内率が普段より上)\n" + "\n".join(f"・{x}" for x in ns), venue_names)
+    else:
+        p2 = f"注目選手のカードを1枚だけ先に公開。{picks[0][0]['name']}は「{picks[0][1]['t']}」"
+    p3 = (f"注目{len(picks)}人の“型”、コースが決まったら使える狙い目の早見表、全{n_all}人のひと言タグ一覧はnoteにまとめました"
+          f"(現地観戦のおともに)\n\n(noteのURL)\n\n#競艇 #ボートレース {tag}")
     out = []
-    for i, p in enumerate(posts, 1):
+    for i, p in enumerate((p1, p2, p3), 1):
         warn = "  ※140字を超えています" if len(p) > 140 else ""
         out += [f"--- 投稿{i}({len(p)}字){warn} ---", p, ""]
     out.append("画像: 投稿1に注目1人目のカード、投稿2に今回の場と相性のいい選手のカードを添える")
+    out.append("出し方: noteのリンクは最後の投稿だけ(本文にリンクがあると届きにくい)。平日の12時台か20〜23時、初日の前日の夜がおすすめ。"
+               "返信が来たら返す(返信のやりとりがいちばん評価される)")
     return "\n".join(out)
+
+
+def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "", d=None, cards=None, meta=None) -> dict:
+    """下書き一式(HTML・note の本文・X の投稿案)と、画像にする注目選手を返す。d・cards・meta を渡せば集計を使い回す。"""
+    if d is None:
+        d = rc.load_table()
+    if cards is None:
+        cards, meta = rc.build(d)
+    meta = {**meta, "rules": {r["tag"]: r["rule"] for r in meta["rules"]} if isinstance(meta["rules"], list) else dict(meta["rules"])}
+    meta["rules"]["(今回の場)と好相性"] = "今回の場での3着内の上積みが、本人の普段より+8ポイント以上(その場で10走以上。回数が少ないほど普段の値に寄せて計算)"
+    sel, missing = [], []
+    for k in keys:
+        c = rc.find(cards, k)
+        if c and c["id"] not in {x["id"] for x in sel}:
+            sel.append(c)
+        elif not c:
+            missing.append(k)
+    vf = venue_fit(d, [c["id"] for c in sel], jcd)
+    base = nerai.course_base(d)
+    chosen = pick(sel, min(n, len(sel)), vf, jcd)
+    picks = [(c, t, headlines(c, t), comment(c, t, vf.get(c["id"])), nerai.best_course(c, base)) for c, t in chosen]
+    wt = nerai.waku_table(sel, base)
+    vname = rc.VENUES.get(jcd) if jcd else None
+    trend = nerai.venue_trend(d, jcd) if jcd else None
+    # コーナー
+    corners, txt = [], []
+    trust = sorted([c for c in sel if c["ex"]["n"] >= 30 and (c["ex"]["grp"] or 0) >= 85], key=lambda c: c["ex"]["mae"])[:5]
+    adjust = sorted([c for c in sel if c["ex"]["n"] >= 30 and (c["ex"]["grp"] or 100) <= 25], key=lambda c: -c["ex"]["mae"])[:3]
+    if trust or adjust:
+        body = ""
+        if trust:
+            body += "<p>展示STを信じていい</p><ul>" + "".join(f"<li>{e(c['name'])}(ずれ平均{c['ex']['mae']:.3f}秒、{c['ex']['n']}走)</li>" for c in trust) + "</ul>"
+        if adjust:
+            body += "<p style='margin-top:6px'>展示STは参考程度(本番で合わせてくるタイプ)</p><ul>" + "".join(
+                f"<li>{e(c['name'])}(ずれ平均{c['ex']['mae']:.3f}秒、{c['ex']['n']}走)</li>" for c in adjust) + "</ul>"
+        corners.append(("展示STを信じていい選手", body))
+        txt += ["■展示STを信じていい選手"] + [f"・{c['name']}(ずれ平均{c['ex']['mae']:.3f}秒)" for c in trust] + \
+               (["(展示STは参考程度)"] + [f"・{c['name']}(ずれ平均{c['ex']['mae']:.3f}秒)" for c in adjust] if adjust else [])
+    vv = []
+    if jcd:
+        # 相性が良い選手だけ載せる(普段より下がる選手の名前は出さない)
+        vv = sorted([(vf[c["id"]], c) for c in sel if c["id"] in vf and vf[c["id"]]["n"] >= 10 and vf[c["id"]]["res"] >= 0.03],
+                    key=lambda x: -x[0]["res"])
+        if vv:
+            corners.append((f"{vname}との相性", "<ul>" + "".join(
+                f"<li>{e(c['name'])} {rc.pts(v['res'])}({v['n']}走)</li>" for v, c in vv[:5]) + "</ul><p>3着内率の普段との差</p>"))
+            txt += [f"■{vname}との相性"] + [f"・{c['name']} {rc.pts(v['res'])}({v['n']}走)" for v, c in vv[:5]]
+    for key, label, n_min in (("kake", "勝負駆けに強い", 15), ("rough", "荒れ水面に強い", 20)):
+        xs = sorted([c for c in sel if c[key]["n"] >= n_min and (c[key]["res"] or 0) >= 0.03], key=lambda c: -c[key]["res"])
+        if xs:
+            corners.append((label, "<ul>" + "".join(f"<li>{e(c['name'])} {rc.pts(c[key]['res'])}({c[key]['n']}走)</li>" for c in xs[:5])
+                            + "</ul><p>3着内率の普段との差</p>"))
+            txt += [f"■{label}"] + [f"・{c['name']} {rc.pts(c[key]['res'])}({c[key]['n']}走)" for c in xs[:5]]
+    gr = sorted([c for c in sel if c["growth"]["n90"] >= 15 and (c["growth"]["diff"] or 0) >= 0.3], key=lambda c: -c["growth"]["diff"])
+    if gr:
+        corners.append(("いま勢いがある", "<ul>" + "".join(
+            f"<li>{e(c['name'])} 勝率{c['growth']['prev']:.2f}→{c['growth']['pts90']:.2f}</li>" for c in gr[:5]) + "</ul><p>前の1年 → 直近90日</p>"))
+        txt += ["■いま勢いがある"] + [f"・{c['name']} 勝率{c['growth']['prev']:.2f}→{c['growth']['pts90']:.2f}" for c in gr[:5]]
+    # 選手同士の相性: 対戦の多い組(よく当たるライバル)を、両方の先着数で並べる(負けた側だけを強調しない)
+    h2h = rc.head_to_head(d, [c["id"] for c in sel], min_meet=10)
+    name = {c["id"]: c["name"] for c in sel}
+    if h2h:
+        rows = sorted(h2h, key=lambda x: -x["n"])[:5]
+
+        def line(x):
+            a_, b_ = (x["a"], x["b"]) if x["a_ahead"] >= x["b_ahead"] else (x["b"], x["a"])
+            wa, wb = max(x["a_ahead"], x["b_ahead"]), min(x["a_ahead"], x["b_ahead"])
+            return f"{name[a_]}と{name[b_]}は{x['n']}回の対戦で{wa}対{wb}({name[a_]}の先着が多い)" if wa != wb else \
+                f"{name[a_]}と{name[b_]}は{x['n']}回の対戦で{wa}対{wb}の五分"
+        corners.append(("よく当たるライバル", "<ul>" + "".join(f"<li>{e(line(x))}</li>" for x in rows)
+                        + "</ul><p>同じレースで両方に着順がついた対戦の、先着した回数</p>"))
+        txt += ["■よく当たるライバル"] + [f"・{line(x)}" for x in rows]
+    page = render(title, vname, picks, sel, corners, meta, note, nerai_html(wt, trend, vname))
+    trust_lines = ["■展示STを信じていい選手(展示と本番のSTのずれが小さい)"] + \
+        [f"・{c['name']}(ずれ平均{c['ex']['mae']:.3f}秒、{c['ex']['n']}走)" for c in trust] if trust else []
+    waku = [f"{crs}コース {label}:" + "、".join(xs) for crs, label, xs in waku_rows(wt) if xs]
+    tl = nerai.trend_lines(trend, vname) if trend else None
+    th = nerai.trend_headline(trend, vname) if trend else None
+    return {"html": page, "note": note_text(title, vname, picks, sel, txt, trust_lines, waku, tl),
+            "x": x_text(title, vname, picks, sel, [c["name"] for c in trust], [c["name"] for v, c in vv[:3]], th),
+            "picks": picks, "sel": sel, "missing": missing, "jcd": jcd, "venue": vname}
 
 
 def main():
@@ -408,78 +580,15 @@ def main():
         jcd = int(j)
     if a.venue:
         jcd = int(a.venue) if str(a.venue).isdigit() else next((k for k, v in rc.VENUES.items() if v == a.venue), None)
-    d = rc.load_table()
-    cards, meta = rc.build(d)
-    meta["rules"] = {r["tag"]: r["rule"] for r in meta["rules"]}
-    meta["rules"]["(今回の場)と好相性"] = "今回の場での3着内の上積みが、本人の普段より+8ポイント以上(その場で10走以上。回数が少ないほど普段の値に寄せて計算)"
-    sel = []
-    for k in keys:
-        c = rc.find(cards, k)
-        print(("OK " if c else "見つからない ") + k)
-        if c:
-            sel.append(c)
-    vf = venue_fit(d, [c["id"] for c in sel], jcd)
-    chosen = pick(sel, min(a.n, len(sel)), vf, jcd)
-    picks = []
-    for c, t in chosen:
-        heads = headlines(c, t)
-        picks.append((c, t, heads, comment(c, t, vf.get(c["id"]))))
-    # コーナー
-    corners, txt = [], []
-    trust = sorted([c for c in sel if c["ex"]["n"] >= 30 and (c["ex"]["grp"] or 0) >= 85], key=lambda c: c["ex"]["mae"])[:5]
-    adjust = sorted([c for c in sel if c["ex"]["n"] >= 30 and (c["ex"]["grp"] or 100) <= 25], key=lambda c: -c["ex"]["mae"])[:3]
-    if trust or adjust:
-        body = ""
-        if trust:
-            body += "<p>展示STを信じていい</p><ul>" + "".join(f"<li>{e(c['name'])}(ずれ平均{c['ex']['mae']:.3f}秒、{c['ex']['n']}走)</li>" for c in trust) + "</ul>"
-        if adjust:
-            body += "<p style='margin-top:6px'>展示STは参考程度(本番で合わせてくるタイプ)</p><ul>" + "".join(
-                f"<li>{e(c['name'])}(ずれ平均{c['ex']['mae']:.3f}秒、{c['ex']['n']}走)</li>" for c in adjust) + "</ul>"
-        corners.append(("展示STを信じていい選手", body))
-        txt += ["■展示STを信じていい選手"] + [f"・{c['name']}(ずれ平均{c['ex']['mae']:.3f}秒)" for c in trust] + \
-               (["(展示STは参考程度)"] + [f"・{c['name']}(ずれ平均{c['ex']['mae']:.3f}秒)" for c in adjust] if adjust else [])
-    if jcd:
-        # 相性が良い選手だけ載せる(普段より下がる選手の名前は出さない)
-        vv = sorted([(vf[c["id"]], c) for c in sel if c["id"] in vf and vf[c["id"]]["n"] >= 10 and vf[c["id"]]["res"] >= 0.03],
-                    key=lambda x: -x[0]["res"])
-        if vv:
-            corners.append((f"{rc.VENUES[jcd]}との相性", "<ul>" + "".join(
-                f"<li>{e(c['name'])} {rc.pts(v['res'])}({v['n']}走)</li>" for v, c in vv[:5]) + "</ul><p>3着内率の普段との差</p>"))
-            txt += [f"■{rc.VENUES[jcd]}との相性"] + [f"・{c['name']} {rc.pts(v['res'])}({v['n']}走)" for v, c in vv[:5]]
-    for key, label, n_min in (("kake", "勝負駆けに強い", 15), ("rough", "荒れ水面に強い", 20)):
-        xs = sorted([c for c in sel if c[key]["n"] >= n_min and (c[key]["res"] or 0) >= 0.03], key=lambda c: -c[key]["res"])
-        if xs:
-            corners.append((label, "<ul>" + "".join(f"<li>{e(c['name'])} {rc.pts(c[key]['res'])}({c[key]['n']}走)</li>" for c in xs[:5])
-                            + "</ul><p>3着内率の普段との差</p>"))
-            txt += [f"■{label}"] + [f"・{c['name']} {rc.pts(c[key]['res'])}({c[key]['n']}走)" for c in xs[:5]]
-    gr = sorted([c for c in sel if c["growth"]["n90"] >= 15 and (c["growth"]["diff"] or 0) >= 0.3], key=lambda c: -c["growth"]["diff"])
-    if gr:
-        corners.append(("いま勢いがある", "<ul>" + "".join(
-            f"<li>{e(c['name'])} 勝率{c['growth']['prev']:.2f}→{c['growth']['pts90']:.2f}</li>" for c in gr[:5]) + "</ul><p>前の1年 → 直近90日</p>"))
-        txt += ["■いま勢いがある"] + [f"・{c['name']} 勝率{c['growth']['prev']:.2f}→{c['growth']['pts90']:.2f}" for c in gr[:5]]
-    # 選手同士の相性: 対戦の多い組(よく当たるライバル)を、両方の先着数で並べる(負けた側だけを強調しない)
-    h2h = rc.head_to_head(d, [c["id"] for c in sel], min_meet=10)
-    name = {c["id"]: c["name"] for c in sel}
-    if h2h:
-        rows = sorted(h2h, key=lambda x: -x["n"])[:5]
-
-        def line(x):
-            a_, b_ = (x["a"], x["b"]) if x["a_ahead"] >= x["b_ahead"] else (x["b"], x["a"])
-            wa, wb = max(x["a_ahead"], x["b_ahead"]), min(x["a_ahead"], x["b_ahead"])
-            return f"{name[a_]}と{name[b_]}は{x['n']}回の対戦で{wa}対{wb}({name[a_]}の先着が多い)" if wa != wb else \
-                f"{name[a_]}と{name[b_]}は{x['n']}回の対戦で{wa}対{wb}の五分"
-        corners.append(("よく当たるライバル", "<ul>" + "".join(f"<li>{e(line(x))}</li>" for x in rows)
-                        + "</ul><p>同じレースで両方に着順がついた対戦の、先着した回数</p>"))
-        txt += ["■よく当たるライバル"] + [f"・{line(x)}" for x in rows]
+    r = make(a.title, keys, jcd, a.n, a.note)
+    for k in r["missing"]:
+        print("見つからない", k)
     out = pathlib.Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(render(a.title, rc.VENUES.get(jcd) if jcd else None, picks, sel, corners, meta, a.note), encoding="utf-8")
-    vname = rc.VENUES.get(jcd) if jcd else None
-    trust_lines = ["■展示STを信じていい選手(展示と本番のSTのずれが小さい)"] + [f"・{c['name']}(ずれ平均{c['ex']['mae']:.3f}秒、{c['ex']['n']}走)" for c in trust] if trust else []
-    out.with_suffix(".txt").write_text(note_text(a.title, vname, picks, sel, txt, trust_lines), encoding="utf-8")
-    vnames = [c["name"] for v, c in vv[:3]] if jcd and "vv" in locals() else []
-    out.with_name(out.stem + "_x.txt").write_text(x_text(a.title, vname, picks, sel, [c["name"] for c in trust], vnames), encoding="utf-8")
-    print("wrote", out, out.with_suffix(".txt"), out.with_name(out.stem + "_x.txt"))
+    out.write_text(r["html"], encoding="utf-8")
+    out.with_suffix(".txt").write_text(r["note"], encoding="utf-8")
+    out.with_name(out.stem + "_x.txt").write_text(r["x"], encoding="utf-8")
+    print("wrote", out, out.with_suffix(".txt"), out.with_name(out.stem + "_x.txt"), f"({len(r['sel'])}人、注目{len(r['picks'])}人)")
 
 
 if __name__ == "__main__":
