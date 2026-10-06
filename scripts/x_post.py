@@ -1,7 +1,10 @@
 """X(旧Twitter)への投稿: 毎日の下書きを作り、鍵があれば投稿する。鍵が無いあいだは下書きだけ(reports/x_drafts/ に残す)。
 
-python scripts/x_post.py morning   # 今日の荒れそうなレース(文字だけ。live ブランチの当日の予想から)
-python scripts/x_post.py evening   # 次のグレードレースの注目選手カード1枚(画像つき。cards ブランチの ura/ から)
+python scripts/x_post.py theory    # 8:20 今日の理論ぶつけ(画像つき。記事タブの「今日のX投稿」から)
+python scripts/x_post.py morning   # 12:10 今日の荒れそうなレース(文字だけ)
+python scripts/x_post.py evening   # 20:00 火・金は検証ラボ、ほかの日は次のグレードレースの注目選手(画像つき)
+  ※ theory / morning / evening は、記事タブの「今日のX投稿」(cards ブランチ ura/xpost_YYYYMMDD.json)と同じ文章・画像を出す。
+    そこに無いときだけ、従来どおりここで作る
 python scripts/x_post.py thread --key 04_20261013   # 大会前の3投稿のスレッド(最後だけ note のリンク。NOTE_URL を渡す)
 python scripts/x_post.py test      # 鍵の確認だけ(投稿しない)
 
@@ -184,6 +187,19 @@ def thread_texts(key: str, note_url: str | None) -> list[str]:
 
 
 # ---------------------------------------------------------------- X API
+def queue_item(day: str, slot: str) -> tuple[str, bytes | None] | None:
+    """記事タブの「今日のX投稿」から、その時間帯の投稿(本文, 画像)を取る。"""
+    q = load_enc("cards", f"ura/xpost_{day.replace('-', '')}.json")
+    if not q:
+        return None
+    want = {"theory": "8:20", "morning": "12:10", "evening": "20:00"}[slot]
+    for it in q.get("queue", []):
+        if it.get("time") == want:
+            img = load_enc("cards", f"ura/{it['image']}") if it.get("image") else None
+            return it["text"], (base64.b64decode(img["png"]) if img else None)
+    return None
+
+
 def creds() -> dict | None:
     k = {n: os.environ.get(n, "") for n in ("X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_SECRET")}
     return k if all(k.values()) else None
@@ -225,7 +241,7 @@ def post(s, text: str, media_id: str | None = None, reply_to: str | None = None)
 # ---------------------------------------------------------------- 本体
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["morning", "evening", "thread", "test"])
+    ap.add_argument("what", choices=["theory", "morning", "evening", "thread", "test"])
     ap.add_argument("--key", default=None)
     ap.add_argument("--note-url", default=os.environ.get("NOTE_URL") or None)
     ap.add_argument("--dry", action="store_true")
@@ -240,7 +256,12 @@ def main():
     day = now.strftime("%Y-%m-%d")
     texts, media = [], None
     tag = a.what
-    if a.what == "morning":
+    qi = queue_item(day, a.what) if a.what in ("theory", "morning", "evening") else None
+    if qi:
+        texts, media = [qi[0]], qi[1]
+    elif a.what == "theory":
+        print("今日の理論ぶつけの投稿がまだありません(記事タブの更新待ち)"); return
+    elif a.what == "morning":
         t = morning_text(today_races(), now)
         if not t:
             print("今日の予想がまだ無いか、締切前のレースがありません"); return
@@ -282,7 +303,7 @@ def main():
         last = post(s, t, mid if not ids else None, last)
         ids.append(last)
     posted[tag] = day if a.what != "thread" else {"day": day, "ids": ids}
-    if a.what == "evening":
+    if a.what == "evening" and ":" in tag:
         posted.setdefault("evening_racers", []).append(tag.split(":", 1)[1])
     POSTED.write_text(json.dumps(posted, ensure_ascii=False, indent=1), encoding="utf-8")
     print("投稿しました:", ids)

@@ -80,6 +80,39 @@ async def render_png(pages: list[tuple[str, str]]) -> list[bytes]:
     return out
 
 
+async def render_top(html: str, width: int = 1080, height: int = 1350) -> bytes:
+    """紙面の上部だけを X 用の1枚に(4:5。スマホのタイムラインで切れずに出る縦横比)。"""
+    from playwright.async_api import async_playwright
+    async with async_playwright() as p:
+        b = await p.chromium.launch()
+        pg = await b.new_page(viewport={"width": width, "height": height}, device_scale_factor=1)
+        await pg.set_content(html)
+        await pg.evaluate("document.fonts.ready")
+        await pg.wait_for_timeout(500)
+        png = await pg.screenshot(clip={"x": 0, "y": 0, "width": width, "height": height})
+        await b.close()
+    return png
+
+
+def x_first(xtext: str) -> str:
+    """X の投稿案(--- 投稿1(…) --- の形)から、1本目の本文だけ。"""
+    m = re.search(r"--- 投稿1[^\n]*---\n([\s\S]*?)(?=\n--- 投稿|\n(?:画像|出し方):|\Z)", xtext)
+    return (m.group(1) if m else xtext).strip()
+
+
+def x_image(out: pathlib.Path, key: str, html: str, name: str, no_images: bool) -> dict | None:
+    if no_images:
+        return None
+    try:
+        png = asyncio.run(render_top(html))
+    except Exception as e:  # noqa: BLE001
+        print("X 用の画像は作れませんでした:", e)
+        return None
+    f = f"{key}_x.json"
+    write_json(out / f, {"name": name, "png": base64.b64encode(png).decode()})
+    return {"file": f, "name": name}
+
+
 async def render_pages(html: str, width: int = 1080, page_h: int = 1920) -> tuple[list[bytes], bytes]:
     """紙面(HTML)を、LINE で送れる画像(幅1080、1920pxごとに分割)と PDF に。"""
     from playwright.async_api import async_playwright
@@ -145,6 +178,8 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     series = [s for s in series_in_window(today, a.days_before) if not a.only or s["key"] == a.only]
     items = []
+    xq: list = []          # 今日のX投稿: (時刻, 見出し, 本文, 画像)
+    evening = None
     if series:
         d = rc.load_table()
         cards, meta = rc.build(d)
@@ -178,6 +213,11 @@ def main():
                 write_json(out / f, {"name": name, "png": base64.b64encode(png).decode()})
                 images.append({"file": f, "name": name, **({"extra": True} if k >= n_main else {})})
         pick_rows = [{"id": c["id"], "name": c["name"], "tag": t["t"]} for c, t, *_x in picks]
+        if picks and (evening is None or s["hd"] < evening["hd"]):   # 夜の投稿: いちばん近いグレードレースの注目選手を日替わりで
+            k = today.toordinal() % len(picks)
+            c, t_ = picks[k][0], picks[k][1]
+            evening = {"hd": s["hd"], "title": title, "venue": venue, "name": c["name"], "tag": t_["t"], "why": t_.get("why", ""),
+                       "image": images[k + 1] if len(images) > k + 1 else None}
         pages_ = save_pages(out, s["key"], r["html"], a.no_images)
         write_json(out / f"{s['key']}.json", {
             "key": s["key"], "title": title, "grade": s["grade"], "venue": venue, "jcd": s["jcd"], "hd": s["hd"],
@@ -215,8 +255,55 @@ def main():
                                                  "pages": pages_, "pdf": f"{key}_pdf.json" if pages_ else None, "asof": today.isoformat()})
                 items.insert(0, {"key": key, "title": t["title"], "grade": "毎日", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"), "n": 0, "picks": [], "images": 0})
                 print("theory daily:", t["n_races"], "races", t["n_conf"], "conflicts")
+                xq.append(("8:20", "今日の理論ぶつけ", x_first(t["x"]), x_image(out, key, t["html"], "01_理論ぶつけ.png", a.no_images)))
+            try:   # 昼: 今日の荒れそうなレース(文字だけ)
+                import x_post
+                now = dt.datetime.now(JST).replace(hour=12, minute=10, second=0, microsecond=0)
+                at = x_post.morning_text(read_json(dp).get("races", []), now)
+                if at:
+                    xq.append(("12:10", "今日の荒れそうなレース", at, None))
+            except Exception as ex:  # noqa: BLE001
+                print("x arashi failed:", ex)
     except Exception as ex:  # noqa: BLE001  毎日の記事の失敗で、ほかの記事を止めない
         print("theory daily failed:", ex)
+    # 夜: 火・金は検証ラボ(いちばん新しい1本)、ほかの日は次のグレードレースの注目選手
+    try:
+        if today.weekday() in (1, 4) and labs:
+            # 火・金ごとに1本ずつ順番に(固定ポストで出した7本は後回し)。2026-10-06 からの火・金の回数で決める
+            pinned = {"streak", "exst", "tenji", "wind", "slowdash", "final", "rokuyo"}
+            order = sorted(labs, key=lambda t: (t["id"] in pinned, t.get("made") or "", t["id"]))
+            n_slot = sum(1 for k in range((today - dt.date(2026, 10, 6)).days + 1)
+                         if (dt.date(2026, 10, 6) + dt.timedelta(days=k)).weekday() in (1, 4))
+            t = order[max(n_slot - 1, 0) % len(order)]
+            xq.append(("20:00", f"検証ラボ: {t['title']}", x_first(labmod.x_text(t)),
+                       x_image(out, f"lab_{t['id']}", labmod.page(t, t.get("asof", "")), "03_検証ラボ.png", a.no_images)))
+        elif evening:
+            import x_post
+            p_ = {"title": evening["title"], "venue": evening["venue"], "hd": evening["hd"], "name": evening["name"], "tag": evening["tag"]}
+            xq.append(("20:00", f"注目選手: {evening['name']}", x_post.evening_text(p_, {"tags": [{"t": evening["tag"], "why": evening["why"]}]}),
+                       evening["image"]))
+    except Exception as ex:  # noqa: BLE001
+        print("x evening failed:", ex)
+    # 「今日のX投稿」: その日の投稿文と画像を1か所に(コピーと画像の保存だけで出せる)
+    if xq:
+        from kyotei.xtext import xlen
+        key = f"xpost_{today.strftime('%Y%m%d')}"
+        wk = "月火水木金土日"[today.weekday()]
+        title = f"今日のX投稿 {today.month}/{today.day}({wk})"
+        xs = "\n\n".join(f"--- 投稿{i}({xlen(b)}字) {tm} {lbl} ---\n{b}" for i, (tm, lbl, b, _im) in enumerate(xq, 1))
+        xs += "\n\n出し方: 時間は目安。画像は下の「画像」から保存して、同じ番号の投稿に添付。記事のリンクは本文に入れず、自分の返信に付ける"
+        imgs = [im for _tm, _l, _b, im in xq if im]
+        rows = "".join(f"<section><h3>{i}. {tm} {lbl}</h3><pre>{b}</pre><p>{'画像あり: ' + im['name'] if im else '文字だけ'}</p></section>"
+                       for i, (tm, lbl, b, im) in enumerate(xq, 1))
+        html_ = (f"<!doctype html><html lang='ja'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+                 f"<style>body{{font-family:sans-serif;margin:16px;line-height:1.7}} pre{{white-space:pre-wrap;background:#f4efdf;padding:12px}}</style>"
+                 f"</head><body><h2>{title}</h2>{rows}</body></html>")
+        write_json(out / f"{key}.json", {"key": key, "title": title, "grade": "X", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"),
+                                         "html": html_, "note": "\n\n".join(b for _t, _l, b, _i in xq), "x": xs, "picks": [], "images": imgs,
+                                         "queue": [{"time": tm, "label": lbl, "text": b, "image": im["file"] if im else None} for tm, lbl, b, im in xq],
+                                         "n": 0, "missing": [], "pages": [], "pdf": None, "asof": today.isoformat()})
+        items.insert(0, {"key": key, "title": title, "grade": "X", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"), "n": 0, "picks": [], "images": len(imgs)})
+        print("x queue:", [(tm, lbl) for tm, lbl, _b, _i in xq])
     write_json(out / "index.json", {"asof": dt.datetime.now(JST).strftime("%Y-%m-%d %H:%M"), "today": today.isoformat(),
                                     "days_before": a.days_before, "items": items})
     print(f"ura: {len(items)} 節 → {out}")

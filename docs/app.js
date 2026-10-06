@@ -1104,7 +1104,7 @@ async function renderUraOne(box, key) {
   const d = URA.cache[key];
   const body = d.x.split("\n").filter((l) => !/^(画像|出し方):/.test(l)).join("\n");
   const posts = body.split(/\n(?=--- 投稿)/).filter((x) => x.startsWith("--- 投稿")).map((x) => {
-    const m = x.match(/^--- 投稿(\d+)\((\d+)字\)(.*?) ---\n([\s\S]*?)\n*$/);
+    const m = x.match(/^--- 投稿(\d+)\((\d+)(?:字|\/\d+)\)(.*?) ---\n([\s\S]*?)\n*$/);
     return m ? { n: m[1], len: m[2], warn: m[3].trim(), body: m[4].trim() } : null;
   }).filter(Boolean);
   const tail = (d.x.split("\n").filter((l) => /^(画像|出し方):/.test(l))).join("\n");
@@ -1120,8 +1120,8 @@ async function renderUraOne(box, key) {
   <div class="ura-sec"><h3>X の投稿案</h3>${posts.map((p) =>
     `<div class="ura-post"><div class="n"><span>投稿${p.n}(${p.len}字)${p.warn ? " " + esc(p.warn) : ""}</span><button data-copy="${p.n}">コピー</button></div>${esc(p.body)}</div>`).join("")}
     ${tail ? `<p class="ura-note" style="margin-top:8px;white-space:pre-wrap">${esc(tail)}</p>` : ""}</div>
-  <div class="ura-sec"><h3>選手カードの画像(${d.images.length}枚)</h3><p>長押しかタップで保存。投稿1に注目1人目、投稿2に相性のいい選手。出場全員ぶんは「推し名簿」用。</p>
-    <div class="ura-btns"><button class="sub" id="ura-imgs-load">早見表と注目選手(${d.images.filter((x) => !x.extra).length}枚)</button>${d.images.some((x) => x.extra) ? `<button class="sub" id="ura-imgs-all">出場全員(${d.images.filter((x) => x.extra).length}枚)</button>` : ""}</div><div class="ura-imgs" id="ura-imgs"></div></div>`;
+  <div class="ura-sec"><h3>${d.grade === "X" ? "画像" : "選手カードの画像"}(${d.images.length}枚)</h3><p>${d.grade === "X" ? "長押しかタップで保存して、同じ番号の投稿に添付。" : "長押しかタップで保存。投稿1に注目1人目、投稿2に相性のいい選手。出場全員ぶんは「推し名簿」用。"}</p>
+    <div class="ura-btns"><button class="sub" id="ura-imgs-load">${d.grade === "X" ? "画像を表示" : "早見表と注目選手"}(${d.images.filter((x) => !x.extra).length}枚)</button>${d.images.some((x) => x.extra) ? `<button class="sub" id="ura-imgs-all">出場全員(${d.images.filter((x) => x.extra).length}枚)</button>` : ""}</div><div class="ura-imgs" id="ura-imgs"></div></div>`;
   box.innerHTML = html;
   $("#ura-back").onclick = () => { URA.open = null; renderUra(); };
   $("#ura-open").onclick = () => {

@@ -1,13 +1,14 @@
 name: X の投稿(下書き or 自動投稿)
 
-# 朝: 今日の荒れそうなレース(文字だけ)。夜: 次のグレードレースの注目選手カード(画像つき)。大会前: 3投稿のスレッド(手動)。
+# 朝8:20 理論ぶつけ(画像つき)・昼12:10 荒れそうなレース・夜20:00 検証ラボ(火・金)か注目選手カード。大会前: 3投稿のスレッド(手動)。
+# 文章と画像は記事タブの「今日のX投稿」と同じ(ura_auto.py が作る)。
 # 鍵(Secrets の X_API_KEY / X_API_SECRET / X_ACCESS_TOKEN / X_ACCESS_SECRET)と変数 X_AUTOPOST=1 がそろうまでは下書きだけ
 # (reports/x_drafts/ に残す)。アプリの「記事」タブ・「荒れそうなレース」からのコピーでも同じ文章が出せる。
 on:
   workflow_dispatch:
     inputs:
       what:
-        description: "morning / evening / thread / test / stats"
+        description: "theory / morning / evening / thread / test / stats"
         default: "test"
       key:
         description: "thread のとき: 場コード_初日(例 04_20261013)"
@@ -16,8 +17,9 @@ on:
         description: "thread のとき: note の URL(最後の投稿に入れる)"
         default: ""
   schedule:
-    - cron: "40 0 * * *"    # 9:40 JST 朝(荒れそうなレース。朝の予想のあと)
-    - cron: "0 11 * * *"    # 20:00 JST 夜(注目選手カード)
+    - cron: "20 23 * * *"   # 8:20 JST 朝: 今日の理論ぶつけ(記事タブの更新 7:40 のあと)
+    - cron: "10 3 * * *"    # 12:10 JST 昼: 今日の荒れそうなレース
+    - cron: "0 11 * * *"    # 20:00 JST 夜: 火・金は検証ラボ、ほかの日は注目選手カード
     - cron: "30 13 * * 1,4" # 22:30 JST 月・木: 反応と返信を取る(stats)
 
 permissions:
@@ -50,7 +52,7 @@ jobs:
           WHAT="${{ inputs.what }}"
           if [ -z "$WHAT" ] || [ "${{ github.event_name }}" = "schedule" ]; then
             H=$(TZ=Asia/Tokyo date +%H)
-            if [ "$H" -ge 22 ]; then WHAT=stats; elif [ "$H" -lt 15 ]; then WHAT=morning; else WHAT=evening; fi
+            if [ "$H" -ge 22 ]; then WHAT=stats; elif [ "$H" -lt 10 ]; then WHAT=theory; elif [ "$H" -lt 15 ]; then WHAT=morning; else WHAT=evening; fi
           fi
           mkdir -p reports/x_drafts
           if [ "$WHAT" = "stats" ]; then

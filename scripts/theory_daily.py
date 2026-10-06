@@ -71,11 +71,13 @@ def build(day: dt.date, data: dict) -> dict | None:
     if conf:
         top = conf[0]; sm0 = top["th_sum"]
         title = f"{base_title}|悩ましいのは{race_short(top)}"
+        headline = f"悩ましいのは、{race_short(top)}"
         lead = (f"いちばん悩ましいのは{race_name(top)}。インに有利な『{sm0['plus'][0]}』と、不利な『{sm0['minus'][0]}』がぶつかる。"
                 f"今日の出走表{len(races)}レースに検証ラボの理論をぶつけて、当てはまったのは{n_notes}。悩ましいレースは{len(conf)}つ。どの理論に乗るかは、あなた次第")
     else:
         top = rich[0] if rich else None
         title = base_title + (f"|理論が集まったのは{race_short(top)}" if top and top["theories"] else "")
+        headline = (f"理論が集まったのは、{race_short(top)}" if top and top["theories"] else "今日の理論ぶつけ")
         lead = (f"今日の出走表{len(races)}レースに検証ラボの理論をぶつけて、当てはまったのは{n_notes}。理論どうしがぶつかるレースはなし。素直な日かも。"
                 + (f"理論がいちばん集まったのは{race_name(top)}" if top and top["theories"] else ""))
 
@@ -113,7 +115,7 @@ def build(day: dt.date, data: dict) -> dict | None:
 </style></head><body>
 <header class="cover"><div class="lanebar"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cv-in">
 <div class="cv-top"><div class="brand">ミカタ 理論ぶつけ<small>出走表に、検証ラボの理論を全部ぶつける</small></div><div class="issue"><b>DAILY</b><br>{e(day.isoformat())}</div></div>
-<p class="cv-kicker">買い目は言わない。考え方を並べる</p><h1 class="cv-h">{e(title)}</h1><p class="cv-deck">{e(lead)}</p>
+<p class="cv-kicker">{e(base_title)} ・ 考え方を並べる</p><h1 class="cv-h">{e(headline)}</h1><p class="cv-deck">{e(lead)}</p>
 <div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ / 暦とオカルト担当 ゲンさん<br>理論の数字は検証ラボ(公式の成績データを独自に集計)から</span></div></div></header>
 <main class="mag">
 <section><span class="label">今日の悩ましいレース</span><p>インに有利な理論と不利な理論が、同じレースでぶつかっている。どっちに乗る?</p>{sec_conf}</section>
@@ -149,7 +151,7 @@ def build(day: dt.date, data: dict) -> dict | None:
         body = (f"今日の悩ましいレース|{race_name(r)}\n\nインに有利: {sm['plus'][0]}\nインに不利: {sm['minus'][0]}\n\nあなたはどっちに乗る?\n#今日の理論ぶつけ {day.month}/{day.day}")
     if xlen(body) > 280:
         body = f"【今日の理論ぶつけ】{day.month}/{day.day}\n\n悩ましいレース{len(conf)}つ。インに有利な理論と不利な理論がぶつかっています。\n\nあなたはどっちに乗る?"
-    return {"title": title, "html": page, "note": "\n".join(lines), "x": f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n記事のリンクは、この投稿への返信に付ける", "n_conf": len(conf), "n_races": len(races)}
+    return {"title": title, "html": page, "note": "\n".join(lines), "x": f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 記事の上部(悩ましいレースのところ)\n出し方: 記事のリンクは本文に入れず、この投稿への自分の返信に付ける", "n_conf": len(conf), "n_races": len(races)}
 
 
 def main():

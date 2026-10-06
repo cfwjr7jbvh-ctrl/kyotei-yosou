@@ -3113,7 +3113,7 @@ def x_text(t: dict) -> str:
                  f"【検証ラボ】{t['title']}\n→ 結論:{con[0]}\n\nみんなは信じてた?"]
     body = next((c for c in cands if xlen(c) <= 280), cands[-1])
     return (f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 紙面の上部のスクリーンショットか、結果のカードの部分\n"
-            "記事のリンクは、この投稿への返信に付ける")
+            "出し方: 記事のリンクは本文に入れず、この投稿への自分の返信に付ける")
 
 
 def main():

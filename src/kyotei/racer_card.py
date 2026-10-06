@@ -65,7 +65,7 @@ def build(d: pd.DataFrame, asof: str | None = None) -> tuple[dict, dict]:
     s["top3"] = (s["finish"] <= 3).astype(float)
     s["pts"] = s["finish"].map(POINTS).astype(float)
     pop_c = s.groupby("course")[["win", "top3"]].mean()
-    s["res3"] = s["top3"] - s["course"].map(pop_c["top3"])     # コースを差し引いた3着内の上積み
+    s["res3"] = s["top3"] - s["course"].map(pop_c["top3"])     # コースを差し引いた3着以内の上積み
     s["kim"] = np.where(s["finish"] == 1, s["kimarite"], np.nan)
     g = s.groupby("racer_id")
     base = pd.DataFrame({"n": g.size(), "win": g["win"].mean(), "top3": g["top3"].mean(), "pts": g["pts"].mean(),
@@ -300,7 +300,9 @@ def grp(c) -> str:
 
 
 def pts(x) -> str:
-    return f"{x * 100:+.0f}ポイント"
+    """読み手向け: 割合の差を「100走あたり◯回多い/少ない」で。"""
+    n = round(abs(x) * 100)
+    return "ほぼ同じ" if n == 0 else f"100走あたり{n}回{'多い' if x > 0 else '少ない'}"
 
 
 TAG_RULES = [
@@ -340,9 +342,9 @@ TAG_RULES = [
      "why": lambda c: f"3コース以遠{c['kim']['mz']['n']}走でまくり差し{c['kim']['mz']['w']}勝({grp(c)}の中で{top(c['kim']['mz']['grp'])})",
      "score": lambda c: c["kim"]["mz"]["grp"]},
     {"tag": "外からでも届く", "cat": "out",
-     "rule": "4〜6コースでの3着内の上積み(コース平均との差)が同じ級別の中で上位10%以内(30走以上)",
+     "rule": "4〜6コースでの3着以内の上積み(コース平均との差)が同じ級別の中で上位10%以内(30走以上)",
      "test": lambda c: c["out"]["n"] >= 30 and (c["out"]["grp"] or 0) >= 90,
-     "why": lambda c: f"4〜6コースの3着内率がコース平均より{pts(c['out']['res'])}({c['out']['n']}走、{grp(c)}の中で{top(c['out']['grp'])})",
+     "why": lambda c: f"4〜6コースで3着以内に入るのが、コースの平均より{pts(c['out']['res'])}({c['out']['n']}走、{grp(c)}の中で{top(c['out']['grp'])})",
      "score": lambda c: c["out"]["grp"]},
     {"tag": "前づけの仕掛け人", "cat": "front",
      "rule": "2枠以上のとき、枠より内のコースに入った割合が15%以上(50走以上)",
@@ -356,20 +358,20 @@ TAG_RULES = [
      "why": lambda c: f"展示タイム1・2位が{c['extime']['top']:.0%}({c['extime']['n']}走、{grp(c)}の中で{top(c['extime']['grp'])})",
      "score": lambda c: c["extime"]["grp"]},
     {"tag": "展示は控えめ、本番で化ける", "cat": "exlate",
-     "rule": "展示タイムがレース内4位以下の走でも、3着内の上積みが本人の普段とほぼ変わらない(普段との差が全選手の平均より+6ポイント以上良い、30走以上)",
+     "rule": "展示タイムがレース内4位以下の走でも、3着以内の上積みが本人の普段とほぼ変わらない(ふだんとの差が全選手の平均より100走あたり6回以上良い、30走以上)",
      "test": lambda c: c["exlate"]["n"] >= 30 and c["exlate"]["res"] is not None and c["exlate"]["res"] - (c["exlate"]["pop"] or 0) >= 0.06,
-     "why": lambda c: f"展示タイム4位以下の{c['exlate']['n']}走でも、3着内率は普段から{c['exlate']['res'] * 100:+.0f}ポイント(全選手の平均は{(c['exlate']['pop'] or 0) * 100:+.0f}ポイント)",
+     "why": lambda c: f"展示タイム4位以下の{c['exlate']['n']}走でも、3着以内の減り方が小さい(ふだんより100走あたり{c['exlate']['res'] * 100:+.0f}回。全選手の平均は{(c['exlate']['pop'] or 0) * 100:+.0f}回)",
      "score": lambda c: 60 + 300 * (c["exlate"]["res"] - (c["exlate"]["pop"] or 0))},
     {"tag": "上り調子", "cat": "growth",
      "rule": "直近90日の勝率(1着10点〜6着1点の平均)が、その前の1年より0.8点以上高い(直近15走以上・前の1年30走以上)。26歳以下は「急成長中」",
      "test": lambda c: c["growth"]["n90"] >= 15 and c["growth"]["n_prev"] >= 30 and (c["growth"]["diff"] or 0) >= 0.8,
      "why": lambda c: f"勝率 {c['growth']['prev']:.2f}(前の1年)→ {c['growth']['pts90']:.2f}(直近90日、{c['growth']['n90']}走)。"
-                      f"成長指数 {c['growth']['index']:+.2f}(伸びの4割ほどは次の3か月も残る傾向)",
+                      "伸びの4割ほどは、次の3か月も残る傾向",
      "score": lambda c: 60 + 20 * c["growth"]["diff"]},
     {"tag": "舟券に絡む安定感", "cat": "stable",
-     "rule": "3着内の上積み(コース平均との差)が同じ級別の中で上位5%以内(100走以上)",
+     "rule": "3着以内の上積み(コース平均との差)が同じ級別の中で上位5%以内(100走以上)",
      "test": lambda c: c["n"] >= MIN_STARTS and (c["p"]["res3"]["grp"] or 0) >= 95,
-     "why": lambda c: f"3着内率 {c['top3']:.0%}、コース平均より{pts(c['res3'])}({c['n']}走、{grp(c)}の中で{top(c['p']['res3']['grp'])})",
+     "why": lambda c: f"3着以内は100走で{round(c['top3'] * 100)}回。同じコースの平均より{pts(c['res3'])}({c['n']}走、{grp(c)}の中で{top(c['p']['res3']['grp'])})",
      "score": lambda c: c["p"]["res3"]["grp"]},
 ]
 VENUE_RULE = "(使っていない)"
