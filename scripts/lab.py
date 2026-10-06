@@ -3037,12 +3037,30 @@ def neta_items(labs: list[dict]) -> list[dict]:
     return rows
 
 
+def neta_use(r: dict) -> str:
+    """1枚1ネタの「だから予想ではどうする?」の1行(答えと、数えたもの(1号艇の1着か、その選手の3着以内か)から)。"""
+    line = r.get("line", "")
+    if r["answer"] == "ほぼ同じ":
+        return "→ 予想では: 気にしなくていい。そのぶん展示と水面を見よう"
+    up = r["answer"] == "多い"
+    if "1号艇が勝つ" in line:
+        return "→ 予想では: 1号艇を信じる材料が1つ増える" if up else "→ 予想では: 1号艇以外から考える材料に"
+    if "3着以内" in line:
+        return "→ 予想では: この条件の選手は、3着までの相手に入れておく" if up else "→ 予想では: この条件の選手は、相手を考え直す材料に"
+    return "→ 予想では: この条件を、見込みを上げる材料に" if up else "→ 予想では: この条件を、見込みを下げる材料に"
+
+
 def neta_text(r: dict, from_poll: bool = False) -> str:
     head = "昨日の投票の答え👇\n\n" if from_poll else ""
     v = {"多い": "ふだんより多い", "少ない": "ふだんより少ない", "ほぼ同じ": "ふだんとほぼ同じ"}[r["answer"]]
     tail = "\n(この差は、たまたまでも出るくらいの幅)" if r["answer"] == "ほぼ同じ" and r.get("a") is not None and abs(r["a"] - r["b"]) >= 0.5 else ""
-    body = (f"{head}「{r['name']}」\n→ {v}\n\n{r['line']}{tail}\n\n"
-            f"検証ラボ「{r['title']}」より📰 " + ("あなたの予想は当たってた?" if from_poll else "あなたは、どっちだと思ってた?"))
+    end = "あなたの予想は当たってた?" if from_poll else "あなたは、どっちだと思ってた?"
+    use = neta_use(r)
+    from kyotei.xtext import xlen as _xl
+    for parts in ((tail, f"検証ラボ「{r['title']}」より📰 "), ("", f"検証ラボ「{r['title']}」より📰 "), ("", "")):
+        body = f"{head}「{r['name']}」\n→ {v}\n\n{r['line']}{parts[0]}\n{use}\n\n{parts[1]}{end}"
+        if _xl(body) <= 256:   # 後ろにハッシュタグ2個(24字ぶん)を足せるように
+            return body
     return body
 
 

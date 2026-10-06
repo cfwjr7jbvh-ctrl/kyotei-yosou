@@ -177,8 +177,16 @@ CARD_CSS = f"""html,body{{margin:0}} .c{{width:1080px;height:1350px;background:#
 .row .p{{width:110px;text-align:right;font:900 40px {F}}} .row .p small{{font-size:24px}}
 .kim{{display:flex;gap:10px}} .kim div{{flex:1;background:#fff;border:2px solid #14212c;padding:10px 6px;text-align:center;font:700 26px {F}}}
 .kim div b{{display:block;font:900 44px {F}}}
-.lines{{list-style:none;margin:0;padding:0;display:grid;gap:12px}} .lines li{{background:#fff;border-left:10px solid #2e8b57;padding:12px 18px;font:700 32px/1.45 {F}}}
-.lines li.m{{border-color:#c8141c}} .lines li small{{display:block;font:700 24px/1.4 {F};color:#56636e}}
+.lines{{list-style:none;margin:0;padding:0;display:grid;gap:12px}} .lines li{{background:#fff;border-left:10px solid #2e8b57;padding:12px 18px;font:700 29px/1.45 {F}}}
+.lines.sm li{{font-size:27px;padding:10px 16px}} .lines li.m{{border-color:#c8141c}} .lines li small{{display:block;font:700 24px/1.4 {F};color:#56636e}}
+.hook{{margin:24px 48px 0;background:#ffe100;padding:18px 24px;font:900 44px/1.3 {F};border:3px solid #14212c}}
+.br{{display:flex;align-items:center;gap:16px;background:#fff;border:3px solid #14212c;padding:10px 18px;margin-bottom:10px}}
+.br .k{{font:900 26px {F};padding:6px 10px;color:#fff;background:#14212c;white-space:nowrap;align-self:flex-start}} .br.n .k{{background:#c8141c}} .br.o .k{{background:#8a949c}}
+.br .bm{{flex:1}} .br .bm b{{display:flex;align-items:center;gap:12px;font:900 36px/1.25 {F}}} .br .bm small{{display:block;font:700 26px/1.4 {F};color:#14212c;margin-top:4px}}
+.br .bm p{{margin:4px 0 0;font:700 23px/1.4 {F};color:#56636e}} .br .pc{{font:900 52px {F};white-space:nowrap}} .br .pc small{{font-size:26px}}
+.br .lt{{width:44px;height:44px;flex:0 0 44px;font-size:28px}} .row em{{font-style:normal;color:#c8141c}}
+.gen{{display:flex;gap:14px;align-items:flex-start;background:#e8eef7;border:3px solid #0b5fb4;padding:12px 18px}} .gen span{{font:900 26px {F};color:#fff;background:#0b5fb4;padding:4px 10px;white-space:nowrap}}
+.gen p{{margin:0;font:700 30px/1.45 {F}}}
 .ft{{position:absolute;left:48px;right:48px;bottom:30px;display:flex;align-items:center;gap:16px;font:700 22px/1.4 {F};color:#56636e}}
 .ft b{{color:#c8141c;font:900 30px {F};margin-left:auto;white-space:nowrap}}"""
 
@@ -191,58 +199,144 @@ def _card(head_small: str, h1: str, sub: str, body: str) -> str:
             f'</div></body></html>')
 
 
+def _lab_pair(lab_id: str, key: str) -> tuple[float, float] | None:
+    """検証ラボの数字(100あたり)を、記事と食い違わないように JSON から読む。"""
+    import json
+    try:
+        t = json.loads((ROOT / f"reports/lab/{lab_id}.json").read_text(encoding="utf-8"))
+        for name, m, _v in t["measures"]:
+            if key in name:
+                return round(m["in1"] * 100, 1), round(m["in1_ref"] * 100, 1)
+    except Exception:  # noqa: BLE001
+        pass
+    return None
+
+
+KIM_TAG = {"まくり屋": "まくり", "差し職人": "差し", "まくり差しの職人": "まくり差し", "イン逃げ番長": "逃げ"}
+FIT = {"逃げ": ("イン逃げ番長", "スタート職人"), "まくり": ("まくり屋", "スタート職人", "外からでも届く"),
+       "差し": ("差し職人",), "まくり差し": ("まくり差しの職人", "外からでも届く")}
+
+
+def _tags(b: dict, cards: dict | None) -> list[dict]:
+    c = (cards or {}).get(int(b.get("racer_id") or 0))
+    return sorted(rc.tags_for(c), key=lambda t: -t["score"]) if c else []
+
+
+def _type_of(b: dict, model_type: str | None, cards: dict | None) -> str | None:
+    """勝ち方: 1号艇は逃げ。ほかは、その人の決まり手の型(まくり屋・差し職人…)があればそれ、無ければモデルの勝ち筋。"""
+    if int(b["lane"]) == 1:
+        return "逃げ"
+    for t in _tags(b, cards):
+        if t["t"] in KIM_TAG and KIM_TAG[t["t"]] != "逃げ":
+            return KIM_TAG[t["t"]]
+    return model_type
+
+
+def _why(b: dict, typ: str | None, cards: dict | None) -> str:
+    """その勝ち方を推す理由の1行(勝ち方に合う型だけ。合う型が無ければ空)。"""
+    fit = FIT.get(typ or "", ())
+    t = next((t for t in _tags(b, cards) if t["t"] in fit), None)
+    return f"{t['t']}: {t['why']}" if t else ""
+
+
+def story(rr: dict, cards: dict | None) -> dict:
+    """「だから何?」で終わらせないための骨組み。
+    hook: このレースの問い(「Aの逃げか、Bのまくりか」)、branches: 展開の分かれ道(見込みと理由)、
+    checks: 展示で見るのはここ(検証ラボで本物と分かった材料だけ。展示STは「ほぼウソ」なので使わない)。"""
+    mv = mikata_view(rr)
+    if not mv:
+        return {}
+    boats = sorted(rr.get("boats", []), key=lambda b: int(b["lane"]))
+    nm = {int(b["lane"]): (b.get("name") or "") for b in boats}
+    h, n = mv["hon"], mv["ner"]
+    ht = _type_of(h, mv["hon_type"], cards) or "1着"
+    nt = _type_of(n, mv["ner_type"], cards) if n else None
+    hook = (f"{h['lane']}号艇 {nm[int(h['lane'])]}の{ht}か、{n['lane']}号艇 {nm[int(n['lane'])]}の{nt or '一撃'}か"
+            if n else f"{h['lane']}号艇 {nm[int(h['lane'])]}の{ht}は堅い? 崩すなら誰だ")
+    br = [{"k": "本線", "lane": int(h["lane"]), "name": nm[int(h["lane"])], "type": ht if ht != "1着" else None, "p": h["p_win"], "why": _why(h, ht, cards),
+           "second": mv["second"][:2]}]
+    if n:
+        br.append({"k": "狙い目かも?", "lane": int(n["lane"]), "name": nm[int(n["lane"])], "type": nt, "p": n["p_win"],
+                   "why": _why(n, nt, cards), "ratio": mv["ratio"]})
+    rest = max(0.0, 1 - sum(x["p"] for x in br))
+    checks = []
+    tj = _lab_pair("tenji", "展示タイム1位")
+    if tj:
+        who = n or h
+        checks.append(f"展示タイムの順位。{who['lane']}号艇が1位なら見込みアップ(1位は3着以内が100走で{tj[0]:.0f}回、ふだん{tj[1]:.0f}回)")
+    st = {int(b["lane"]): (b.get("traits") or {}).get("st") for b in boats}
+    if all(st.get(k) is not None for k in (1, 2, 3, 4)) and st[4] <= min(st[1], st[2], st[3]) - 0.02:
+        kd = _lab_pair("slowdash", "0.02秒以上速い")
+        if kd:
+            checks.insert(0, f"カドの一撃の形: 4号艇の平均STが内の3人より速い(4コースの1着は100レースで{kd[0]:.0f}回、STが同じくらいなら{kd[1]:.0f}回)")
+    hot = [x for x in rr.get("theories") or [] if x.get("id") == "hot" and "連勝" in x.get("title", "")]
+    if hot:
+        hp = _lab_pair("hot", "今節、2連勝中")
+        ln = "・".join(f"{l}号艇" for x in hot for l in x.get("lanes") or [])
+        if ln and hp:
+            checks.append(f"今節2連勝中の{ln}。3着以内は100走で{hp[0]:.0f}回(その人のふだんは{hp[1]:.0f}回)")
+    if not n:
+        checks.append(f"1号艇の展示タイムが4位以下なら、本線を疑う(展示の順位が下がったぶん見込みも下がる)")
+    occ = [x for x in rr.get("theories") or [] if x.get("kind") == "occult"]
+    gen = (f"{occ[0]['title']}か。関係ねえのは分かってる。でもワンチャン、あるだろ?" if occ else "理論もいいが、最後は展示だ。ピットを出ていく顔つきを見とけよ")
+    who = n or h
+    short = [f"展示タイムで{who['lane']}号艇が1位か"]
+    if any(c.startswith("カドの一撃") for c in checks):
+        short.append("カドの一撃の形(4号艇のSTが内より速い)")
+    return {"hook": hook, "branches": br, "rest": rest, "checks": checks[:2], "gen": gen, "mv": mv, "hon_type": ht, "ner_type": nt, "short": short}
+
+
 def x_cards(series_name: str, grade: str, rr: dict, cards: dict | None, day: dt.date) -> list[str]:
-    """X 用のカード2枚。1枚目: ミカタの見立て(本線・狙い目かも)と6艇の1着の見込み・平均ST。2枚目: 展開(決まり手)と2着の候補、当てはまる理論、型。"""
+    """X 用のカード2枚(スマホで読める大きな文字)。
+    1枚目「このレースの分かれ道」: 問い → 本線と狙い目かも(見込みと理由、2着の候補)→ 展示で見るのはここ。
+    2枚目「6人の材料」: 1着の見込み・平均ST・いちばん強い型、ゲンさんのひと言。"""
     rt = str(rr.get("race_type") or "")
     race = f"{rr['venue']}{rr['rno']}R"
     small = f"ミカタ新聞 {day.month}/{day.day} ・ " + ((grade + " " + series_name).strip() or "これからのレース")
     h1 = f"{race} {rt}"
     sub = f"{rr.get('deadline') or ''}締切"
-    mv = mikata_view(rr)
+    st_ = story(rr, cards)
     boats = sorted(rr.get("boats", []), key=lambda b: int(b["lane"]))
     out = []
-    # 1枚目
-    v = ""
-    if mv:
-        h = mv["hon"]
-        v += (f'<div class="v"><span class="k">本線</span><div><b>{h["lane"]}号艇 {e(h.get("name") or "")}{("の" + mv["hon_type"]) if mv["hon_type"] else ""}</b>'
-              f'<small>1着の見込み {_pct(h["p_win"])}%(ふだんの{h["lane"]}号艇は{LANE_BASE[int(h["lane"])]:.0f}%)</small></div></div>')
-        if mv["ner"]:
-            n = mv["ner"]
-            v += (f'<div class="v n"><span class="k">狙い目かも?</span><div><b>{n["lane"]}号艇 {e(n.get("name") or "")}{("の" + mv["ner_type"]) if mv["ner_type"] else ""}</b>'
-                  f'<small>1着の見込み {_pct(n["p_win"])}%。ふだんの{n["lane"]}号艇({LANE_BASE[int(n["lane"])]:.0f}%)の{mv["ratio"]:.1f}倍</small></div></div>')
-        else:
-            v += '<div class="v n"><span class="k">狙い目かも?</span><div><b>本線が堅め</b><small>ふだんより見込みが高い外の艇は見当たらない</small></div></div>'
+    # 1枚目: 分かれ道
+    if st_:
+        nm = {int(b["lane"]): (b.get("name") or "") for b in boats}
+        brs = ""
+        for x in st_["branches"]:
+            i = x["lane"] - 1
+            extra = ""
+            if x.get("second"):
+                extra = "<small>2着は " + " / ".join(f"{s['lane']}号艇 {_pct(s['p'])}%" for s in x["second"]) + "</small>"
+            if x.get("ratio"):
+                extra = f"<small>ふだんの{x['lane']}号艇({LANE_BASE[x['lane']]:.0f}%)の{x['ratio']:.1f}倍</small>"
+            brs += (f'<div class="br{" n" if x["k"] != "本線" else ""}"><span class="k">{e(x["k"])}</span>'
+                    f'<div class="bm"><b><span class="lt" style="background:{LANE_BG[i]};color:{LANE_FG[i]}">{x["lane"]}</span>{e(x["name"])}{("の" + e(x["type"])) if x["type"] else ""}</b>'
+                    f'{extra}' + (f'<p>{e(x["why"])}</p>' if x["why"] else "") + f'</div><div class="pc">{_pct(x["p"])}<small>%</small></div></div>')
+        brs += f'<div class="br o"><span class="k">それ以外</span><div class="bm"><b>ほかの艇が勝つ</b></div><div class="pc">{_pct(st_["rest"])}<small>%</small></div></div>'
+        chk = "".join(f"<li>{e(c)}</li>" for c in st_["checks"])
+        body1 = (f'<div class="hook">{e(st_["hook"])}</div>'
+                 f'<div class="sec"><p class="h">展開の分かれ道(1着の見込み)</p>{brs}</div>'
+                 + (f'<div class="sec"><p class="h">ここを見て決める</p><ul class="lines sm">{chk}</ul></div>' if chk else ""))
+    else:
+        body1 = '<div class="hook">6人の材料を並べました</div>'
+    out.append(_card(small, h1, sub, body1))
+    # 2枚目: 6人の材料
     rows = ""
     mx = max([b.get("p_win") or 0 for b in boats] + [0.01])
+    ner = (st_.get("mv") or {}).get("ner") if st_ else None
     for b in boats:
         i = int(b["lane"]) - 1
-        st = (b.get("traits") or {}).get("st")
+        stv = (b.get("traits") or {}).get("st")
+        c = (cards or {}).get(int(b.get("racer_id") or 0))
+        tg = sorted(rc.tags_for(c), key=lambda t: -t["score"])[:1] if c else []
         rows += (f'<div class="row"><span class="lt" style="background:{LANE_BG[i]};color:{LANE_FG[i]}">{i + 1}</span>'
-                 f'<div class="nm">{e(b.get("name") or "")}<small>{e(str(b.get("class") or ""))} ・ 平均ST {_st(st)}</small></div>'
-                 f'<div class="bar{" n" if mv and mv.get("ner") is b else ""}"><i style="width:{(b.get("p_win") or 0) / mx * 100:.0f}%"></i></div>'
+                 f'<div class="nm">{e(b.get("name") or "")}<small>{e(str(b.get("class") or ""))} ・ 平均ST {_st(stv)}'
+                 + (f' ・ <em>{e(tg[0]["t"])}</em>' if tg else "") + '</small></div>'
+                 f'<div class="bar{" n" if ner is b else ""}"><i style="width:{(b.get("p_win") or 0) / mx * 100:.0f}%"></i></div>'
                  f'<div class="p">{_pct(b.get("p_win"))}<small>%</small></div></div>')
-    body1 = (f'<div class="sec"><p class="h">ミカタの見立て</p><div class="view">{v}</div></div>'
-             f'<div class="sec"><p class="h">1着の見込み(ミカタのモデル)</p>{rows}</div>')
-    out.append(_card(small, h1, sub, body1))
-    # 2枚目
-    kim = mv.get("kim") or (rr.get("tenkai") or {}).get("kimarite") or {}
-    kd = "".join(f'<div>{k}<b>{_pct(kim.get(k))}%</b></div>' for k in ("逃げ", "差し", "まくり", "まくり差し"))
-    sec_ = ""
-    if mv and mv["second"]:
-        h = mv["hon"]
-        nm_ = {int(b["lane"]): b.get("name") or "" for b in boats}
-        sec_ = (f'<div class="sec"><p class="h">{h["lane"]}号艇が勝つなら、2着は?</p><ul class="lines">'
-                + "".join(f'<li>{s["lane"]}号艇 {e(nm_.get(int(s["lane"]), ""))}<small>{h["lane"]}号艇が1着のとき、2着になる見込み {_pct(s["p"])}%</small></li>' for s in mv["second"][:2])
-                + "</ul></div>")
-    sm = rr.get("th_sum") or {}
-    th = ""
-    if sm.get("plus") or sm.get("minus"):
-        th = ('<div class="sec"><p class="h">当てはまる理論</p><ul class="lines">'
-              + (f'<li>インに有利: {e("・".join((sm.get("plus") or [])[:3]))}</li>' if sm.get("plus") else "")
-              + (f'<li class="m">インに不利: {e("・".join((sm.get("minus") or [])[:3]))}</li>' if sm.get("minus") else "") + "</ul></div>")
-    il = mv.get("in_lose") if mv else None
-    body2 = (f'<div class="sec"><p class="h">展開の見込み(決まり手)</p><div class="kim">{kd}</div></div>' + sec_ + th
-             + (f'<div class="sec"><p class="h">荒れそう度</p><ul class="lines"><li class="m">1号艇以外が勝つ見込み {_pct(il)}%<small>ふだんは45%(100レースで45回)</small></li></ul></div>' if il is not None else ""))
-    out.append(_card(small, h1, sub + " ・ つづき 2/2", body2))
+    il = (rr.get("arashi") or {}).get("in_lose")
+    body2 = (f'<div class="sec"><p class="h">6人の材料(1着の見込み・平均ST・いちばん強い型)</p>{rows}</div>'
+             + (f'<div class="sec"><p class="h">荒れそう度</p><ul class="lines"><li class="m">1号艇以外が勝つ見込み {_pct(il)}%<small>ふだんは100レースで45回</small></li></ul></div>' if il is not None else "")
+             + (f'<div class="sec gen"><span>ゲンさん</span><p>{e(st_["gen"])}</p></div>' if st_ else ""))
+    out.append(_card(small, h1, sub + " ・ 2/2", body2))
     return out

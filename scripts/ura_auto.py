@@ -385,28 +385,25 @@ def news_posts(live: list[dict], races: list[dict], day: dt.date | None = None, 
         head = f"{rr['venue']}{rr['rno']}R {rt}{('|' + nm) if nm else ''}({rr['deadline']}締切)【ミカタ新聞】"
         foot = seo.x_tags(rr["venue"], nm or None)
         import race_feature as _rf
-        mv = _rf.mikata_view(rr)
-        view = []
-        if mv:   # ミカタの見立て(本線と狙い目かも)。買い目(組み合わせ)は出さない
-            h = mv["hon"]
-            view.append(f"本線: {h['lane']}号艇 {h.get('name') or ''}{('の' + mv['hon_type']) if mv['hon_type'] else ''}(1着の見込み{_rf._pct(h['p_win'])}%)")
-            if mv["ner"]:
-                n_ = mv["ner"]
-                view.append(f"狙い目かも? {n_['lane']}号艇 {n_.get('name') or ''}{('の' + mv['ner_type']) if mv['ner_type'] else ''}(ふだんの{n_['lane']}号艇の{mv['ratio']:.1f}倍)")
-            else:
-                view.append("狙い目かも? 本線が堅め")
+        st_ = _rf.story(rr, cards)
         body = None
-        for k in (2, 1, 0):
-            if sm.get("conflict") and k:
-                mid = f"インに有利: {'・'.join(sm['plus'][:k])}\nインに不利: {'・'.join(sm['minus'][:k])}\n\n展開と2着の候補は画像で📰 あなたはどっちに乗る?"
-            elif notes and k:
-                mid = "当てはまる理論: " + "・".join(n["title"] for n in notes[:k + 1]) + "\n\n展開と2着の候補は画像で📰 あなたの本線は?"
-            else:
-                mid = "6艇の1着の見込みと展開は画像で📰 あなたの本線は?"
-            b = f"{head}\n" + ("\n".join(view) + "\n" if view else "") + f"\n{mid}\n{foot}"
-            if xlen(b) <= 280:
-                body = b
-                break
+        if st_:   # 問い → 本線と狙い目かも → ここを見て決める → あなたは?(「だから何?」で終わらせない)
+            h_ = st_["branches"][0]
+            n_ = st_["branches"][1] if len(st_["branches"]) > 1 else None
+            lines = [f"本線 {h_['lane']}号艇{('の' + h_['type']) if h_['type'] else ''} {_rf._pct(h_['p'])}%"]
+            lines.append(f"狙い目かも? {n_['lane']}号艇{('の' + n_['type']) if n_['type'] else ''} {_rf._pct(n_['p'])}%(ふだんの{n_['ratio']:.1f}倍)" if n_ else "狙い目かも? 本線が堅め")
+            for k in (2, 1, 0):
+                chk = ("見るのはここ: " + " / ".join(st_["short"][:k])) if k else ""
+                b = (f"{head}\n{st_['hook']}🔥\n\n" + "\n".join(lines) + (f"\n{chk}" if chk else "")
+                     + f"\n\n材料は画像で📰 あなたはどっち?\n{foot}")
+                if xlen(b) <= 280:
+                    body = b
+                    break
+        if body is None:
+            mid = (f"インに有利: {sm['plus'][0]}\nインに不利: {sm['minus'][0]}\n\nあなたはどっちに乗る?" if sm.get("conflict")
+                   else "6艇の1着の見込みと展開は画像で📰 あなたの本線は?")
+            b = f"{head}\n\n{mid}\n{foot}"
+            body = b if xlen(b) <= 280 else None
         if body:
             out.append((at, f"新聞: {rr['venue']}{rr['rno']}R {rt}", body, rr["deadline"], sc, rr, x, nm))
     return out
