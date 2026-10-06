@@ -357,7 +357,7 @@ def upload_media(s, png: bytes) -> str | None:
 def post(s, text: str, media_id: str | None = None, reply_to: str | None = None, poll: dict | None = None) -> str:
     body: dict = {"text": text}
     if media_id:
-        body["media"] = {"media_ids": [media_id]}
+        body["media"] = {"media_ids": media_id if isinstance(media_id, list) else [media_id]}
     elif poll:   # 投票と画像は一緒にできない
         body["poll"] = {"options": poll["options"][:4], "duration_minutes": int(poll.get("minutes", 1440))}
     if reply_to:
@@ -401,9 +401,10 @@ def main():
             print("いま出す大会の投稿はありません"); return
         it = due[0]   # 1回に1本(重なったら次の15分で)。締切前の投稿を先に
         texts, tag, ev_label = [it["text"]], it["tag"], it["label"]
-        if it.get("image"):
-            img = load_enc("cards", f"ura/{it['image']}")
-            media = base64.b64decode(img["png"]) if img else None
+        files = it.get("images") or ([it["image"]] if it.get("image") else [])
+        pngs = [load_enc("cards", f"ura/{f}") for f in files[:4]]
+        pngs = [base64.b64decode(x["png"]) for x in pngs if x]
+        media = pngs or None
     qi = queue_item(day, a.what) if a.what in SLOTS else None
     if qi:
         texts, media, poll = [qi[0]], qi[1], qi[2]
@@ -442,14 +443,15 @@ def main():
         print("今日はもう出しています:", tag); return
     # 下書きを残す
     draft = DRAFTS / f"{day}_{a.what}.txt"
-    draft.write_text("\n\n---\n\n".join(texts) + ("\n\n(画像つき)" if media else "")
+    draft.write_text("\n\n---\n\n".join(texts) + ((f"\n\n(画像{len(media)}枚)" if isinstance(media, list) else "\n\n(画像つき)") if media else "")
                      + (f"\n\n(投票: {' / '.join(poll['options'])})" if poll and not media else ""), encoding="utf-8")
     for i, t in enumerate(texts, 1):
         print(f"--- {i} ({xlen(t)}/280) ---\n{t}\n")
     if not live:
         print("下書き:", draft); return
     s = session()
-    mid = upload_media(s, media) if media else None
+    mids = [m for m in (upload_media(s, x) for x in (media if isinstance(media, list) else [media])) if m] if media else []
+    mid = mids or None
     last = None
     ids = []
     for t in texts:

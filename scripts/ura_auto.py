@@ -97,6 +97,81 @@ async def render_top(html: str, width: int = 1080, height: int = 1350) -> bytes:
     return png
 
 
+async def render_split(html: str, width: int = 1080, height: int = 1350, max_n: int = 4) -> list[bytes]:
+    """紙面の全部を X 用に4:5の画像で最大4枚に。文章の途中で切れないよう、表紙・各段(section・ひと言・奥付)の切れ目で分ける。
+    1枚に入らない段は、その段の中の行(li・p)の切れ目で分ける。余白は紙の色で埋める。"""
+    from playwright.async_api import async_playwright
+    from PIL import Image
+    import io
+    async with async_playwright() as p:
+        b = await p.chromium.launch()
+        pg = await b.new_page(viewport={"width": width, "height": height}, device_scale_factor=1)
+        await pg.set_content(html)
+        await pg.evaluate("document.fonts.ready")
+        await pg.wait_for_timeout(500)
+        # 切ってよい位置(上から): 表紙の下、各段の下、段の中の行の下
+        cuts = await pg.evaluate("""() => {
+          const ys = new Set();
+          const add = (el) => { const r = el.getBoundingClientRect(); ys.add(Math.round(r.bottom + window.scrollY)); };
+          document.querySelectorAll('header.cover, main > *, main section li, main section > p, main section > ul').forEach(add);
+          return [...ys].sort((a, b) => a - b);
+        }""")
+        total = await pg.evaluate("document.documentElement.scrollHeight")
+        bg = await pg.evaluate("getComputedStyle(document.body).backgroundColor")
+        full = Image.open(io.BytesIO(await pg.screenshot(full_page=True)))
+        await b.close()
+    m = re.match(r"rgba?\((\d+),\s*(\d+),\s*(\d+)", bg or "")
+    color = tuple(int(x) for x in m.groups()) if m else (244, 239, 223)
+    end_ = min(max(cuts) if cuts else total, total)
+    band = 64                                   # 2枚目からの上の帯(「つづき 2/3」)
+    spans, top = [], 0
+    while top < end_ - 40 and len(spans) < max_n:
+        room = height - (band if spans else 0)
+        ok = [c for c in cuts if top + 200 < c <= top + room]
+        bottom = max(ok) if ok else min(top + room, end_)
+        if len(spans) == max_n - 1:
+            bottom = min(top + room, end_)
+        spans.append((top, bottom))
+        top = bottom
+    from PIL import ImageDraw, ImageFont
+    try:
+        font = ImageFont.truetype("/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc", 30)
+    except Exception:  # noqa: BLE001
+        font = ImageFont.load_default()
+    out = []
+    for i, (t, bt) in enumerate(spans):
+        img = Image.new("RGB", (width, height), color)
+        y0 = 0
+        if i:
+            d_ = ImageDraw.Draw(img)
+            d_.rectangle([0, 0, width, band - 8], fill=(23, 25, 28))
+            d_.text((40, 12), f"ミカタ新聞 ・ つづき {i + 1}/{len(spans)}", font=font, fill=(255, 225, 0))
+            y0 = band
+        img.paste(full.crop((0, t, width, bt)), (0, y0))
+        buf = io.BytesIO()
+        img.save(buf, "PNG", optimize=True)
+        out.append(buf.getvalue())
+    return out
+
+
+def x_images(out: pathlib.Path, key: str, html: str, name: str, no_images: bool) -> list[dict]:
+    """紙面の全部を最大4枚に(X は1投稿に画像4枚まで)。"""
+    if no_images:
+        return []
+    try:
+        pngs = asyncio.run(render_split(html))
+    except Exception as e:  # noqa: BLE001
+        print("X 用の画像(全部)は作れませんでした:", e)
+        im = x_image(out, key, html, name, no_images)
+        return [im] if im else []
+    res = []
+    for i, png in enumerate(pngs):
+        f = f"{key}_x{i + 1}.json"
+        write_json(out / f, {"name": f"{i + 1}_{name}", "png": base64.b64encode(png).decode()})
+        res.append({"file": f, "name": f"{i + 1}_{name}"})
+    return res
+
+
 NETA_START = dt.date(2026, 10, 6)   # 「1枚1ネタ」の1日目(前の日の21:30に投票で出題 → 次の日の15:30に答え)
 
 
@@ -333,6 +408,7 @@ def main():
     xq: list = []          # 今日のX投稿: (時刻, 見出し, 本文, 画像)
     poll_today = None      # 21:30 の投票(選択肢)
     event_items: list = []  # 大会の準優・優勝戦の投稿(締切つき)
+    more_imgs: dict = {}    # 見出し → 画像の一覧(ミカタ新聞は全部を最大4枚)
     evening = None
     hayami: dict = {}      # 節の key → (早見表の画像, コース別の上位)
     d = None
@@ -481,15 +557,17 @@ def main():
                 try:
                     f_ = race_feature.make(nm, x["grade"] if x else "", rr, cards, sc, today)
                     key_f = f"race_{today:%Y%m%d}_{rr['jcd']:02d}{int(rr['rno']):02d}"
-                    img = x_image(out, key_f, f_["html"], "ミカタ新聞.png", a.no_images)
+                    ims = x_images(out, key_f, f_["html"], "ミカタ新聞.png", a.no_images)   # 新聞の全部を最大4枚に
+                    img = ims[0] if ims else None
+                    more_imgs[lbl] = ims
                     pages_f = save_pages(out, key_f, f_["html"], a.no_images)
                     write_json(out / f"{key_f}.json", {"key": key_f, "title": f_["title"], "grade": "新聞", "venue": rr["venue"], "jcd": rr["jcd"],
                                                        "hd": f"{today:%Y%m%d}", "html": f_["html"], "note": f_["note"],
                                                        "x": f"--- 投稿1({xlen_(body)}/280) {at} ---\n{body}\n\n出し方: {at}に自動で出ます(画像つき)",
-                                                       "picks": [], "images": [img] if img else [], "pages": pages_f,
+                                                       "picks": [], "images": ims, "pages": pages_f,
                                                        "pdf": f"{key_f}_pdf.json" if pages_f else None, "n": 6, "missing": [], "asof": today.isoformat()})
                     items.insert(0, {"key": key_f, "title": f_["title"], "grade": "新聞", "venue": rr["venue"], "jcd": rr["jcd"], "hd": f"{today:%Y%m%d}",
-                                     "score": sc, "stars": demand.stars(sc), "n": 6, "picks": [], "images": 1 if img else 0})
+                                     "score": sc, "stars": demand.stars(sc), "n": 6, "picks": [], "images": len(ims)})
                 except Exception as ex:  # noqa: BLE001
                     print("race feature failed:", ex)
                 xq.append((at, lbl, body, img))
@@ -541,7 +619,7 @@ def main():
         title = f"今日のX投稿 {today.month}/{today.day}({wk})"
         xs = "\n\n".join(f"--- 投稿{i}({xlen(b)}字) {tm} {lbl} ---\n{b}" for i, (tm, lbl, b, _im) in enumerate(xq, 1))
         xs += "\n\n出し方: 時間は目安。画像は下の「画像」から保存して、同じ番号の投稿に添付。記事のリンクは本文に入れず、自分の返信に付ける"
-        imgs = [im for _tm, _l, _b, im in xq if im]
+        imgs = [x for _tm, l_, _b, im in xq for x in (more_imgs.get(l_) or ([im] if im else []))]
         rows = "".join(f"<section><h3>{i}. {tm} {lbl}</h3><pre>{b}</pre><p>{'画像あり: ' + im['name'] if im else '文字だけ'}</p></section>"
                        for i, (tm, lbl, b, im) in enumerate(xq, 1))
         html_ = (f"<!doctype html><html lang='ja'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
@@ -551,6 +629,7 @@ def main():
                                          "html": html_, "note": "\n\n".join(b for _t, _l, b, _i in xq), "x": xs, "picks": [], "images": imgs,
                                          "queue": [{"time": tm, "label": lbl, "text": (b.split("\n\n選択肢: ")[0] if tm == "21:30" else b),
                                                     "image": im["file"] if im else None,
+                                                    **({"images": [x["file"] for x in more_imgs[lbl]]} if more_imgs.get(lbl) else {}),
                                                     **({"poll": poll_today} if tm == "21:30" and poll_today else {}),
                                                     **({"deadline": next(e["deadline"] for e in event_items if e["time"] == tm and e["label"] in lbl)}
                                                        if lbl.startswith("新聞:") else {})} for tm, lbl, b, im in xq],
