@@ -5,3 +5,5 @@ models/
 data/notify/
 out/
 data/racers/racers.csv
+
+reports/market/_raw_*.json

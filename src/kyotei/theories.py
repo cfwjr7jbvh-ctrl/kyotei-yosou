@@ -50,11 +50,19 @@ def _n(v, per=100):
     return f"{x:.1f}" if x < 10 else f"{round(x)}"
 
 
+def _pct(v):
+    """確率を「66%」(10%未満は小数1桁)。レースの結果は%、回数は出目などめったに無いことだけ。"""
+    if v is None or v != v:
+        return "-"
+    x = v * 100
+    return f"{x:.1f}%" if x < 10 else f"{round(x)}%"
+
+
 def _cnt(m, per=100):
-    """「100レースで23回(ふだん9.5回)」"""
+    """「23%(ふだん9.5%)」"""
     if not m:
         return ""
-    return f"{_n(m['in1'], per)}回(ふだん{_n(m['in1_ref'], per)}回)"
+    return f"{_pct(m['in1'])}(ふだん{_pct(m['in1_ref'])})"
 
 
 def _badge(v, occult=False):
@@ -168,18 +176,18 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
     rt = str(r0.get("race_type") or "")
     if "優勝戦" in rt and "準" not in rt:
         m, v = _m("final", 1)
-        notes.append(_note("final", "優勝戦", [1], f"優勝戦の1号艇は100レースで{_n(m['in1']) if m else '-'}回勝つ(予選は{_n(m['in1_ref']) if m else '-'}回)。大一番はスタートをむしろ攻める(STはふだんより早く、Fも多い)", v, +1))
+        notes.append(_note("final", "優勝戦", [1], f"優勝戦の1号艇の1着は{_pct(m['in1']) if m else '-'}(予選は{_pct(m['in1_ref']) if m else '-'})。大一番はスタートをむしろ攻める(STはふだんより早く、Fも多い)", v, +1))
     elif "準優" in rt:
         m, v = _m("final", 0)
-        notes.append(_note("final", "準優勝戦", [1], f"準優の1号艇は100レースで{_n(m['in1']) if m else '-'}回勝つ(予選は{_n(m['in1_ref']) if m else '-'}回)。1着・2着が優勝戦へ。『2着でいい走り』は数字には出ない", v, +1))
+        notes.append(_note("final", "準優勝戦", [1], f"準優の1号艇の1着は{_pct(m['in1']) if m else '-'}(予選は{_pct(m['in1_ref']) if m else '-'})。1着・2着が優勝戦へ。『2着でいい走り』は数字には出ない", v, +1))
     for kw, i in (("特別選抜", 0), ("ドリーム", 1)):
         if kw in rt:
             m, v = _m("kikaku", i)
             if m:
-                notes.append(_note("kikaku", f"企画レース({kw}戦)", [1], f"{kw}戦の1号艇は100レースで{_n(m['in1'])}回勝つ(全レースは{_n(m['in1_ref'])}回)。" + ("" if "追試中" in (v.get("known") or "") else "堅いことは、みんな知っている"), v, +1))
+                notes.append(_note("kikaku", f"企画レース({kw}戦)", [1], f"{kw}戦の1号艇の1着は{_pct(m['in1'])}(全レースは{_pct(m['in1_ref'])})。" + ("" if "追試中" in (v.get("known") or "") else "堅いことは、みんな知っている"), v, +1))
     if int(r0.get("fixed_entry") or 0) == 1:
         m, v = _m("fixed", 1)
-        notes.append(_note("fixed", "進入固定", [1], f"前づけができないので1号艇は助走を十分にとれる。力の差が同じくらいでも1号艇が{_cnt(m)}勝つ", v, +1))
+        notes.append(_note("fixed", "進入固定", [1], f"前づけができないので1号艇は助走を十分にとれる。力の差が同じくらいでも1号艇の1着は{_cnt(m)}", v, +1))
 
     # --- 番組の癖(場×レース番号)
     bg = _lab("bangumi")
@@ -188,7 +196,7 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
         for x in tbl:
             if x.get("venue") == VENUES.get(jcd) and int(x.get("rno") or 0) == rno:
                 notes.append(_note("bangumi", "番組の癖: " + ("インが堅い枠" if sign > 0 else "インが荒れる枠"), [1],
-                                   f"{VENUES.get(jcd)}{rno}Rは、1号艇が100レースで{_n(x['in1'])}回勝つ枠(全国の場×レース番号で{'上位' if sign > 0 else '下位'}8つ)。毎年ほぼ同じ顔ぶれ",
+                                   f"{VENUES.get(jcd)}{rno}Rは、1号艇の1着が{_pct(x['in1'])}の枠(全国の場×レース番号で{'上位' if sign > 0 else '下位'}8つ)。毎年ほぼ同じ顔ぶれ",
                                    _m("bangumi", ti)[1], sign))
 
     # --- カドの一撃
@@ -202,13 +210,13 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
                 exn = all(int(g(k, "course")) == k for k in range(1, 7) if k in r.index and g(k, "course") == g(k, "course"))
             if exn is not False:
                 notes.append(_note("slowdash", "カドの一撃", [4],
-                                   f"4号艇がカドに入れば、ふだんのSTが内の3人より{abs(gap):.2f}秒速い。この形だとカドの1着は100レースで{_cnt(m)}",
+                                   f"4号艇がカドに入れば、ふだんのSTが内の3人より{abs(gap):.2f}秒速い。この形だとカドの1着は{_cnt(m)}",
                                    v, -1, gen="4カドのまくりこそ競艇の華よ!"))
 
     # --- 1号艇: 隠れA2
     if str(g(1, "racer_class")) == "B1" and g(1, "rc_avgst") <= 0.15 and g(1, "nige_rate") >= 0.55:
         m, v = _m("a1in", 3)
-        notes.append(_note("a1in", "隠れA2の1号艇", [1], f"B1でも、スタートが速く1コースで勝ってきた人。この形の1号艇は100レースで{_cnt(m)}", v, +1))
+        notes.append(_note("a1in", "隠れA2の1号艇", [1], f"B1でも、スタートが速く1コースで勝ってきた人。この形の1号艇は{_cnt(m)}", v, +1))
 
     # --- 選手ごと
     acc = ctx.get("acc") or {}
@@ -222,22 +230,22 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
         l2 = _last2(q.get("series_str"))
         if l2 == ["1", "1"]:
             m, v = _m("hot", 0)
-            notes.append(_note("hot", "今節2連勝中", [lane], f"{who}は今節2連勝中。こういう選手は3着以内が100走で{_cnt(m)}", v, +1 if lane == 1 else 0))
+            notes.append(_note("hot", "今節2連勝中", [lane], f"{who}は今節2連勝中。こういう選手は3着以内が{_cnt(m)}", v, +1 if lane == 1 else 0))
         elif len(l2) == 2 and all(c in "56" for c in l2):
             m, v = _m("hot", 2)
-            notes.append(_note("hot", "2走続けて5・6着", [lane], f"{wl}は今節2走続けて5・6着。こういうときの次のレースは、3着以内が100走で{_cnt(m)}", v, -1 if lane == 1 else 0))
+            notes.append(_note("hot", "2走続けて5・6着", [lane], f"{wl}は今節2走続けて5・6着。こういうときの次のレースは、3着以内が{_cnt(m)}", v, -1 if lane == 1 else 0))
         fs = q.get("f_since")
         if fs == fs and fs is not None and fs <= 10:
             m, v = _m("flying", 0)
-            notes.append(_note("flying", "フライング直後", [lane], f"{wl}は最後のフライングから{int(fs)}走目。F直後の10走はスタートが控えめ。3着以内は100走で{_cnt(m)}", v, -1 if lane == 1 else 0))
+            notes.append(_note("flying", "フライング直後", [lane], f"{wl}は最後のフライングから{int(fs)}走目。F直後の10走はスタートが控えめ。3着以内は{_cnt(m)}", v, -1 if lane == 1 else 0))
         rd = q.get("rest_days")
         if rd == rd and rd is not None and rd >= 30:
             m, v = _m("rest", 1 if rd >= 90 else 0)
-            notes.append(_note("rest", "休み明け", [lane], f"{wl}は{int(rd)}日ぶりのレース。休み明けは3着以内が100走で{_cnt(m)}", v, -1 if lane == 1 else 0))
+            notes.append(_note("rest", "休み明け", [lane], f"{wl}は{int(rd)}日ぶりのレース。休み明けは3着以内が{_cnt(m)}", v, -1 if lane == 1 else 0))
         a = acc.get(int(q.get("racer_id") or 0))
         if a and a[1] <= 42 and a[0] >= 0.5:
             m, v = _m("penalty", 0)
-            notes.append(_note("penalty", "期末の事故率", [lane], f"{wl}は今期の事故率の目安が{a[0]:.2f}(0.70を超えるとB2級)。期末はスタートを控えめにしやすい。3着以内は100走で{_cnt(m)}",
+            notes.append(_note("penalty", "期末の事故率", [lane], f"{wl}は今期の事故率の目安が{a[0]:.2f}(0.70を超えるとB2級)。期末はスタートを控えめにしやすい。3着以内は{_cnt(m)}",
                                v, -1 if lane == 1 else 0))
         ma = q.get("motor_age")
         if lane == 1 and ma == ma and ma is not None and ma <= 14:
@@ -247,12 +255,12 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
             wd = q.get("w_dev")
             if wd == wd and wd is not None and abs(wd) >= 1.5:
                 m, v = _m("weight", 1 if wd > 0 else 0)
-                notes.append(_note("weight", "当日の体重", [lane], f"{wl}は当日の体重がふだんより{abs(wd):.1f}kg{'重い' if wd > 0 else '軽い'}。3着以内は100走で{_cnt(m)}", v,
+                notes.append(_note("weight", "当日の体重", [lane], f"{wl}は当日の体重がふだんより{abs(wd):.1f}kg{'重い' if wd > 0 else '軽い'}。3着以内は{_cnt(m)}", v,
                                    (-1 if wd > 0 else +1) if lane == 1 else 0))
             tl, cs = q.get("tilt"), q.get("course")
             if tl == tl and cs == cs and tl is not None and cs is not None and cs >= 4 and tl >= 1.5:
                 m, v = _m("tilt", 0)
-                notes.append(_note("tilt", "外でチルトを跳ねた", [lane], f"{who}は{int(cs)}コースでチルト{tl:+.1f}度。伸び勝負の合図。3着以内は100走で{_cnt(m)}", v, -1))
+                notes.append(_note("tilt", "外でチルトを跳ねた", [lane], f"{who}は{int(cs)}コースでチルト{tl:+.1f}度。伸び勝負の合図。3着以内は{_cnt(m)}", v, -1))
         # オカルト枠: 名前・ラッキー7
         for ch, tag in (("勝", "勝"), ("龍", "龍"), ("竜", "龍"), ("翔", "翔")):
             if ch in nm:
@@ -270,12 +278,12 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
         c6, c5 = g(6, "course"), g(5, "course")
         if (c6 == c6 and c6 <= 3) or (c5 == c5 and c5 <= 2):
             m, v = _m("formation", 0)
-            notes.append(_note("formation", "展示で外の艇が深く内へ", [1], f"スロー勢が増えて1コースは深くなりやすい。このとき1コースの艇の1着は100レースで{_cnt(m)}", v, -1))
+            notes.append(_note("formation", "展示で外の艇が深く内へ", [1], f"スロー勢が増えて1コースは深くなりやすい。このとき1コースの艇の1着は{_cnt(m)}", v, -1))
     elif "front_rate" in r.columns:
         fr = [k for k in r.index if k >= 4 and g(k, "front_rate") == g(k, "front_rate") and g(k, "front_rate") >= 0.3]
         if fr:
             m, v = _m("formation", 0)
-            notes.append(_note("formation", "前づけの常連がいる", fr, f"{'・'.join(f'{k}号艇' for k in fr)}は前づけの多い選手。外の艇が深く入ると、1コースの艇の1着は100レースで{_cnt(m)}", v, -1))
+            notes.append(_note("formation", "前づけの常連がいる", fr, f"{'・'.join(f'{k}号艇' for k in fr)}は前づけの多い選手。外の艇が深く入ると、1コースの艇の1着は{_cnt(m)}", v, -1))
 
     # --- 風(予報 or 直前)
     wind = None
@@ -294,10 +302,10 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
         src = "天気予報"
     if wind is not None and wind >= 5:
         m, v = _m("wind", 1 if wind >= 7 else 0)
-        notes.append(_note("wind", f"風{wind:.0f}m", [1], f"{src}の風が{wind:.0f}m。風5m以上で1号艇の1着は100レースで{_cnt(m)}", v, -1))
+        notes.append(_note("wind", f"風{wind:.0f}m", [1], f"{src}の風が{wind:.0f}m。風5m以上で1号艇の1着は{_cnt(m)}", v, -1))
     if hum is not None and hum >= 75:
         m, v = _m("humid", 0)
-        notes.append(_note("humid", f"湿度{hum:.0f}%", [1], f"湿った空気の日は1号艇が強い。100レースで{_cnt(m)}", v, +1))
+        notes.append(_note("humid", f"湿度{hum:.0f}%", [1], f"湿った空気の日は1号艇が強い。1号艇の1着は{_cnt(m)}", v, +1))
 
     # --- 場のらしい出目(情報)
     dm = _lab("deme").get("numbers", {}).get("venues", [])
@@ -311,7 +319,7 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
         rk = _rokuyo(day)
         if rk == "赤口":
             m, v = _m("rokuyo", 0)
-            notes.append(_note("rokuyo", "今日は赤口", [1], f"六曜で1号艇がいちばん勝っているのは赤口({_n(m['in1']) if m else '-'}回)。理由は不明、追試中", None, +1, occult=True,
+            notes.append(_note("rokuyo", "今日は赤口", [1], f"六曜で1号艇がいちばん勝っているのは赤口({_pct(m['in1']) if m else '-'})。理由は不明、追試中", None, +1, occult=True,
                                gen="ほらみろ、暦は生きてるんだよ!"))
         elif rk in ("大安", "仏滅"):
             notes.append(_note("rokuyo", f"今日は{rk}", [], f"{rk}でも成績はほかの日とほぼ同じ。でも気分は大事", None, 0, occult=True))

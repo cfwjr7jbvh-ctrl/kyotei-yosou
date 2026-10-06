@@ -343,9 +343,9 @@ def grp(c) -> str:
 
 
 def pts(x) -> str:
-    """読み手向け: 割合の差を「100走あたり◯回多い/少ない」で。"""
+    """読み手向け: 割合の差を「◯ポイント高い/低い」で(3着以内の確率の差)。"""
     n = round(abs(x) * 100)
-    return "ほぼ同じ" if n == 0 else f"100走あたり{n}回{'多い' if x > 0 else '少ない'}"
+    return "ほぼ同じ" if n == 0 else f"{n}ポイント{'高い' if x > 0 else '低い'}"
 
 
 TAG_RULES = [
@@ -403,7 +403,7 @@ TAG_RULES = [
     {"tag": "展示は控えめ、本番で化ける", "cat": "exlate",
      "rule": "展示タイムがレース内4位以下の走でも、3着以内の上積みが本人の普段とほぼ変わらない(ふだんとの差が全選手の平均より100走あたり6回以上良い、30走以上)",
      "test": lambda c: c["exlate"]["n"] >= 30 and c["exlate"]["res"] is not None and c["exlate"]["res"] - (c["exlate"]["pop"] or 0) >= 0.06,
-     "why": lambda c: f"展示タイムが4位以下でも、本番であまり崩れない(3着以内が100走で{abs(c['exlate']['res'] * 100):.0f}回減るだけ。ふつうの選手は{abs((c['exlate']['pop'] or 0) * 100):.0f}回減る)",
+     "why": lambda c: f"展示タイムが4位以下でも、本番であまり崩れない(3着以内が{abs(c['exlate']['res'] * 100):.0f}ポイント下がるだけ。ふつうの選手は{abs((c['exlate']['pop'] or 0) * 100):.0f}ポイント下がる)",
      "score": lambda c: 60 + 300 * (c["exlate"]["res"] - (c["exlate"]["pop"] or 0))},
     {"tag": "上り調子", "cat": "growth",
      "rule": "直近90日の勝率(1着10点〜6着1点の平均)が、その前の1年より0.8点以上高い(直近15走以上・前の1年30走以上)。26歳以下は「急成長中」",
@@ -414,7 +414,7 @@ TAG_RULES = [
     {"tag": "舟券に絡む安定感", "cat": "stable",
      "rule": "3着以内の上積み(コース平均との差)が同じ級別の中で上位5%以内(100走以上)",
      "test": lambda c: c["n"] >= MIN_STARTS and (c["p"]["res3"]["grp"] or 0) >= 95,
-     "why": lambda c: f"3着以内に100走で{round(c['top3'] * 100)}回入る(同じコースのふつうの選手より{pts(c['res3'])})",
+     "why": lambda c: f"3着以内が{round(c['top3'] * 100)}%(同じコースのふつうの選手より{pts(c['res3'])})",
      "score": lambda c: c["p"]["res3"]["grp"]},
 ]
 VENUE_RULE = "(使っていない)"

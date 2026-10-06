@@ -427,6 +427,24 @@ def news_posts(live: list[dict], races: list[dict], day: dt.date | None = None, 
     return out
 
 
+def theory_hits(today: dt.date, tid: str) -> list[dict]:
+    """今日の理論ぶつけで、この説(検証ラボの id)が当てはまったレース。X の最後の「今日なら◯◯R」に使う。優勝戦→締切順。"""
+    out: list = []
+    try:
+        from kyotei.publish import read_json as _rjh
+        dph = ROOT / f"docs/data/days/{today.isoformat()}.json"
+        if dph.exists():
+            for r_ in _rjh(dph).get("races", []):
+                n_ = next((n for n in (r_.get("theories") or []) if n.get("id") == tid), None)
+                if n_:
+                    out.append({"venue": r_.get("venue"), "rno": r_.get("rno"), "lanes": n_.get("lanes"), "deadline": r_.get("deadline"),
+                                "final": "優勝戦" in str(r_.get("race_type") or "")})
+            out.sort(key=lambda h: (not h["final"], str(h.get("deadline") or "")))
+    except Exception as ex:  # noqa: BLE001
+        print("theory hits failed:", tid, ex)
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
@@ -555,7 +573,8 @@ def main():
             n_slot = sum(1 for k in range((today - dt.date(2026, 10, 6)).days + 1)
                          if (dt.date(2026, 10, 6) + dt.timedelta(days=k)).weekday() in (1, 4))
             t = order[max(n_slot - 1, 0) % len(order)]
-            xq.append(("20:00", f"検証ラボ: {t['title']}", seo.with_tags(x_first(labmod.x_text(t)), "#競艇 #ボートレース"),
+            hits = theory_hits(today, t["id"])   # 投稿の最後の「今日なら◯◯R」に
+            xq.append(("20:00", f"検証ラボ: {t['title']}", seo.with_tags(x_first(labmod.x_text(t, hits)), "#競艇 #ボートレース"),
                        x_image(out, f"lab_{t['id']}", labmod.page(t, t.get("asof", "")), "03_検証ラボ.png", a.no_images)))
         elif evening:
             import x_post
@@ -571,7 +590,8 @@ def main():
             k = (today - NETA_START).days
             if k >= 0:
                 r_ = rows[k % len(rows)]
-                xq.append(("15:30", "1枚1ネタ", seo.with_tags(labmod.neta_text(r_, from_poll=polled_yesterday(today)), "#競艇 #ボートレース"), neta_image(out, r_, a.no_images)))
+                xq.append(("15:30", "1枚1ネタ", seo.with_tags(labmod.neta_text(r_, from_poll=polled_yesterday(today), hits=theory_hits(today, r_["lab"])), "#競艇 #ボートレース"),
+                           neta_image(out, r_, a.no_images)))
             r2 = rows[(k + 1) % len(rows)]
             pq = labmod.neta_poll(r2)
             xq.append(("21:30", "投票(答えは明日15:30)", seo.with_tags(pq["text"], "#競艇 #ボートレース") + "\n\n選択肢: " + " / ".join(pq["options"]), None))

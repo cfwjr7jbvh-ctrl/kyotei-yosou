@@ -143,12 +143,14 @@ def build(day: dt.date, data: dict) -> dict | None:
     # X
     if conf:
         r = conf[0]; sm = r["th_sum"]
-        body = (f"今日の悩ましいレース|{race_name(r)}\n\nインに有利: {'・'.join(sm['plus'])}\nインに不利: {'・'.join(sm['minus'])}\n\n"
-                f"ゲンさん「どっちの理論に乗るかで、レースの見え方が変わるんだよ」\n\nあなたはどっちに乗る?\n#今日の理論ぶつけ #ボートレース{r['venue']} #競艇")
+        # 市場の作りに合わせる(2026-10-06): 1行目は 場名+R+締切、1行1情報、ゲンさんのセリフは画像の中
+        dl = f" 締切{r['deadline']}" if r.get("deadline") else ""
+        body = (f"今日の悩ましいレース|{race_short(r)}{dl}\n\nインに有利: {'・'.join(sm['plus'])}\nインに不利: {'・'.join(sm['minus'])}\n\n"
+                f"あなたはどっちに乗る?\n#今日の理論ぶつけ #ボートレース{r['venue']} #競艇")
     else:
         body = f"【今日の理論ぶつけ】{day.month}/{day.day}\n\n今日の出走表{len(races)}レースに、検証ラボの理論をぶつけました。当てはまった理論は{n_notes}。\n\nゲンさん「理論にすがりたい日もあるさ」"
     if xlen(body) > 280 and conf:
-        body = (f"今日の悩ましいレース|{race_name(r)}\n\nインに有利: {sm['plus'][0]}\nインに不利: {sm['minus'][0]}\n\nあなたはどっちに乗る?\n#今日の理論ぶつけ #ボートレース{r['venue']} #競艇")
+        body = (f"今日の悩ましいレース|{race_short(r)}{dl}\n\nインに有利: {sm['plus'][0]}\nインに不利: {sm['minus'][0]}\n\nあなたはどっちに乗る?\n#今日の理論ぶつけ #ボートレース{r['venue']} #競艇")
     if xlen(body) > 280:
         body = f"【今日の理論ぶつけ】{day.month}/{day.day}\n\n悩ましいレース{len(conf)}つ。インに有利な理論と不利な理論がぶつかっています。\n\nあなたはどっちに乗る?"
     return {"title": title, "html": page, "note": "\n".join(lines), "x": f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 記事の上部(悩ましいレースのところ)\n出し方: 記事のリンクは本文に入れず、この投稿への自分の返信に付ける", "n_conf": len(conf), "n_races": len(races)}
