@@ -19,6 +19,7 @@ import pandas as pd
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+from kyotei.racer_card import full_name as rc_full_name  # noqa: E402  出走表の名前は4字で切れるので全部の字に
 sys.path.insert(0, str(ROOT / "scripts"))
 from fetch_history import download_text  # noqa: E402
 from kyotei import features  # noqa: E402
@@ -99,7 +100,7 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
     boats = []
     for _, b in rdf.iterrows():
         boats.append({k: (None if pd.isna(v) else v) for k, v in {
-            "lane": int(b["lane"]), "name": b.get("racer_name"), "class": b.get("racer_class"),
+            "lane": int(b["lane"]), "name": rc_full_name(b["racer_id"], b.get("racer_name")), "class": b.get("racer_class"),
             "racer_id": int(b["racer_id"]), "age": b.get("age"), "branch": b.get("branch"),
             "nat_win_rate": b.get("nat_win_rate"), "loc_win_rate": b.get("loc_win_rate"),
             "motor_2rate": b.get("motor_2rate"), "exhibit_time": b.get("exhibit_time"),

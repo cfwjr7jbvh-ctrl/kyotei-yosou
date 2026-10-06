@@ -215,7 +215,8 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
     twice = ctx.get("twice") or {}
     for lane in r.index:
         q = r.loc[lane]
-        nm = str(q.get("racer_name") or "").replace("　", "")
+        from .racer_card import full_name
+        nm = str(full_name(q.get("racer_id"), q.get("racer_name")) or "").replace("　", "")
         who = f"{lane}号艇{(' ' + nm) if nm else ''}"
         wl = f"{lane}号艇"   # 不利な方向の話は名前を出さない(選手をけなす書き方を避ける)
         l2 = _last2(q.get("series_str"))

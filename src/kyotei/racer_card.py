@@ -16,6 +16,9 @@
 from __future__ import annotations
 
 import numpy as np
+import pathlib
+from functools import lru_cache
+
 import pandas as pd
 
 POINTS = {1: 10, 2: 8, 3: 6, 4: 4, 5: 2, 6: 1}  # 勝率の点数
@@ -35,6 +38,34 @@ def st_fmt(v) -> str:
     return ("F" if v < 0 else "") + f"{x:.2f}"[1:]
 
 
+@lru_cache(maxsize=1)
+def full_names() -> dict:
+    """登番 → 名前(全部の字)。出走表の名前は4字で切れる(松田大志郎 → 松田大志)ので、レーサー期別成績(data/racers/fanYYMM.txt)から引く。
+    名前だけを使う(生年月日などは読まない)。"""
+    import re as _re
+    root = pathlib.Path(__file__).resolve().parents[2] / "data/racers"
+    out: dict = {}
+    for f in sorted(root.glob("fan*.txt")):          # 新しい期で上書き
+        try:
+            for ln in f.read_text(encoding="utf-8").splitlines():
+                b = ln.encode("cp932", errors="replace")
+                if len(b) < 20 or not b[:4].isdigit():
+                    continue
+                nm = _re.sub(r"\s+", "", b[4:20].decode("cp932", errors="replace").replace("　", ""))
+                if nm:
+                    out[int(b[:4])] = nm
+        except OSError:
+            continue
+    return out
+
+
+def full_name(racer_id, short: str | None = None) -> str | None:
+    try:
+        return full_names().get(int(racer_id)) or short
+    except (TypeError, ValueError):
+        return short
+
+
 def load_table(since: str | None = None) -> pd.DataFrame:
     """1行 = 1選手の1走。必要な列だけ。"""
     from .data import load_history
@@ -49,6 +80,9 @@ def load_table(since: str | None = None) -> pd.DataFrame:
     d = d[d["course"].between(1, 6)]
     d["course"] = d["course"].astype(int)
     d["name"] = d["racer_name"].astype(str).str.replace(r"[\s　]+", "", regex=True)
+    fn = full_names()
+    if fn:
+        d["name"] = d["racer_id"].map(fn).fillna(d["name"])
     return d
 
 
