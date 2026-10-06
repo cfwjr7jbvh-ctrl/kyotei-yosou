@@ -234,9 +234,27 @@ def series_name_tag(x: dict) -> tuple[str, str]:
     return nm, re.sub(r"[\s・･!！?？\-]", "", unicodedata.normalize("NFKC", nm))
 
 
+FIXED_SLOTS = ["8:20", "12:10", "15:30", "18:30", "20:00", "21:30"]
+
+
+def study_time(deadline: str, used: list[str]) -> str:
+    """ミカタ新聞を出す時間: 締切の直前ではなく、予想する人がスマホを見る時間帯(朝の通勤・昼休み・夕方・帰り道)に。
+    売上の9割は締切10分前から入る(展示を見てから買う)が、予想を組み立てるのはその前。
+    朝のレース(〜13時)→ 8:50、昼(〜17時)→ 11:40、夕方(〜19:30)→ 16:40、ナイター → 18:10。
+    締切の60分前より遅くならないように。同じ時間帯に2本なら25分ずらす(決まった投稿の時間とも重ねない)。"""
+    hh, mm = map(int, deadline.split(":"))
+    dl = hh * 60 + mm
+    base = 8 * 60 + 50 if dl < 13 * 60 else 11 * 60 + 40 if dl < 17 * 60 else 16 * 60 + 40 if dl < 19 * 60 + 30 else 18 * 60 + 10
+    t = min(base, dl - 60)
+    taken = {int(x.split(":")[0]) * 60 + int(x.split(":")[1]) for x in used + FIXED_SLOTS}
+    while any(abs(t - u) < 15 for u in taken) and t + 25 <= dl - 45:
+        t += 25
+    return f"{t // 60}:{t % 60:02d}"
+
+
 def news_posts(live: list[dict], races: list[dict], day: dt.date | None = None, top: int = 4) -> list[tuple]:
     """ミカタ新聞(これからのレースの1レース特集): 今日の全レースから、買う人が多そうなレース(3連単の売上の見込み)を選ぶ。
-    1場1レースずつ大きい順に、足りなければ2レース目も。締切の70分前に X へ(画像=新聞の上の部分)。
+    1場1レースずつ大きい順に、足りなければ2レース目も。予想する人が見る時間帯(study_time)に X へ(画像=新聞の上の部分)。
     → [(時刻, 見出し, 本文, 締切, 見込み, レース, 大会 or None, 大会名 or "")]"""
     from kyotei.xtext import xlen
     ser = {}
@@ -261,12 +279,13 @@ def news_posts(live: list[dict], races: list[dict], day: dt.date | None = None, 
                 continue
             picked.append((sc, rr, x))
             per[rr["jcd"]] = per.get(rr["jcd"], 0) + 1
-    out = []
+    out, used = [], []
+    picked.sort(key=lambda c: c[1]["deadline"])
     for sc, rr, x in picked:
         rt = str(rr.get("race_type") or "")
         nm, tag = series_name_tag(x) if x else ("", f"ボートレース{rr['venue']}")
-        hh, mm = map(int, rr["deadline"].split(":"))
-        at = (dt.datetime(2000, 1, 1, hh, mm) - dt.timedelta(minutes=70)).strftime("%-H:%M")
+        at = study_time(rr["deadline"], used)
+        used.append(at)
         sm = rr.get("th_sum") or {}
         notes = [n for n in (rr.get("theories") or []) if n.get("kind") != "occult"]
         head = f"【ミカタ新聞】{nm + ' ' if nm else ''}{rr['venue']}{rr['rno']}R {rt}({rr['deadline']}締切)"
@@ -438,7 +457,7 @@ def main():
             poll_today = pq
     except Exception as ex:  # noqa: BLE001
         print("x neta failed:", ex)
-    # ミカタ新聞: これからのレースのうち、買う人が多そうなレース(全場から)。締切の70分前に、1レース特集の上の部分を画像にして X へ
+    # ミカタ新聞: これからのレースのうち、買う人が多そうなレース(全場から)。予想する人が見る時間帯に、1レース特集の上の部分を画像にして X へ
     try:
         from kyotei.publish import read_json as _rj2
         dp2 = ROOT / f"docs/data/days/{today.isoformat()}.json"
