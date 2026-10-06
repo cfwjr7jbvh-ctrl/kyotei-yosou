@@ -94,6 +94,69 @@ async def render_top(html: str, width: int = 1080, height: int = 1350) -> bytes:
     return png
 
 
+NETA_START = dt.date(2026, 10, 7)   # 「1枚1ネタ」の1日目(前の日の21:30に投票で出題 → 次の日の15:30に答え)
+
+
+def polled_yesterday(today: dt.date) -> bool:
+    """前の日の21:30の投票を、実際に出したか(reports/x_drafts/posted.json)。出していなければ「昨日の投票の答え」と書かない。"""
+    p = ROOT / "reports/x_drafts/posted.json"
+    try:
+        return json.loads(p.read_text(encoding="utf-8")).get("poll") == (today - dt.timedelta(days=1)).isoformat()
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def neta_card_html(r: dict) -> str:
+    from kyotei.card_render import gull_svg, LANE_BG
+    import html as _h
+    e_ = _h.escape
+    F = "'Noto Sans CJK JP','Zen Kaku Gothic New',sans-serif"
+    col = {"多い": "#c8141c", "少ない": "#1f6fd1", "ほぼ同じ": "#6b7680"}[r["answer"]]
+    v = {"多い": "ふだんより多い", "少ない": "ふだんより少ない", "ほぼ同じ": "ふだんとほぼ同じ"}[r["answer"]]
+    bars = ""
+    sub = r["line"].split("のは")[0] + "回数" if r.get("a") is not None and "のは" in r["line"] else r["line"]
+    note = ""
+    if r["answer"] == "ほぼ同じ" and r.get("a") is not None and abs(r["a"] - r["b"]) >= 0.5:
+        note = '<div class="nt">この差は、たまたまでも出るくらいの幅です</div>'
+    if r.get("a") is not None and r.get("b") is not None:
+        mx = max(r["a"], r["b"], 1) * 1.08
+        fmt = lambda v: f"{v:.1f}".rstrip("0").rstrip(".") if v != int(v) else f"{int(v)}"  # noqa: E731
+        bars = ('<div class="bars">'
+                f'<div class="br"><b>この条件</b><div class="tr"><div class="fl" style="width:{r["a"] / mx * 100:.1f}%;background:{col}"></div></div><em>{fmt(r["a"])}回</em></div>'
+                f'<div class="br"><b>{e_(r.get("refl") or "ふだん")}</b><div class="tr"><div class="fl" style="width:{r["b"] / mx * 100:.1f}%;background:#8a949c"></div></div><em>{fmt(r["b"])}回</em></div></div>')
+    lanes = "".join(f'<i style="background:{c}"></i>' for c in LANE_BG)
+    return f"""<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>
+html,body{{margin:0}} .c{{width:1080px;height:1350px;background:#f4efdf;font-family:{F};color:#14212c;position:relative;overflow:hidden}}
+.top{{background:#17191c;color:#fff;padding:40px 60px 34px;position:relative}} .top small{{font:900 30px {F};color:#ffe100;letter-spacing:.06em}}
+.top p{{margin:12px 0 0;font:700 28px/1.4 {F};color:#c9ced2}}
+.lb{{position:absolute;left:0;right:0;bottom:-16px;height:16px;display:flex;gap:4px;padding:4px 0;background:#f4efdf}} .lb i{{flex:1}}
+.q{{margin:90px 60px 0;font:900 64px/1.35 {F}}} .q span{{display:block;font:700 30px {F};color:#56636e;margin-bottom:14px}}
+.v{{margin:50px 60px 0;background:{col};color:#fff;padding:26px 36px;font:900 72px/1.1 {F};display:inline-block}}
+.n{{margin:46px 60px 0;font:700 38px/1.5 {F}}}
+.bars{{margin:60px 60px 0}} .br{{display:flex;align-items:center;gap:20px;margin-bottom:26px;font:900 34px {F}}}
+.br b{{width:230px;font:700 30px/1.25 {F};color:#56636e}} .br .tr{{flex:1;height:70px;background:#e3dcc6;position:relative}}
+.br .fl{{height:100%}} .br em{{font-style:normal;width:130px;text-align:right}}
+.nt{{margin:10px 60px 0;font:700 30px/1.4 {F};color:#56636e}}
+.ft{{position:absolute;left:60px;right:60px;bottom:44px;display:flex;align-items:center;gap:18px;font:900 30px/1.3 {F}}}
+.ft small{{display:block;font:700 22px {F};color:#56636e}} .ft .at{{margin-left:auto;color:#c8141c;font:900 34px {F}}}
+</style></head><body><div class="c"><div class="top"><small>ミカタ検証ラボ ・ 1枚1ネタ</small><p>{e_(r['title'])}</p><div class="lb">{lanes}</div></div>
+<div class="q"><span>この条件だと、どうなる?</span>「{e_(r['name'])}」</div><div class="v">{e_(v)}</div><div class="n">{e_(sub)}</div>{bars}{note}
+<div class="ft">{gull_svg(80, bg="#ffffff", cls="f")}<div>17万レースで数えた<small>公式の成績データ(2023年10月〜)を独自に集計</small></div><div class="at">@mikata_kyotei</div></div></div></body></html>"""
+
+
+def neta_image(out: pathlib.Path, r: dict, no_images: bool) -> dict | None:
+    if no_images:
+        return None
+    try:
+        png = asyncio.run(render_top(neta_card_html(r), 1080, 1350))
+    except Exception as e:  # noqa: BLE001
+        print("1枚1ネタの画像は作れませんでした:", e)
+        return None
+    key = "neta_" + r["id"].replace(":", "_")
+    write_json(out / f"{key}_x.json", {"name": "02_1枚1ネタ.png", "png": base64.b64encode(png).decode()})
+    return {"file": f"{key}_x.json", "name": "02_1枚1ネタ.png"}
+
+
 def x_first(xtext: str) -> str:
     """X の投稿案(--- 投稿1(…) --- の形)から、1本目の本文だけ。"""
     m = re.search(r"--- 投稿1[^\n]*---\n([\s\S]*?)(?=\n--- 投稿|\n(?:画像|出し方):|\Z)", xtext)
@@ -163,6 +226,43 @@ def save_pages(out: pathlib.Path, key: str, html: str, no_images: bool) -> list[
     return files
 
 
+def event_posts(live: list[dict], races: list[dict]) -> list[tuple[str, str, str, str]]:
+    """大会の準優・優勝戦: 締切の70分前に、そのレースの理論ぶつけ(大会のタグ1つ+#今日の理論ぶつけ)。(時刻, 見出し, 本文, 締切)"""
+    from kyotei.xtext import xlen
+    out, seen = [], set()
+    for x in live:
+        if x["jcd"] in seen:   # 同じ節が2つの日付で載っていることがある
+            continue
+        seen.add(x["jcd"])
+        nm = short_title(x.get("title") or x.get("title_page", ""), rc.VENUES.get(x["jcd"], ""), x["grade"]).split(" ", 1)[-1]
+        tag = re.sub(r"[\s・･!！?？\-]", "", unicodedata.normalize("NFKC", nm))
+        for rr in races:
+            rt = str(rr.get("race_type") or "")
+            if rr.get("jcd") != x["jcd"] or not any(w in rt for w in ("準優", "優勝戦", "ドリーム")) or not rr.get("deadline"):
+                continue
+            hh, mm = map(int, rr["deadline"].split(":"))
+            at = (dt.datetime(2000, 1, 1, hh, mm) - dt.timedelta(minutes=70)).strftime("%-H:%M")
+            sm = rr.get("th_sum") or {}
+            notes = [n for n in (rr.get("theories") or []) if n.get("kind") != "occult"]
+            head = f"【{nm}】{rt} {rr['venue']}{rr['rno']}R({rr['deadline']}締切)"
+            foot = f"#{tag} #今日の理論ぶつけ"
+            body = None
+            for k in (3, 2, 1):
+                if sm.get("conflict"):
+                    mid = f"インに有利: {'・'.join(sm['plus'][:k])}\nインに不利: {'・'.join(sm['minus'][:k])}\n\nあなたはどっちに乗る?"
+                elif notes:
+                    mid = "当てはまる理論: " + "・".join(n["title"] for n in notes[:k + 1]) + "\n\nどの理論に乗る?"
+                else:
+                    break
+                b = f"{head}\n\n{mid}\n{foot}"
+                if xlen(b) <= 280:
+                    body = b
+                    break
+            if body:
+                out.append((at, f"大会: {rr['venue']}{rr['rno']}R {rt}", body, rr["deadline"]))
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", required=True)
@@ -179,6 +279,8 @@ def main():
     series = [s for s in series_in_window(today, a.days_before) if not a.only or s["key"] == a.only]
     items = []
     xq: list = []          # 今日のX投稿: (時刻, 見出し, 本文, 画像)
+    poll_today = None      # 21:30 の投票(選択肢)
+    event_items: list = []  # 大会の準優・優勝戦の投稿(締切つき)
     evening = None
     if series:
         d = rc.load_table()
@@ -291,6 +393,33 @@ def main():
                        evening["image"]))
     except Exception as ex:  # noqa: BLE001
         print("x evening failed:", ex)
+    # 15:30 1枚1ネタ(前の日の投票の答え)と 21:30 投票(次の日の1枚1ネタを先に問題に)
+    try:
+        rows = labmod.neta_items(labs)
+        if rows:
+            k = (today - NETA_START).days
+            if k >= 0:
+                r_ = rows[k % len(rows)]
+                xq.append(("15:30", "1枚1ネタ", labmod.neta_text(r_, from_poll=polled_yesterday(today)), neta_image(out, r_, a.no_images)))
+            r2 = rows[(k + 1) % len(rows)]
+            pq = labmod.neta_poll(r2)
+            xq.append(("21:30", "投票(答えは明日15:30)", pq["text"] + "\n\n選択肢: " + " / ".join(pq["options"]), None))
+            poll_today = pq
+    except Exception as ex:  # noqa: BLE001
+        print("x neta failed:", ex)
+    # 大会のドリーム戦・準優・優勝戦: 締切の70分前に、そのレースの理論ぶつけ(大会のタグ1つ+#今日の理論ぶつけ)
+    try:
+        from kyotei.publish import read_json as _rj2
+        dp2 = ROOT / f"docs/data/days/{today.isoformat()}.json"
+        live = [x for x in series_in_window(today, 0) if dt.datetime.strptime(x["hd"], "%Y%m%d").date() <= today]
+        if dp2.exists() and live:
+            races = _rj2(dp2).get("races", [])
+            for at, lbl, body, dl in event_posts(live, races):
+                xq.append((at, lbl, body, None))
+                event_items.append({"time": at, "deadline": dl, "label": lbl[4:]})
+    except Exception as ex:  # noqa: BLE001
+        print("x event failed:", ex)
+    xq.sort(key=lambda q: tuple(int(v) for v in q[0].split(":")))
     # 「今日のX投稿」: その日の投稿文と画像を1か所に(コピーと画像の保存だけで出せる)
     if xq:
         from kyotei.xtext import xlen
@@ -307,7 +436,11 @@ def main():
                  f"</head><body><h2>{title}</h2>{rows}</body></html>")
         write_json(out / f"{key}.json", {"key": key, "title": title, "grade": "X", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"),
                                          "html": html_, "note": "\n\n".join(b for _t, _l, b, _i in xq), "x": xs, "picks": [], "images": imgs,
-                                         "queue": [{"time": tm, "label": lbl, "text": b, "image": im["file"] if im else None} for tm, lbl, b, im in xq],
+                                         "queue": [{"time": tm, "label": lbl, "text": (b.split("\n\n選択肢: ")[0] if tm == "21:30" else b),
+                                                    "image": im["file"] if im else None,
+                                                    **({"poll": poll_today} if tm == "21:30" and poll_today else {}),
+                                                    **({"deadline": next(e["deadline"] for e in event_items if e["time"] == tm and e["label"] in lbl)}
+                                                       if lbl.startswith("大会:") else {})} for tm, lbl, b, im in xq],
                                          "n": 0, "missing": [], "pages": [], "pdf": None, "asof": today.isoformat()})
         items.insert(0, {"key": key, "title": title, "grade": "X", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"), "n": 0, "picks": [], "images": len(imgs)})
         print("x queue:", [(tm, lbl) for tm, lbl, _b, _i in xq])

@@ -3,6 +3,9 @@
 python scripts/x_post.py theory    # 8:20 今日の理論ぶつけ(画像つき。記事タブの「今日のX投稿」から)
 python scripts/x_post.py morning   # 12:10 今日の荒れそうなレース(文字だけ)
 python scripts/x_post.py evening   # 20:00 火・金は検証ラボ、ほかの日は次のグレードレースの注目選手(画像つき)
+python scripts/x_post.py neta      # 15:30 1枚1ネタ(前の日の投票の答え。画像つき)
+python scripts/x_post.py poll      # 21:30 投票(次の日の1枚1ネタを先に問題に。24時間)
+python scripts/x_post.py event     # 大会の準優・優勝戦: 締切70分前の投稿のうち、時間が来ていてまだ出していないもの(15分ごとに見る)
   ※ theory / morning / evening は、記事タブの「今日のX投稿」(cards ブランチ ura/xpost_YYYYMMDD.json)と同じ文章・画像を出す。
     そこに無いときだけ、従来どおりここで作る
 python scripts/x_post.py thread --key 04_20261013   # 大会前の3投稿のスレッド(最後だけ note のリンク。NOTE_URL を渡す)
@@ -187,17 +190,42 @@ def thread_texts(key: str, note_url: str | None) -> list[str]:
 
 
 # ---------------------------------------------------------------- X API
-def queue_item(day: str, slot: str) -> tuple[str, bytes | None] | None:
-    """記事タブの「今日のX投稿」から、その時間帯の投稿(本文, 画像)を取る。"""
+SLOTS = {"theory": "8:20", "morning": "12:10", "neta": "15:30", "evening": "20:00", "poll": "21:30"}
+
+
+def queue(day: str) -> list[dict]:
     q = load_enc("cards", f"ura/xpost_{day.replace('-', '')}.json")
-    if not q:
-        return None
-    want = {"theory": "8:20", "morning": "12:10", "evening": "20:00"}[slot]
-    for it in q.get("queue", []):
-        if it.get("time") == want:
+    return (q or {}).get("queue", [])
+
+
+def queue_item(day: str, slot: str) -> tuple[str, bytes | None, dict | None] | None:
+    """記事タブの「今日のX投稿」から、その時間帯の投稿(本文, 画像, 投票)を取る。"""
+    want = SLOTS[slot]
+    for it in queue(day):
+        if it.get("time") == want and not str(it.get("label", "")).startswith("大会:"):
             img = load_enc("cards", f"ura/{it['image']}") if it.get("image") else None
-            return it["text"], (base64.b64decode(img["png"]) if img else None)
+            return it["text"], (base64.b64decode(img["png"]) if img else None), it.get("poll")
     return None
+
+
+def hm(s: str) -> int:
+    h, m = map(int, s.split(":"))
+    return h * 60 + m
+
+
+def event_due(day: str, now: dt.datetime, posted: dict) -> list[dict]:
+    """大会の投稿で、出す時間を過ぎていて、締切の10分前より前で、まだ出していないもの。"""
+    t = now.hour * 60 + now.minute
+    out = []
+    for it in queue(day):
+        if not str(it.get("label", "")).startswith("大会:") or not it.get("deadline"):
+            continue
+        tag = f"event:{it['label']}"
+        if posted.get(tag) == day:
+            continue
+        if hm(it["time"]) <= t < hm(it["deadline"]) - 10:
+            out.append({**it, "tag": tag})
+    return out
 
 
 def creds() -> dict | None:
@@ -226,10 +254,12 @@ def upload_media(s, png: bytes) -> str:
     return mid
 
 
-def post(s, text: str, media_id: str | None = None, reply_to: str | None = None) -> str:
+def post(s, text: str, media_id: str | None = None, reply_to: str | None = None, poll: dict | None = None) -> str:
     body: dict = {"text": text}
     if media_id:
         body["media"] = {"media_ids": [media_id]}
+    elif poll:   # 投票と画像は一緒にできない
+        body["poll"] = {"options": poll["options"][:4], "duration_minutes": int(poll.get("minutes", 1440))}
     if reply_to:
         body["reply"] = {"in_reply_to_tweet_id": reply_to}
     r = s.post(f"{API}/tweets", json=body)
@@ -241,7 +271,7 @@ def post(s, text: str, media_id: str | None = None, reply_to: str | None = None)
 # ---------------------------------------------------------------- 本体
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["theory", "morning", "evening", "thread", "test"])
+    ap.add_argument("what", choices=["theory", "morning", "neta", "evening", "poll", "event", "thread", "test"])
     ap.add_argument("--key", default=None)
     ap.add_argument("--note-url", default=os.environ.get("NOTE_URL") or None)
     ap.add_argument("--dry", action="store_true")
@@ -257,11 +287,21 @@ def main():
             print("鍵の確認:", r.status_code, (r.json().get("data") or {}).get("username") if r.ok else r.text[:300])
         return
     day = now.strftime("%Y-%m-%d")
-    texts, media = [], None
+    texts, media, poll = [], None, None
     tag = a.what
-    qi = queue_item(day, a.what) if a.what in ("theory", "morning", "evening") else None
+    if a.what == "event":
+        due = event_due(day, now, posted)
+        if not due:
+            print("いま出す大会の投稿はありません"); return
+        it = due[0]   # 1回に1本(同じ時間に重なったら次の15分で)
+        texts, tag = [it["text"]], it["tag"]
+    qi = queue_item(day, a.what) if a.what in SLOTS else None
     if qi:
-        texts, media = [qi[0]], qi[1]
+        texts, media, poll = [qi[0]], qi[1], qi[2]
+    elif a.what in ("neta", "poll"):
+        print("今日のこの時間の投稿がありません(記事タブの更新待ち)"); return
+    elif a.what == "event":
+        pass
     elif a.what == "theory":
         print("今日の理論ぶつけの投稿がまだありません(記事タブの更新待ち)"); return
     elif a.what == "morning":
@@ -293,7 +333,8 @@ def main():
         print("今日はもう出しています:", tag); return
     # 下書きを残す
     draft = DRAFTS / f"{day}_{a.what}.txt"
-    draft.write_text("\n\n---\n\n".join(texts) + ("\n\n(画像つき)" if media else ""), encoding="utf-8")
+    draft.write_text("\n\n---\n\n".join(texts) + ("\n\n(画像つき)" if media else "")
+                     + (f"\n\n(投票: {' / '.join(poll['options'])})" if poll and not media else ""), encoding="utf-8")
     for i, t in enumerate(texts, 1):
         print(f"--- {i} ({xlen(t)}/280) ---\n{t}\n")
     if not live:
@@ -303,7 +344,7 @@ def main():
     last = None
     ids = []
     for t in texts:
-        last = post(s, t, mid if not ids else None, last)
+        last = post(s, t, mid if not ids else None, last, poll if not ids else None)
         ids.append(last)
     posted[tag] = day if a.what != "thread" else {"day": day, "ids": ids}
     if a.what == "evening" and ":" in tag:
@@ -312,8 +353,8 @@ def main():
     print("投稿しました:", ids)
     try:   # 出した記事の履歴(reports/published.json)にも残す
         import publish_log
-        slot = {"theory": "8:20", "morning": "12:10", "evening": "20:00"}.get(a.what)
-        key = f"xpost_{day.replace('-', '')}" if qi else f"x:{tag}"
+        slot = SLOTS.get(a.what) or (texts and a.what == "event" and tag.split(":", 1)[1]) or None
+        key = f"xpost_{day.replace('-', '')}" if (qi or a.what == "event") else f"x:{tag}"
         publish_log.add(key, "X", f"https://x.com/i/web/status/{ids[0]}", now.date(), slot, via="自動投稿", text=texts[0])
     except SystemExit as ex:
         print(ex)

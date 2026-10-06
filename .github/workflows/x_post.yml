@@ -1,6 +1,7 @@
 name: X の投稿(下書き or 自動投稿)
 
-# 朝8:20 理論ぶつけ(画像つき)・昼12:10 荒れそうなレース・夜20:00 検証ラボ(火・金)か注目選手カード。大会前: 3投稿のスレッド(手動)。
+# 8:20 理論ぶつけ(画像)・12:10 荒れそうなレース・15:30 1枚1ネタ(前の日の投票の答え、画像)・20:00 検証ラボ(火・金)か注目選手カード・
+# 21:30 投票(答えは次の日の15:30)。大会の準優・優勝戦は締切の70分前(15分ごとに見て、時間が来たものを出す)。大会前: 3投稿のスレッド(手動)。
 # 文章と画像は記事タブの「今日のX投稿」と同じ(ura_auto.py が作る)。
 # 鍵(Secrets の X_API_KEY / X_API_SECRET / X_ACCESS_TOKEN / X_ACCESS_SECRET)と変数 X_AUTOPOST=1 がそろうまでは下書きだけ
 # (reports/x_drafts/ に残す)。アプリの「記事」タブ・「荒れそうなレース」からのコピーでも同じ文章が出せる。
@@ -8,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       what:
-        description: "theory / morning / evening / thread / test / stats"
+        description: "theory / morning / neta / evening / poll / event / thread / test / stats"
         default: "test"
       key:
         description: "thread のとき: 場コード_初日(例 04_20261013)"
@@ -19,7 +20,10 @@ on:
   schedule:
     - cron: "20 23 * * *"   # 8:20 JST 朝: 今日の理論ぶつけ(記事タブの更新 7:40 のあと)
     - cron: "10 3 * * *"    # 12:10 JST 昼: 今日の荒れそうなレース
+    - cron: "30 6 * * *"    # 15:30 JST 1枚1ネタ(前の日の投票の答え)
     - cron: "0 11 * * *"    # 20:00 JST 夜: 火・金は検証ラボ、ほかの日は注目選手カード
+    - cron: "30 12 * * *"   # 21:30 JST 投票(答えは次の日の15:30)
+    - cron: "5,20,35,50 3-12 * * *"  # 12:05〜21:50 JST 大会の準優・優勝戦(締切70分前の投稿で、時間が来たもの。無ければ何もしない)
     - cron: "30 13 * * 1,4" # 22:30 JST 月・木: 反応と返信を取る(stats)
 
 permissions:
@@ -50,16 +54,25 @@ jobs:
       - name: 投稿(または下書き)
         run: |
           WHAT="${{ inputs.what }}"
-          if [ -z "$WHAT" ] || [ "${{ github.event_name }}" = "schedule" ]; then
-            H=$(TZ=Asia/Tokyo date +%H)
-            if [ "$H" -ge 22 ]; then WHAT=stats; elif [ "$H" -lt 10 ]; then WHAT=theory; elif [ "$H" -lt 15 ]; then WHAT=morning; else WHAT=evening; fi
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            case "${{ github.event.schedule }}" in
+              "20 23 * * *") WHAT=theory ;;
+              "10 3 * * *") WHAT=morning ;;
+              "30 6 * * *") WHAT=neta ;;
+              "0 11 * * *") WHAT=evening ;;
+              "30 12 * * *") WHAT=poll ;;
+              "30 13 * * 1,4") WHAT=stats ;;
+              *) WHAT=event ;;
+            esac
           fi
+          [ -z "$WHAT" ] && WHAT=test
           mkdir -p reports/x_drafts
           if [ "$WHAT" = "stats" ]; then
             python scripts/x_stats.py 2>&1 | tee reports/x_drafts/last_stats.txt; exit "${PIPESTATUS[0]}"
           fi
           ARGS=("$WHAT"); [ -n "${{ inputs.key }}" ] && ARGS+=(--key "${{ inputs.key }}")
-          python scripts/x_post.py "${ARGS[@]}" 2>&1 | tee reports/x_drafts/last_run.txt
+          LOG=reports/x_drafts/last_run.txt; [ "$WHAT" = "event" ] && LOG=reports/x_drafts/last_event.txt   # 15分ごとの見回りで朝昼夜の記録を上書きしない
+          python scripts/x_post.py "${ARGS[@]}" 2>&1 | tee "$LOG"
           exit "${PIPESTATUS[0]}"
       - name: 下書きと投稿の記録をコミット(失敗しても記録は残す)
         if: always()

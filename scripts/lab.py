@@ -2995,6 +2995,62 @@ def key_line(t) -> str:
     return f"{name}: {per}{unit}で{sv}のは{nn(m['in1'])}回({refl}は{nn(m['in1_ref'])}回)"
 
 
+def measure_line(t, m, name) -> str:
+    """物差し1つぶんの数字の1行(key_line と同じ書き方)。"""
+    unit = m.get("unit") or t.get("unit") or ("走" if t.get("no_market") else "レース")
+    refl = m.get("ref_label") or t.get("ref_label") or ("ふだん" if t.get("no_market") else "全レース")
+    per = t.get("per", 100)
+    cu = m.get("cu", "回")
+    nn = (lambda v: f"{v * per:.1f}") if _fine(m, per) else (lambda v: _n100(v, per))  # noqa: E731
+    subj = m.get("subject", t.get("subject", "1号艇"))
+    sv = ("" if subj.startswith("その") or subj in name else f"{subj}が") + m.get("verb", t.get("verb", "勝つ"))
+    return f"{per}{unit}で{sv}のは{nn(m['in1'])}{cu}({refl}は{nn(m['in1_ref'])}{cu})"
+
+
+def neta_items(labs: list[dict]) -> list[dict]:
+    """「1枚1ネタ」: 検証ラボの物差し1つ = X の1投稿。差がはっきりしたもの(本物の差)を先に、説ごとに交互に並べる。"""
+    rows = []
+    for t in sorted(labs, key=lambda t: t["id"]):
+        if t.get("key_line") and t["id"] == "saying":   # 人数で数える回は別の書き方なので、結論の1行だけ
+            continue
+        for i, (name, m, v) in enumerate(t.get("measures") or []):
+            if v.get("baseline") or m.get("in1") is None or m.get("in1_ref") is None:
+                continue
+            per = t.get("per", 100)
+            d = round((m["in1"] - m["in1_ref"]) * per, 1)
+            ans = "ほぼ同じ" if abs(d) < 0.5 or not v.get("real") else ("多い" if d > 0 else "少ない")
+            rows.append({"id": f"{t['id']}:{i}", "lab": t["id"], "title": t["title"], "name": name, "real": bool(v.get("real")),
+                         "line": measure_line(t, m, name), "answer": ans, "occult": t["id"] in HOOKS,
+                         "a": round(m["in1"] * per, 1), "b": round(m["in1_ref"] * per, 1),
+                         "refl": m.get("ref_label") or t.get("ref_label") or ("ふだん" if t.get("no_market") else "全レース"),
+                         "q": f"{name}。" + measure_line(t, m, name).split("のは")[0] + "のは、ふだんより?"})
+    # 本物の差を先に。同じ説が続かないよう、説ごとの何番目かで並べる
+    seen: dict = {}
+    for r in rows:
+        k = seen.get(r["lab"], 0)
+        r["_o"] = (not r["real"], k)
+        seen[r["lab"]] = k + 1
+    pr = ["lucky7", "hot", "manshu", "tilt", "moon", "lane6", "flying", "name", "humid", "series", "c1lose", "blood", "rest", "maezuke",
+          "formation", "zorome", "birthday", "e30", "motor", "a1in", "fixed",
+          "exst", "streak", "wind", "slowdash", "tenji", "rokuyo", "final"]   # 固定ポストで出した7本は後ろに
+    rows.sort(key=lambda r: (r["_o"][1], pr.index(r["lab"]) if r["lab"] in pr else 99, r["_o"][0], r["id"]))
+    return rows
+
+
+def neta_text(r: dict, from_poll: bool = False) -> str:
+    head = "昨日の投票の答え👇\n\n" if from_poll else ""
+    v = {"多い": "ふだんより多い", "少ない": "ふだんより少ない", "ほぼ同じ": "ふだんとほぼ同じ"}[r["answer"]]
+    tail = "\n(この差は、たまたまでも出るくらいの幅)" if r["answer"] == "ほぼ同じ" and r.get("a") is not None and abs(r["a"] - r["b"]) >= 0.5 else ""
+    body = (f"{head}「{r['name']}」\n→ {v}\n\n{r['line']}{tail}\n\n"
+            f"検証ラボ「{r['title']}」より📰 あなたの予想は当たってた?")
+    return body
+
+
+def neta_poll(r: dict) -> dict:
+    q = f"【明日答えます】{r['name']}。" + r["line"].split("のは")[0] + "のは、ふだんより?"
+    return {"text": q, "options": ["多い", "少ない", "ほぼ同じ"]}
+
+
 def practical_lines(t, con):
     """実用の説の、結論のあとの短い掛け合い(説 → ひと言の答え → どこで使う? → 使いどころ)。"""
     v = con[0].split("。")[0]
