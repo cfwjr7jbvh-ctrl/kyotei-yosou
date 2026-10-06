@@ -307,6 +307,15 @@ def main():
         posted.setdefault("evening_racers", []).append(tag.split(":", 1)[1])
     POSTED.write_text(json.dumps(posted, ensure_ascii=False, indent=1), encoding="utf-8")
     print("投稿しました:", ids)
+    try:   # 出した記事の履歴(reports/published.json)にも残す
+        import publish_log
+        slot = {"theory": "8:20", "morning": "12:10", "evening": "20:00"}.get(a.what)
+        key = f"xpost_{day.replace('-', '')}" if qi else f"x:{tag}"
+        publish_log.add(key, "X", f"https://x.com/i/web/status/{ids[0]}", now.date(), slot, via="自動投稿", text=texts[0])
+    except SystemExit as ex:
+        print(ex)
+    except Exception as ex:  # noqa: BLE001
+        print("履歴に残せませんでした:", ex)
 
 
 if __name__ == "__main__":

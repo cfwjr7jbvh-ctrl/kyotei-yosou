@@ -1,0 +1,72 @@
+name: 出した記事の記録
+
+# アプリの記事タブの「note に出した」「X に出した」→ GitHub の issue「公開: <key> note|X」(本文に url: / date: / slot:)
+# → reports/published.json に記録して、issue を閉じる。記録できないとき(日付が合わない・二重など)は理由を返信して閉じる。
+# 手で記録するときは workflow_dispatch(key / channel / url / date / slot)。
+on:
+  issues:
+    types: [opened]
+  workflow_dispatch:
+    inputs:
+      key: { description: "記事の key(lab_saying など)", required: true }
+      channel: { description: "note か X", default: "note" }
+      url: { description: "出した記事・投稿の URL", default: "" }
+      date: { description: "出した日 YYYY-MM-DD(空なら今日)", default: "" }
+      slot: { description: "今日のX投稿の時間(8:20 など。無ければ空)", default: "" }
+
+permissions:
+  contents: write
+  issues: write
+  actions: write
+
+concurrency:
+  group: x_post
+  cancel-in-progress: false
+
+jobs:
+  log:
+    # issue は、リポジトリの持ち主が「公開:」で始まるタイトルで立てたものだけ
+    if: github.event_name == 'workflow_dispatch' || (github.event.issue.user.login == github.repository_owner && startsWith(github.event.issue.title, '公開'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q cryptography pandas numpy
+      - name: 記録
+        id: rec
+        env:
+          TITLE: ${{ github.event.issue.title }}
+          BODY: ${{ github.event.issue.body }}
+          KEY: ${{ inputs.key }}
+          CH: ${{ inputs.channel }}
+          URL: ${{ inputs.url }}
+          DATE: ${{ inputs.date }}
+          SLOT: ${{ inputs.slot }}
+        run: |
+          set +e
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            python scripts/publish_log.py issue --title "$TITLE" --body "$BODY" > out.txt 2>&1
+          else
+            ARGS=(add --key "$KEY" --channel "$CH")
+            [ -n "$URL" ] && ARGS+=(--url "$URL"); [ -n "$DATE" ] && ARGS+=(--date "$DATE"); [ -n "$SLOT" ] && ARGS+=(--slot "$SLOT")
+            python scripts/publish_log.py "${ARGS[@]}" > out.txt 2>&1
+          fi
+          echo "code=$?" >> "$GITHUB_OUTPUT"
+          cat out.txt
+      - name: 保存
+        if: steps.rec.outputs.code == '0'
+        run: |
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/commit_files.sh "[CI Skip] 出した記事の記録" reports/published.json
+          gh workflow run ura_auto.yml --ref main || true   # 記事タブに「出した」を反映
+      - name: issue に返事して閉じる
+        if: github.event_name == 'issues'
+        run: |
+          gh issue comment ${{ github.event.issue.number }} --body-file out.txt
+          gh issue close ${{ github.event.issue.number }}

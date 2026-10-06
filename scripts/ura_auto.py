@@ -271,7 +271,13 @@ def main():
         if today.weekday() in (1, 4) and labs:
             # 火・金ごとに1本ずつ順番に(固定ポストで出した7本は後回し)。2026-10-06 からの火・金の回数で決める
             pinned = {"streak", "exst", "tenji", "wind", "slowdash", "final", "rokuyo"}
+            try:
+                import publish_log
+                on_x = {r["key"][4:] for r in publish_log.load() if r["key"].startswith("lab_") and r["channel"] == "X"}
+            except Exception:  # noqa: BLE001
+                on_x = set()
             order = sorted(labs, key=lambda t: (t["id"] in pinned, t.get("made") or "", t["id"]))
+            order = [t for t in order if t["id"] not in on_x] or order   # X に出した回はとばす
             n_slot = sum(1 for k in range((today - dt.date(2026, 10, 6)).days + 1)
                          if (dt.date(2026, 10, 6) + dt.timedelta(days=k)).weekday() in (1, 4))
             t = order[max(n_slot - 1, 0) % len(order)]
@@ -304,6 +310,21 @@ def main():
                                          "n": 0, "missing": [], "pages": [], "pdf": None, "asof": today.isoformat()})
         items.insert(0, {"key": key, "title": title, "grade": "X", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"), "n": 0, "picks": [], "images": len(imgs)})
         print("x queue:", [(tm, lbl) for tm, lbl, _b, _i in xq])
+    # 出した記事の記録(reports/published.json)を一覧と中身に付ける
+    try:
+        import publish_log
+        pubs = publish_log.summary()
+        for it in items:
+            if it["key"] in pubs:
+                it["pub"] = pubs[it["key"]]
+                f = out / f"{it['key']}.json"
+                if f.exists():
+                    from kyotei.publish import read_json as _rj
+                    dd = _rj(f)
+                    dd["pub"] = pubs[it["key"]]
+                    write_json(f, dd)
+    except Exception as ex:  # noqa: BLE001
+        print("published log failed:", ex)
     write_json(out / "index.json", {"asof": dt.datetime.now(JST).strftime("%Y-%m-%d %H:%M"), "today": today.isoformat(),
                                     "days_before": a.days_before, "items": items})
     print(f"ura: {len(items)} 節 → {out}")

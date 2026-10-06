@@ -66,4 +66,4 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          bash scripts/commit_files.sh "[CI Skip] X: 下書き・投稿の記録・反応" reports/x_drafts/* reports/x_stats.json docs/data/x_replies.json
+          bash scripts/commit_files.sh "[CI Skip] X: 下書き・投稿の記録・反応" reports/x_drafts/* reports/x_stats.json docs/data/x_replies.json reports/published.json

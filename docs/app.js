@@ -1055,10 +1055,25 @@ async function copyText(text, btn) {
   }
   if (btn) { const t = btn.textContent; btn.textContent = "コピーしました"; setTimeout(() => btn.textContent = t, 1500); }
 }
+// 出した記事の記録(reports/published.json)は、GitHub の issue「公開: <key> note|X」から足す(publish_log.yml が記録して閉じる)
+const REPO = "cfwjr7jbvh-ctrl/kyotei-yosou";
+function pubText(pub) {
+  if (!pub || !pub.length) return "";
+  return " ・ 出した: " + pub.map((p) => `${p.channel}${p.slot ? " " + p.slot : ""} ${+p.date.slice(5, 7)}/${+p.date.slice(8)}${p.no ? `(第${p.no}号)` : ""}`).join("、");
+}
+function pubIssueURL(key, channel, slot) {
+  const d = new Date(Date.now() + 9 * 3600e3).toISOString().slice(0, 10);
+  const body = `url: (ここに出した${channel === "note" ? "記事" : "投稿"}のURLを貼る)\ndate: ${d}` + (slot ? `\nslot: ${slot}` : "") +
+    `\n\n(このまま「Submit」で記録されます。日付は出した日。URLは後から --update でも直せます)`;
+  return `https://github.com/${REPO}/issues/new?title=${encodeURIComponent(`公開: ${key} ${channel}`)}&body=${encodeURIComponent(body)}`;
+}
 function uraMeta(it) {
   const hd = `${+it.hd.slice(4, 6)}/${+it.hd.slice(6)}`;
-  if (it.grade === "LAB") return `毎週の検証 ・ ${hd} ・ 無料記事向け`;
-  return `${esc(it.venue)} ${hd}〜 ・ 出場${it.n}人 ・ 注目${(it.picks || []).length}人`;
+  const pub = pubText(it.pub);
+  if (it.grade === "LAB") return `毎週の検証 ・ ${hd}` + (pub || " ・ まだ出していない");
+  if (it.grade === "毎日") return `毎日の理論ぶつけ ・ ${hd}の分(その日に出す)` + pub;
+  if (it.grade === "X") return `今日の X 投稿 ・ ${hd}の分` + pub;
+  return `${esc(it.venue)} ${hd}〜 ・ 出場${it.n}人 ・ 注目${(it.picks || []).length}人` + pub;
 }
 async function xStatsHTML() {
   let st = null, rep = null;
@@ -1117,8 +1132,13 @@ async function renderUraOne(box, key) {
       <button class="sub" id="ura-share">リンクで共有</button><button class="sub" id="ura-share-copy">リンクをコピー</button></div><p class="ura-note" id="ura-share-url"></p></div>
   <div class="ura-sec"><h3>note の本文</h3><p>無料と有料の切れ目の線が入っています。タイトル案は冒頭。</p>
     <div class="ura-btns"><button id="ura-copy-note">本文をコピー</button></div></div>
-  <div class="ura-sec"><h3>X の投稿案</h3>${posts.map((p) =>
-    `<div class="ura-post"><div class="n"><span>投稿${p.n}(${p.len}字)${p.warn ? " " + esc(p.warn) : ""}</span><button data-copy="${p.n}">コピー</button></div>${esc(p.body)}</div>`).join("")}
+  <div class="ura-sec"><h3>出したら記録</h3><p>出した日と URL を履歴に残します(GitHub の画面が開くので「Submit」を押すだけ)。${(d.pub || []).length ? "記録ずみ: " + esc(pubText(d.pub).replace(" ・ 出した: ", "")) : "まだ出していません。"}</p>
+    <div class="ura-btns">${d.grade === "X" ? "" : `<a class="btn-link" href="${pubIssueURL(key, "note")}" target="_blank" rel="noopener">note に出した</a>`}${d.grade === "X" ? "" : `<a class="btn-link sub" href="${pubIssueURL(key, "X")}" target="_blank" rel="noopener">X に出した</a>`}</div></div>
+  <div class="ura-sec"><h3>X の投稿案</h3>${posts.map((p) => {
+    const slot = (p.warn.match(/^(\d{1,2}:\d{2})/) || [])[1];
+    const done = (d.pub || []).some((x) => x.channel === "X" && (!slot || x.slot === slot));
+    return `<div class="ura-post"><div class="n"><span>投稿${p.n}(${p.len}字)${p.warn ? " " + esc(p.warn) : ""}${done ? " ・ 出した" : ""}</span><button data-copy="${p.n}">コピー</button>${d.grade === "X" && slot && !done ? `<a class="btn-link sub" href="${pubIssueURL(key, "X", slot)}" target="_blank" rel="noopener">出した</a>` : ""}</div>${esc(p.body)}</div>`;
+  }).join("")}
     ${tail ? `<p class="ura-note" style="margin-top:8px;white-space:pre-wrap">${esc(tail)}</p>` : ""}</div>
   <div class="ura-sec"><h3>${d.grade === "X" ? "画像" : "選手カードの画像"}(${d.images.length}枚)</h3><p>${d.grade === "X" ? "長押しかタップで保存して、同じ番号の投稿に添付。" : "長押しかタップで保存。投稿1に注目1人目、投稿2に相性のいい選手。出場全員ぶんは「推し名簿」用。"}</p>
     <div class="ura-btns"><button class="sub" id="ura-imgs-load">${d.grade === "X" ? "画像を表示" : "早見表と注目選手"}(${d.images.filter((x) => !x.extra).length}枚)</button>${d.images.some((x) => x.extra) ? `<button class="sub" id="ura-imgs-all">出場全員(${d.images.filter((x) => x.extra).length}枚)</button>` : ""}</div><div class="ura-imgs" id="ura-imgs"></div></div>`;
