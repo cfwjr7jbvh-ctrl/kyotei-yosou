@@ -154,6 +154,23 @@ async def render_split(html: str, width: int = 1080, height: int = 1350, max_n: 
     return out
 
 
+def card_images(out: pathlib.Path, key: str, htmls: list[str], no_images: bool) -> list[dict]:
+    """X 用のカード(1080×1350 で作った紙面)をそのまま画像に。"""
+    if no_images:
+        return []
+    res = []
+    for i, h in enumerate(htmls[:4]):
+        try:
+            png = asyncio.run(render_top(h))
+        except Exception as e:  # noqa: BLE001
+            print("カードの画像は作れませんでした:", e)
+            continue
+        f = f"{key}_c{i + 1}.json"
+        write_json(out / f, {"name": f"{i + 1}_ミカタ新聞.png", "png": base64.b64encode(png).decode()})
+        res.append({"file": f, "name": f"{i + 1}_ミカタ新聞.png"})
+    return res
+
+
 def x_images(out: pathlib.Path, key: str, html: str, name: str, no_images: bool) -> list[dict]:
     """紙面の全部を最大4枚に(X は1投稿に画像4枚まで)。"""
     if no_images:
@@ -368,20 +385,25 @@ def news_posts(live: list[dict], races: list[dict], day: dt.date | None = None, 
         head = f"{rr['venue']}{rr['rno']}R {rt}{('|' + nm) if nm else ''}({rr['deadline']}締切)【ミカタ新聞】"
         foot = seo.x_tags(rr["venue"], nm or None)
         import race_feature as _rf
-        who = _rf.type_names(rr, cards, 2)
+        mv = _rf.mikata_view(rr)
+        view = []
+        if mv:   # ミカタの見立て(本線と狙い目かも)。買い目(組み合わせ)は出さない
+            h = mv["hon"]
+            view.append(f"本線: {h['lane']}号艇 {h.get('name') or ''}{('の' + mv['hon_type']) if mv['hon_type'] else ''}(1着の見込み{_rf._pct(h['p_win'])}%)")
+            if mv["ner"]:
+                n_ = mv["ner"]
+                view.append(f"狙い目かも? {n_['lane']}号艇 {n_.get('name') or ''}{('の' + mv['ner_type']) if mv['ner_type'] else ''}(ふだんの{n_['lane']}号艇の{mv['ratio']:.1f}倍)")
+            else:
+                view.append("狙い目かも? 本線が堅め")
         body = None
-        for k in (3, 2, 1, 0):
-            if who and k < 3:
-                who_ = who if k >= 1 else ""
-            else:
-                who_ = who
-            if sm.get("conflict"):
-                mid = f"インに有利: {'・'.join(sm['plus'][:max(k, 1)])}\nインに不利: {'・'.join(sm['minus'][:max(k, 1)])}\n\n6人の型は画像で📰 あなたはどっちに乗る?"
+        for k in (2, 1, 0):
+            if sm.get("conflict") and k:
+                mid = f"インに有利: {'・'.join(sm['plus'][:k])}\nインに不利: {'・'.join(sm['minus'][:k])}\n\n展開と2着の候補は画像で📰 あなたはどっちに乗る?"
             elif notes and k:
-                mid = "当てはまる理論: " + "・".join(n["title"] for n in notes[:k + 1]) + "\n\n6人の型は画像で📰 どの理論に乗る?"
+                mid = "当てはまる理論: " + "・".join(n["title"] for n in notes[:k + 1]) + "\n\n展開と2着の候補は画像で📰 あなたの本線は?"
             else:
-                mid = "6人それぞれの強い型を1枚にしました📰 あなたは誰から?"
-            b = f"{head}\n" + (f"注目の型: {who_}\n" if who_ else "") + f"\n{mid}\n{foot}"
+                mid = "6艇の1着の見込みと展開は画像で📰 あなたの本線は?"
+            b = f"{head}\n" + ("\n".join(view) + "\n" if view else "") + f"\n{mid}\n{foot}"
             if xlen(b) <= 280:
                 body = b
                 break
@@ -557,7 +579,7 @@ def main():
                 try:
                     f_ = race_feature.make(nm, x["grade"] if x else "", rr, cards, sc, today)
                     key_f = f"race_{today:%Y%m%d}_{rr['jcd']:02d}{int(rr['rno']):02d}"
-                    ims = x_images(out, key_f, f_["html"], "ミカタ新聞.png", a.no_images)   # 新聞の全部を最大4枚に
+                    ims = card_images(out, key_f, race_feature.x_cards(nm, x["grade"] if x else "", rr, cards, today), a.no_images)   # X 用の大きな文字のカード2枚
                     img = ims[0] if ims else None
                     more_imgs[lbl] = ims
                     pages_f = save_pages(out, key_f, f_["html"], a.no_images)
