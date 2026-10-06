@@ -276,7 +276,8 @@ def main():
                 on_x = {r["key"][4:] for r in publish_log.load() if r["key"].startswith("lab_") and r["channel"] == "X"}
             except Exception:  # noqa: BLE001
                 on_x = set()
-            order = sorted(labs, key=lambda t: (t["id"] in pinned, t.get("made") or "", t["id"]))
+            first = ["saying", "lucky7", "manshu", "tilt", "hot", "moon", "humid", "lane6", "a1in", "series", "motor", "c1lose", "e30"]   # X で先に出す順(話題になりやすい回から)
+            order = sorted(labs, key=lambda t: (t["id"] in pinned, first.index(t["id"]) if t["id"] in first else 99, t.get("made") or "", t["id"]))
             order = [t for t in order if t["id"] not in on_x] or order   # X に出した回はとばす
             n_slot = sum(1 for k in range((today - dt.date(2026, 10, 6)).days + 1)
                          if (dt.date(2026, 10, 6) + dt.timedelta(days=k)).weekday() in (1, 4))
