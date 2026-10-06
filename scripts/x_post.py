@@ -255,7 +255,7 @@ def flash_due(day: str, now: dt.datetime, posted: dict, races: list[dict]) -> li
                 t = win_text(sr, fin)
                 if t:
                     out.append({"tag": tag, "text": t, "label": f"速報: {sr['name']} 優勝"})
-        elif demand.GRADE_W.get(str(sr.get("grade")), 1.0) >= 4:
+        elif str(sr.get("grade")) in ("SG", "PG1", "G1"):
             tag = f"day:{sr['jcd']}"
             last = max(rs, key=lambda r: int(r.get("rno") or 0))
             if last.get("result") and sum(1 for r in rs if r.get("result")) >= len(rs) - 1 and posted.get(tag) != day:

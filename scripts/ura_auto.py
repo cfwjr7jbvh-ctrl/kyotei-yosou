@@ -266,10 +266,10 @@ def event_posts(live: list[dict], races: list[dict], day: dt.date | None = None)
                     body = b
                     break
             if body:
-                sc = demand.score(x["grade"], rt, rr.get("rno"), day, rr["deadline"])
-                if sc >= 4.0:
+                sc = demand.score(x["grade"], rt, rr.get("rno"), day, rr["deadline"], rr.get("jcd"), demand.day_a1(races, rr.get("jcd")))
+                if sc >= 0.8:   # 3連単の売上の見込み0.8億円以上(G1 の準優・優勝戦くらいから)
                     out.append((at, f"大会: {rr['venue']}{rr['rno']}R {rt}", body, rr["deadline"], sc, rr, x, nm))
-    # 注目度(買う人・見る人が多そうな順)で、1日4本まで。G2 の準優(4.0)より下は出さない
+    # 注目度(3連単の売上の見込みが大きい順)で、1日4本まで
     return sorted(out, key=lambda o: -o[4])[:4]
 
 
@@ -329,7 +329,7 @@ def main():
         hayami[s["key"]] = (images[0] if images else None, r["wt"])
         pick_rows = [{"id": c["id"], "name": c["name"], "tag": t["t"]} for c, t, *_x in picks]
         first_day = dt.datetime.strptime(s["hd"], "%Y%m%d").date()
-        sc_s = demand.series_score(s["grade"], first_day + dt.timedelta(days=SERIES_DAYS - 1))
+        sc_s = demand.series_score(s["grade"], s["jcd"], None, first_day + dt.timedelta(days=SERIES_DAYS - 1))
         # 夜の投稿: 注目度がいちばん高い(同じなら近い)グレードレースの注目選手を日替わりで
         if picks and (evening is None or (-sc_s, s["hd"]) < (-evening["score"], evening["hd"])):
             k = today.toordinal() % len(picks)
@@ -433,7 +433,7 @@ def main():
             import race_feature
             for k_, (at, lbl, body, dl, sc, rr, x, nm) in enumerate(event_posts(live, races, today)):
                 img = None
-                if sc >= 7 and k_ < 2:   # 注目度の高い2レースは1レース特集の記事も(上の部分を投稿の画像に)
+                if sc >= 2.0 and k_ < 2:   # 注目度の高い2レースは1レース特集の記事も(上の部分を投稿の画像に)
                     try:
                         f_ = race_feature.make(nm, x["grade"], rr, cards if series else None, sc, today)
                         key_f = f"race_{today:%Y%m%d}_{rr['jcd']:02d}{int(rr['rno']):02d}"

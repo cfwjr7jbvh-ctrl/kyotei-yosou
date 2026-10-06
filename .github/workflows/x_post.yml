@@ -17,6 +17,9 @@ on:
       note_url:
         description: "thread のとき: note の URL(最後の投稿に入れる)"
         default: ""
+      dry:
+        description: "1 なら投稿せずに文章だけ作る(試し)"
+        default: ""
   schedule:
     - cron: "20 23 * * *"   # 8:20 JST 朝: 今日の理論ぶつけ(記事タブの更新 7:40 のあと)
     - cron: "10 3 * * *"    # 12:10 JST 昼: 今日の荒れそうなレース
@@ -70,8 +73,8 @@ jobs:
           if [ "$WHAT" = "stats" ]; then
             python scripts/x_stats.py 2>&1 | tee reports/x_drafts/last_stats.txt; exit "${PIPESTATUS[0]}"
           fi
-          ARGS=("$WHAT"); [ -n "${{ inputs.key }}" ] && ARGS+=(--key "${{ inputs.key }}")
-          LOG=reports/x_drafts/last_run.txt; [ "$WHAT" = "event" ] && LOG=reports/x_drafts/last_event.txt   # 15分ごとの見回りで朝昼夜の記録を上書きしない
+          ARGS=("$WHAT"); [ -n "${{ inputs.key }}" ] && ARGS+=(--key "${{ inputs.key }}"); [ "${{ inputs.dry }}" = "1" ] && ARGS+=(--dry)
+          LOG=reports/x_drafts/last_run.txt; [ "$WHAT" = "event" ] && LOG=reports/x_drafts/last_event.txt; [ "${{ inputs.dry }}" = "1" ] && LOG=reports/x_drafts/last_dry.txt   # 15分ごとの見回りで朝昼夜の記録を上書きしない
           python scripts/x_post.py "${ARGS[@]}" 2>&1 | tee "$LOG"
           exit "${PIPESTATUS[0]}"
       - name: 下書きと投稿の記録をコミット(失敗しても記録は残す)
