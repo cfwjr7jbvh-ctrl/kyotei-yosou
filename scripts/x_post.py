@@ -219,7 +219,7 @@ def win_text(sr: dict, fin: dict) -> str | None:
 
 
 def day_text(sr: dict, rs: list[dict], now: dt.datetime) -> str:
-    """1日のまとめ。荒れたか・インが強かったかを見出しに、外から勝った選手(よい面)と決まり手を足す。"""
+    """1日のまとめ。荒れたか・インが強かったかを見出しに、枠ごとの1着、外から勝った選手(よい面)と決まり手を足す。"""
     from collections import Counter
     done = sorted([r for r in rs if r.get("result")], key=lambda r: int(r.get("rno") or 0))
     n = len(done)
@@ -233,6 +233,8 @@ def day_text(sr: dict, rs: list[dict], now: dt.datetime) -> str:
         head, q = f"今日の{sr['venue']}まとめ📊", "明日、気になる選手は?"
     lines = [f"【{sr['name']}】{now.month}/{now.day} {head}", "",
              f"1号艇の1着: {n}レース中{w1}回" + (f"(ふだんの{sr['venue']}なら{ex}回くらい)" if ex is not None else "")]
+    lw = Counter(int((_winner(r) or {}).get("lane") or 0) for r in done)
+    lines.append("1着の枠: " + " ".join(f"{'①②③④⑤⑥'[k - 1]}{lw.get(k, 0)}" for k in range(1, 7)))
     outs = []
     for r in done:
         w = _winner(r)
