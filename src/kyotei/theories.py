@@ -31,8 +31,8 @@ VENUE_PREF = {1: "群馬", 2: "埼玉", 3: "東京", 4: "東京", 5: "東京", 6
 # ---------------------------------------------------------------- 検証ラボの数字
 @lru_cache(maxsize=None)
 def _lab(tid: str) -> dict:
-    p = LAB / f"{tid}.json"
-    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    from .publish import load_private
+    return load_private(LAB / f"{tid}.json", {}) or {}
 
 
 def _m(tid: str, i: int):

@@ -1,0 +1,32 @@
+name: 記事の本文を暗号化
+
+# reports/lab/*.json(検証ラボの本文。note の有料部分も入っている)を、公開リポジトリで読めないように暗号化する。
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["scripts/encrypt_reports.py", ".github/workflows/encrypt_reports.yml"]
+
+permissions:
+  contents: write
+
+jobs:
+  encrypt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q cryptography
+      - run: |
+          if [ -z "$SITE_PASSWORD" ]; then echo "SITE_PASSWORD が無い"; exit 1; fi
+          python scripts/encrypt_reports.py
+      - name: コミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/commit_files.sh "[CI Skip] 記事の本文を暗号化" reports/lab/*.json

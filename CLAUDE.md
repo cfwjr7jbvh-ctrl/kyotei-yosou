@@ -12,7 +12,7 @@
 
 ## よく使うコマンド
 - 検証ラボ1本: `python scripts/lab.py --theory a1in --out /tmp/lab` / 一覧: `--list` / 全部: `--theory all`(約40分。Actions の lab.yml は毎週火曜 7:50 に全部作り直す)
-- X の文面の確認(JSON から): `python -c "import sys,json;sys.path+=['scripts','src'];import lab;t=json.load(open('reports/lab/a1in.json'));print(lab.x_text(t,[{'venue':'住之江','rno':11,'lanes':[1],'deadline':'20:15'}]))"`
+- X の文面の確認(JSON から): `python -c "import sys;sys.path+=['scripts','src'];import lab;from kyotei.publish import load_private;t=load_private('reports/lab/a1in.json');print(lab.x_text(t,[{'venue':'住之江','rno':11,'lanes':[1],'deadline':'20:15'}]))"`
 - 予想屋の回収率: `python scripts/tipster_track.py --luck`(運だけの表)/ `data/tipsters/picks.csv` を書いて `python scripts/tipster_track.py`
 - 市場の言葉(Actions でだけ動く。手元は外に出られない): `python scripts/market_words.py`
 - 構文確認: `python -m py_compile scripts/lab.py`(.py を編集したらフックが自動で走る)
@@ -26,7 +26,7 @@
 - `scripts/predict.py`(予想) / `scripts/train_eval.py`(学習と検証) / `src/kyotei/features*.py`(特徴量) / `scripts/compare.py`(採否の判定)
 - `scripts/market_words.py` → `reports/market/`(毎朝6:05)。`scripts/tipster_track.py`(予想屋の追跡)
 - データ: `data/history/{entries,races}_YYYYMM.csv.gz`(2023-10〜)、`data/odds/odds3t_YYYYMM.csv.gz`(3連単の最終オッズ、2025-12〜ほぼ全部)、`data/weather`、`data/previews`
-- 出力: `reports/lab/*.json`(検証ラボ49本)、`reports/x_drafts/`(X の下書きと posted.json)、`docs/data/days/*.json`(その日の予想。**暗号化。手元では読めない**: SITE_PASSWORD は GitHub Secrets だけ。`InvalidTag` はそれが原因で、バグではない)
+- 出力: `reports/lab/*.json`(検証ラボの本文。**2026-10-07 から暗号化**(パクられ対策)。読み書きは必ず `kyotei.publish.load_private / save_private`。手元は鍵が無いので、手元で作った分は `out/private/reports/lab/` にだけ入る=commit されない。新しい理論を本番に出すには builder を push して Actions の lab.yml を theory 指定で回す)、`reports/x_drafts/`(X の下書きと posted.json)、`docs/data/days/*.json`(その日の予想。**暗号化。手元では読めない**: SITE_PASSWORD は GitHub Secrets だけ。`InvalidTag` はそれが原因で、バグではない)
 
 ## 言葉の決まり(記事・X・アプリ全部)
 - レースの結果は **「◯%」**。差は **「47%→66%に上がる」**(何%が何%まで)。両方の値が無いときだけ「◯ポイント」。選手の数は「100人中◯人」。出目など、めったに無いことは「1000レースで◯回」。「100レースで◯回」はもう使わない

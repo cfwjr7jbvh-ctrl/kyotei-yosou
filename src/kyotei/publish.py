@@ -73,6 +73,54 @@ def read_json(path: pathlib.Path):
     return obj
 
 
+PRIVATE_LOCAL = ROOT / "out/private"   # 鍵が無い手元で作ったものの置き場(.gitignore 済み。公開リポジトリには出さない)
+
+
+def save_private(path, obj):
+    """記事の本文など、公開リポジトリで読まれたくない JSON を保存する(2026-10-07 パクられ対策)。
+    鍵(SITE_PASSWORD)があれば暗号化して path に。無ければ平文を out/private/ の同じ場所に置き、path は触らない。"""
+    path = pathlib.Path(path)
+    if os.environ.get("SITE_PASSWORD"):
+        write_json(path, obj, encrypt=True)
+        return path
+    try:
+        rel = path.resolve().relative_to(ROOT)
+    except ValueError:
+        rel = pathlib.Path(path.name)
+    alt = PRIVATE_LOCAL / rel
+    alt.parent.mkdir(parents=True, exist_ok=True)
+    alt.write_text(json.dumps(_clean(obj), ensure_ascii=False, indent=1, default=_default), encoding="utf-8")
+    print(f"鍵が無いので {rel} は手元(out/private)にだけ保存しました")
+    return alt
+
+
+def load_private(path, default=None):
+    """save_private の逆。暗号化・平文どちらでも読む。鍵が無くて読めないときは out/private/ の手元の写しを読む。"""
+    path = pathlib.Path(path)
+    try:
+        rel = path.resolve().relative_to(ROOT)
+    except ValueError:
+        rel = pathlib.Path(path.name)
+    alt = PRIVATE_LOCAL / rel
+    if path.exists():
+        try:
+            return read_json(path)
+        except Exception:  # noqa: BLE001  鍵が無い・違う
+            pass
+    if alt.exists():
+        return json.loads(alt.read_text(encoding="utf-8"))
+    return default
+
+
+def private_exists(path) -> bool:
+    path = pathlib.Path(path)
+    try:
+        rel = path.resolve().relative_to(ROOT)
+    except ValueError:
+        rel = pathlib.Path(path.name)
+    return path.exists() or (PRIVATE_LOCAL / rel).exists()
+
+
 def write_check():
     """パスワード確認用の小さな暗号化ファイル。"""
     write_json(ROOT / "docs/data/check.json", {"ok": True})

@@ -210,7 +210,8 @@ def _lab_pair(lab_id: str, key: str) -> tuple[float, float] | None:
     """検証ラボの数字(100あたり)を、記事と食い違わないように JSON から読む。"""
     import json
     try:
-        t = json.loads((ROOT / f"reports/lab/{lab_id}.json").read_text(encoding="utf-8"))
+        from kyotei.publish import load_private
+        t = load_private(ROOT / f"reports/lab/{lab_id}.json", {})
         for name, m, _v in t["measures"]:
             if key in name:
                 return round(m["in1"] * 100, 1), round(m["in1_ref"] * 100, 1)

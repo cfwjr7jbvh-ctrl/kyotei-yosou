@@ -18,6 +18,8 @@ jobs:
   lab:
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}   # 記事の本文(reports/lab/*.json)は暗号化して保存する
     steps:
       - uses: actions/checkout@v4
       - uses: ./.github/actions/setup
@@ -29,4 +31,5 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python scripts/encrypt_reports.py   # 保険: 平文が残っていたら暗号化
           bash scripts/commit_files.sh "[CI Skip] report: 検証ラボ" reports/lab/*

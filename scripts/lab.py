@@ -26,6 +26,7 @@ from kyotei import mag  # noqa: E402
 from kyotei.card_render import gull_svg  # noqa: E402
 from kyotei.data import load_history  # noqa: E402
 from kyotei.racer_card import VENUES  # noqa: E402
+from kyotei.publish import load_private, private_exists, save_private  # noqa: E402
 from kyotei.xtext import fun_rate, sim_words, xlen  # noqa: E402
 
 e = html.escape
@@ -3670,14 +3671,14 @@ def main():
     a = ap.parse_args()
     if a.list:
         for k in BUILDERS:
-            print(k, "済" if (REP / f"{k}.json").exists() else "")
+            print(k, "済" if private_exists(REP / f"{k}.json") else "")
         return
     if a.theory == "all":
         tids = list(BUILDERS)
     elif a.theory:
         tids = a.theory.split(",")
     else:
-        tids = [next((k for k in BUILDERS if not (REP / f"{k}.json").exists()), None)] if a.next else []
+        tids = [next((k for k in BUILDERS if not private_exists(REP / f"{k}.json")), None)] if a.next else []
     tids = [t_ for t_ in tids if t_]
     if not tids:
         print("作る理論がありません"); return
@@ -3701,13 +3702,13 @@ def build_one(tid, ent, r, outdir):
     now = dt.datetime.now(JST).strftime("%Y-%m-%d")
     old = REP / f"{tid}.json"
     made0 = None
-    if old.exists():   # 作り直しても『はじめて出した日』は変えない(記事の並び順に使う)。直した日は updated に
+    if private_exists(old):   # 作り直しても『はじめて出した日』は変えない(記事の並び順に使う)。直した日は updated に
         try:
-            made0 = json.loads(old.read_text(encoding="utf-8")).get("made")
+            made0 = (load_private(old) or {}).get("made")
         except Exception:  # noqa: BLE001
             made0 = None
     t["asof"], t["made"], t["updated"], t["n_races"] = asof, made0 or now, now, int(len(r))
-    (REP / f"{tid}.json").write_text(json.dumps(t, ensure_ascii=False, indent=1, default=float), encoding="utf-8")
+    save_private(REP / f"{tid}.json", json.loads(json.dumps(t, ensure_ascii=False, default=float)))   # 本文は暗号化(公開リポジトリでパクられないように)
     print("wrote", out / f"lab_{tid}.html")
     print(t["lead"])
 

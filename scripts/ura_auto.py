@@ -529,7 +529,8 @@ def main():
         print(s["key"], title, f"{len(r['sel'])}人", f"画像{len(images)}枚", "見つからない:", r["missing"] or "なし")
     # 検証ラボ(reports/lab/*.json、毎週1本)も記事タブに
     import lab as labmod
-    labs = [json.loads(p.read_text(encoding="utf-8")) for p in (ROOT / "reports/lab").glob("*.json")]
+    from kyotei.publish import load_private as _lp
+    labs = [x for x in (_lp(p) for p in (ROOT / "reports/lab").glob("*.json")) if x]   # 本文は暗号化されている
     for t in sorted(labs, key=lambda t: (t.get("made") or "", t["id"]), reverse=True)[:120]:   # ストック全部(新しい順。40本で切っていたため古い9本が出ていなかった)
         key = f"lab_{t['id']}"
         html_ = labmod.page(t, t.get("asof", ""))

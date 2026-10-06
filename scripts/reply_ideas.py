@@ -29,8 +29,8 @@ SEA = {"江戸川", "平和島", "浜名湖", "常滑", "津", "鳴門", "丸亀
 
 
 def _lab(tid: str) -> dict:
-    p = LAB / f"{tid}.json"
-    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+    from kyotei.publish import load_private
+    return load_private(LAB / f"{tid}.json", {}) or {}
 
 
 def _pct(v) -> str:

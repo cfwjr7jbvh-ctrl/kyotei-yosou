@@ -78,7 +78,10 @@ def lab_snapshot(key: str) -> dict:
     if not p.exists():
         return {}
     import lab
-    t = json.loads(p.read_text(encoding="utf-8"))
+    from kyotei.publish import load_private
+    t = load_private(p)
+    if not t:
+        return {}
     con = lab.conclusion(t)
     return {"title": f"検証ラボ: {t['title']}", "asof": t.get("asof"), "conclusion": con[0], "key_line": lab.key_line(t)}
 
