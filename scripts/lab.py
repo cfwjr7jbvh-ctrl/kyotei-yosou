@@ -189,10 +189,17 @@ def t_bangumi(ent, r):
     for m in (mh, ms):
         m.pop("half", None)
         m["note"] = "前半2年で選んだ枠を、後半1年で測定"
+    # 最大値と最小値の落差を倍率で表現
+    gap_phrase = _ratio_phrase(g['in1'].max(), g['in1'].min())
     return {
         "id": "bangumi", "title": "番組屋の癖は本物か", "belief": "「この場のこのレースはインが堅い」は番組を組む人の癖で、毎年同じ",
-        "lead": f"場×レース番号ごとに、1号艇が勝つのは100レースで、いちばん堅い枠なら{_n100(g['in1'].max())}回({fun_rate(g['in1'].max())})、いちばん荒れる枠なら{_n100(g['in1'].min())}回({fun_rate(g['in1'].min())})。"
-                f"前の2年で堅かった枠は、最近の1年でも{sim_words(corr)}。番組の癖はたしかにあり、年をまたいでも続いている。",
+        "lead": f"出走表を前に『この場のこのレース番号はインが堅い』。それって、本当なのか?　"
+                f"データで調べた。\n\n"
+                f"場×レース番号ごとに、1号艇が勝つのは100レースで、いちばん堅いところなら{_n100(g['in1'].max())}人。"
+                f"いちばん荒れるところは{_n100(g['in1'].min())}人。{gap_phrase}。"
+                f"\n\nその『堅さ』は、年を変えても続く。前の2年で堅かった場所は、最近の1年でも{sim_words(corr)}。"
+                f"つまり、番組屋さんが『ここは1号艇に強い選手を置く』という習性は、昨年も今年も同じ。"
+                f"それが、出走表の読み方を変える。",
         "tables": [("1号艇が堅い枠(上位8)", rows), ("1号艇が荒れる枠(下位8)", rows2)],
         "measures": [("前の2年でインが強かった『場とレース番号』8つの、最近の1年", mh, verdicts(mh)), ("前の2年で荒れた『場とレース番号』8つの、最近の1年", ms, verdicts(ms))],
         "use": ["出走表を見る前に、その場のその番号の「ふだんの堅さ」を頭に入れる。堅い枠で1号艇が弱そうなら、それ自体がニュース",
@@ -305,12 +312,20 @@ def t_a1in(ent, r):
     vbg = verdicts(bg)
     odds_w = {1: "しかも人気以上に勝っている", 0: ("しかも人気以上に勝っている(まだレース数が少ないので追試中)" if "追試中" in vbg.get("known", "") else "人気どおり(みんな知っている)"),
               -1: "人気のわりにひかえめ"}.get(vbg.get("edge"), "")
+    # 級別の差を倍率で表現
+    a1_vs_b1_gap = _ratio_phrase(a['in1'], b['in1'])
+    a2_vs_b1_gap = _ratio_phrase(a2['in1'], b['in1'])
+    bg_vs_other_b1 = _ratio_phrase(bg['in1'], bg['in1_ref'])
     return {
         "id": "a1in", "title": "1号艇がA1なら堅いのか", "belief": "予選・一般戦で1号艇にA1級が入ったレースは堅い",
-        "lead": f"予選・一般戦で1号艇がA1級だと、1号艇が勝つのは100レースで{_n100(a['in1'])}回。A2で{_n100(a2['in1'])}回、B1なら{_n100(b['in1'])}回。"
-                f"級別の差は本物で、人気にもちゃんと出ている。おもしろいのはB1の中の『スタートが速くて(平均0.15秒以内)、1コースで2回に1回以上勝ってきた人』。"
-                f"この人が1号艇だと{_n100(bg['in1'])}回で、A2なみ。{odds_w}。",
-        "conclusion": ["本当。でもB1にも『隠れA2』がいる", f"A1の1号艇は100レースで{_n100(a['in1'])}回勝つ(人気どおり)。スタートが速いB1の1号艇は{_n100(bg['in1'])}回で、級別より強い。{odds_w}"],
+        "lead": f"出走表の最初に目に入る『級別』。A1級の1号艇なら、予選や一般戦で100レースで{_n100(a['in1'])}人勝つ。"
+                f"でもA2は{_n100(a2['in1'])}人、B1は{_n100(b['in1'])}人。A1とB1じゃ{a1_vs_b1_gap}の差がある。"
+                f"\n\nここまでなら『級別って大事なんだな』で終わる。ただし、ここからが面白い。"
+                f"B1の中に、『スタートが超速い(平均0.15秒以下)』で『1コースで2回に1回以上勝ってきた人』がいる。"
+                f"この人が1号艇だと{_n100(bg['in1'])}人勝つ。つまり、他のB1より{bg_vs_other_b1}、A2なみ。"
+                f"\n\nそう考えると、出走表から見えるのは『級別』じゃなくて『その人がふだんどんなスタート切ってるのか』。"
+                f"それを知ってから1号艇を見ると、強さの見え方が変わる。{odds_w}。",
+        "conclusion": ["本当。でもB1にも『隠れA2』がいる", f"A1の1号艇は100レースで{_n100(a['in1'])}人勝つが、人気どおり。スタートが速いB1の1号艇は{_n100(bg['in1'])}人で、級別より強い。ミカタ新聞の選手カード、スタートと逃げの欄を見ながら出走表を読むと、『あ、この人は違う』が見えてくる。{odds_w}。"],
         "subject": "1号艇",
         "tables": [],
         "measures": [("1号艇がA1", a, verdicts(a)), ("1号艇がA2", a2, verdicts(a2)), ("1号艇がB1(下のB1をのぞく)", b, verdicts(b)),
@@ -2874,6 +2889,48 @@ def _diff_words(m, verb, per=100):
         return "ほぼ同じ"
     n = f"{abs(d):.0f}" if float(d).is_integer() else f"{abs(d):.1f}"
     return f"{n}回{'多い' if d > 0 else '少ない'}"
+
+
+def _ratio_phrase(this, ref, label1="", label2="", per=100):
+    """2つの値の倍率・差を、比較表現に変える。「◯倍」「◯%多い」など。
+    例: _ratio_phrase(0.42, 0.28) → "50%多い" (42回 vs 28回)
+    label1="特別選抜戦", label2="一般戦" なら "一般戦の50%多い" も可能。
+    """
+    if ref is None or ref == 0 or ref != ref:
+        return f"{_n100(this, per)}回"
+    a, b = this * per, ref * per
+    if abs(a - b) < 0.5:
+        return "ほぼ同じ"
+    # 倍率で表現するか、差で表現するか
+    ratio = a / b if b > 0 else 1
+    diff_pct = round((ratio - 1) * 100)
+    if abs(diff_pct) >= 30:  # 30%以上なら倍率を言う
+        return f"{ratio:.1f}倍" if ratio >= 1.5 else f"{_n100(this, per)}回({diff_pct:+d}%)"
+    else:  # 30%未満なら差分を言う
+        diff = round(a - b, 1)
+        diff_str = f"{abs(diff):.0f}" if float(diff).is_integer() else f"{abs(diff):.1f}"
+        return f"{diff_str}回{'多い' if diff > 0 else '少ない'}"
+
+
+def _story_lead(setup, data_points, conclusion=""):
+    """記事の導入を「問い→データ展開→推測」の構造で作成。
+    setup: 「なぜこれを調べたか」を示す問いかけ（例: "フライングすると、スタートって変わるんだろうか?")
+    data_points: [{"finding": "スタートが0.123秒遅くなり", "this": value, "ref": ref_value, "label": "直後の10走"},...]
+    conclusion: 最後につなげる一文（例: "その日の心理状態が、そのまま出ている。"）
+    """
+    if not data_points:
+        return setup
+    lines = [setup]
+    for point in data_points:
+        finding = point.get("finding", "")
+        label = point.get("label", "")
+        if label:
+            lines.append(f"{label}、{finding}。")
+        else:
+            lines.append(f"{finding}。")
+    if conclusion:
+        lines.append(conclusion)
+    return "".join(lines)
 
 
 def measures_html(ms, subject="1号艇", verb="勝つ", no_market=False, compare="全体", ref_label=None, unit=None, per=100):

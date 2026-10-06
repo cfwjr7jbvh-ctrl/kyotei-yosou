@@ -325,6 +325,15 @@ def _card(rid, b, pa, pg, cg, stc, vg, x, asof, ctx) -> dict:
 # ---------------------------------------------------------------- ひと言タグ
 # 条件はカードの数字だけで判定し、根拠の文(why)と基準の文(rule)を残す。けなすタグは作らない。
 # 「上位X%」は同じ級別(A1 / A2 / B級)の中での位置(全選手の中だと A1 はどれも上位になって差が出ないため)
+def st_sec(v) -> str:
+    """読み手向けのST: 0.12秒(フライング側はF0.02秒)。"""
+    try:
+        v = float(v)
+    except (TypeError, ValueError):
+        return "-"
+    return ("F" if v < 0 else "") + f"{abs(v):.2f}秒"
+
+
 def top(p) -> str:
     return f"上位{max(1, round(100 - p))}%"
 
@@ -343,69 +352,69 @@ TAG_RULES = [
     {"tag": "スタート職人", "cat": "start",
      "rule": "平均STが同じ級別の中で上位10%以内(ST記録50走以上)",
      "test": lambda c: c["st"]["n"] >= 50 and (c["st"]["grp"] or 0) >= 90,
-     "why": lambda c: f"平均ST {st_fmt(c['st']['avg'])}({grp(c)}の中で{top(c['st']['grp'])}、{c['st']['n']}走)",
+     "why": lambda c: f"スタートが平均{st_sec(c['st']['avg'])}と速い({grp(c)}の中で{top(c['st']['grp'])})",
      "score": lambda c: c["st"]["grp"]},
     {"tag": "展示STを信じていい", "cat": "ex",
      "rule": "展示STと本番STのずれ(差の絶対値の平均)が同じ級別の中で小さい方から15%以内(30走以上)",
      "test": lambda c: c["ex"]["n"] >= 30 and (c["ex"]["grp"] or 0) >= 85,
-     "why": lambda c: f"展示と本番のSTのずれは平均{c['ex']['mae']:.3f}秒({grp(c)}の中で{top(c['ex']['grp'])}の小ささ、{c['ex']['n']}走)",
+     "why": lambda c: f"展示と本番でスタートの速さがほとんど変わらない(ずれは平均{c['ex']['mae']:.2f}秒。{grp(c)}の中で{top(c['ex']['grp'])})",
      "score": lambda c: c["ex"]["grp"]},
     {"tag": "本番で踏み込む", "cat": "ex2",
      "rule": "本番STが展示STからどれだけ遅くなるか(平均)が、同じ級別の中で小さい方から10%以内(30走以上。全選手の中央値は本番の方が約0.05秒遅い)",
      "test": lambda c: c["ex"]["n"] >= 30 and (c["ex"]["d_grp"] or 0) >= 90,
-     "why": lambda c: f"本番のSTは展示より平均{c['ex']['delta']:+.2f}秒(全選手の中央値は{c['ex']['pop_delta']:+.2f}秒、{c['ex']['n']}走)",
+     "why": lambda c: f"本番のスタートが展示とほぼ同じ速さ(ふつうの選手は本番で{abs(c['ex']['pop_delta']):.2f}秒ほど遅くなる)",
      "score": lambda c: c["ex"]["d_grp"]},
     {"tag": "イン逃げ番長", "cat": "nige",
      "rule": "1コースの逃げ率(全体の平均に寄せた値)が同じ級別の中で上位10%以内(1コース20走以上)",
      "test": lambda c: c["kim"]["nige"]["n"] >= 20 and (c["kim"]["nige"]["grp"] or 0) >= 90,
-     "why": lambda c: f"1コース{c['kim']['nige']['n']}走で{c['kim']['nige']['w']}回逃げ(逃げ率{c['kim']['nige']['w'] / c['kim']['nige']['n']:.0%}、{grp(c)}の中で{top(c['kim']['nige']['grp'])})",
+     "why": lambda c: f"1コースで{c['kim']['nige']['n']}回走って{c['kim']['nige']['w']}回逃げ切り(逃げ切り率{c['kim']['nige']['w'] / c['kim']['nige']['n']:.0%}。{grp(c)}の中で{top(c['kim']['nige']['grp'])})",
      "score": lambda c: c["kim"]["nige"]["grp"]},
     {"tag": "差し職人", "cat": "sashi",
      "rule": "2コース以遠から差しで勝つ割合が同じ級別の中で上位10%以内(30走以上)",
      "test": lambda c: c["kim"]["sashi"]["n"] >= 30 and (c["kim"]["sashi"]["grp"] or 0) >= 90,
-     "why": lambda c: f"2コース以遠{c['kim']['sashi']['n']}走で差し{c['kim']['sashi']['w']}勝({grp(c)}の中で{top(c['kim']['sashi']['grp'])})",
+     "why": lambda c: f"2〜6コースで{c['kim']['sashi']['n']}回走って、差しで{c['kim']['sashi']['w']}勝({grp(c)}の中で{top(c['kim']['sashi']['grp'])})",
      "score": lambda c: c["kim"]["sashi"]["grp"]},
     {"tag": "まくり屋", "cat": "makuri",
      "rule": "2コース以遠からまくりで勝つ割合が同じ級別の中で上位10%以内(30走以上)",
      "test": lambda c: c["kim"]["makuri"]["n"] >= 30 and (c["kim"]["makuri"]["grp"] or 0) >= 90,
-     "why": lambda c: f"2コース以遠{c['kim']['makuri']['n']}走でまくり{c['kim']['makuri']['w']}勝({grp(c)}の中で{top(c['kim']['makuri']['grp'])})",
+     "why": lambda c: f"2〜6コースで{c['kim']['makuri']['n']}回走って、まくりで{c['kim']['makuri']['w']}勝({grp(c)}の中で{top(c['kim']['makuri']['grp'])})",
      "score": lambda c: c["kim"]["makuri"]["grp"]},
     {"tag": "まくり差しの職人", "cat": "mz",
      "rule": "3コース以遠からまくり差しで勝つ割合が同じ級別の中で上位10%以内(30走以上)",
      "test": lambda c: c["kim"]["mz"]["n"] >= 30 and (c["kim"]["mz"]["grp"] or 0) >= 90,
-     "why": lambda c: f"3コース以遠{c['kim']['mz']['n']}走でまくり差し{c['kim']['mz']['w']}勝({grp(c)}の中で{top(c['kim']['mz']['grp'])})",
+     "why": lambda c: f"3〜6コースで{c['kim']['mz']['n']}回走って、まくり差しで{c['kim']['mz']['w']}勝({grp(c)}の中で{top(c['kim']['mz']['grp'])})",
      "score": lambda c: c["kim"]["mz"]["grp"]},
     {"tag": "外からでも届く", "cat": "out",
      "rule": "4〜6コースでの3着以内の上積み(コース平均との差)が同じ級別の中で上位10%以内(30走以上)",
      "test": lambda c: c["out"]["n"] >= 30 and (c["out"]["grp"] or 0) >= 90,
-     "why": lambda c: f"4〜6コースで3着以内に入るのが、コースの平均より{pts(c['out']['res'])}({c['out']['n']}走、{grp(c)}の中で{top(c['out']['grp'])})",
+     "why": lambda c: f"4〜6コースからでも3着以内によく入る(ふつうの選手より{pts(c['out']['res'])}。{grp(c)}の中で{top(c['out']['grp'])})",
      "score": lambda c: c["out"]["grp"]},
     {"tag": "前づけの仕掛け人", "cat": "front",
      "rule": "2枠以上のとき、枠より内のコースに入った割合が15%以上(50走以上)",
      "test": lambda c: c["front"]["n"] >= 50 and (c["front"]["rate"] or 0) >= 0.15,
-     "why": lambda c: f"2枠以上の{c['front']['n']}走のうち{c['front']['rate']:.0%}で枠より内のコースへ",
+     "why": lambda c: f"2〜6号艇のとき、{c['front']['rate']:.0%}のレースで内のコースを取りにいく({c['front']['n']}走)",
      "score": lambda c: 60 + 100 * c["front"]["rate"]},
     {"tag": "展示タイム番長", "cat": "extime",
      "rule": "展示タイムがレース内1・2位になる割合が、同じ級別の中で上位10%以内(展示50走以上)。"
              "展示上位が本番にどれだけ効くかは人によらずほぼ同じ(「展示だけの人」は時期を変えると入れ替わる)",
      "test": lambda c: c["extime"]["n"] >= 50 and (c["extime"]["grp"] or 0) >= 90,
-     "why": lambda c: f"展示タイム1・2位が{c['extime']['top']:.0%}({c['extime']['n']}走、{grp(c)}の中で{top(c['extime']['grp'])})",
+     "why": lambda c: f"展示タイムで1位か2位になるのが{c['extime']['top']:.0%}のレース({grp(c)}の中で{top(c['extime']['grp'])})",
      "score": lambda c: c["extime"]["grp"]},
     {"tag": "展示は控えめ、本番で化ける", "cat": "exlate",
      "rule": "展示タイムがレース内4位以下の走でも、3着以内の上積みが本人の普段とほぼ変わらない(ふだんとの差が全選手の平均より100走あたり6回以上良い、30走以上)",
      "test": lambda c: c["exlate"]["n"] >= 30 and c["exlate"]["res"] is not None and c["exlate"]["res"] - (c["exlate"]["pop"] or 0) >= 0.06,
-     "why": lambda c: f"展示タイム4位以下の{c['exlate']['n']}走でも、3着以内の減り方が小さい(ふだんより100走あたり{c['exlate']['res'] * 100:+.0f}回。全選手の平均は{(c['exlate']['pop'] or 0) * 100:+.0f}回)",
+     "why": lambda c: f"展示タイムが4位以下でも、本番であまり崩れない(3着以内が100走で{abs(c['exlate']['res'] * 100):.0f}回減るだけ。ふつうの選手は{abs((c['exlate']['pop'] or 0) * 100):.0f}回減る)",
      "score": lambda c: 60 + 300 * (c["exlate"]["res"] - (c["exlate"]["pop"] or 0))},
     {"tag": "上り調子", "cat": "growth",
      "rule": "直近90日の勝率(1着10点〜6着1点の平均)が、その前の1年より0.8点以上高い(直近15走以上・前の1年30走以上)。26歳以下は「急成長中」",
      "test": lambda c: c["growth"]["n90"] >= 15 and c["growth"]["n_prev"] >= 30 and (c["growth"]["diff"] or 0) >= 0.8,
-     "why": lambda c: f"勝率 {c['growth']['prev']:.2f}(前の1年)→ {c['growth']['pts90']:.2f}(直近90日、{c['growth']['n90']}走)。"
-                      "伸びの4割ほどは、次の3か月も残る傾向",
+     "why": lambda c: f"勝率が{c['growth']['prev']:.2f}(前の1年)から{c['growth']['pts90']:.2f}(この90日)に上がった。"
+                      "上がった分の4割ほどは、この先3か月も続くことが多い",
      "score": lambda c: 60 + 20 * c["growth"]["diff"]},
     {"tag": "舟券に絡む安定感", "cat": "stable",
      "rule": "3着以内の上積み(コース平均との差)が同じ級別の中で上位5%以内(100走以上)",
      "test": lambda c: c["n"] >= MIN_STARTS and (c["p"]["res3"]["grp"] or 0) >= 95,
-     "why": lambda c: f"3着以内は100走で{round(c['top3'] * 100)}回。同じコースの平均より{pts(c['res3'])}({c['n']}走、{grp(c)}の中で{top(c['p']['res3']['grp'])})",
+     "why": lambda c: f"3着以内に100走で{round(c['top3'] * 100)}回入る(同じコースのふつうの選手より{pts(c['res3'])})",
      "score": lambda c: c["p"]["res3"]["grp"]},
 ]
 VENUE_RULE = "(使っていない)"

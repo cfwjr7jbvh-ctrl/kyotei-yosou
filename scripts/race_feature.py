@@ -135,7 +135,7 @@ def _st(v) -> str:
         v = float(v)
     except (TypeError, ValueError):
         return "-"
-    return ("F" if v < 0 else "") + f"{abs(v):.2f}"[1:]
+    return ("F" if v < 0 else "") + f"{abs(v):.2f}"
 
 
 def mikata_view(rr: dict) -> dict:
@@ -202,7 +202,7 @@ def _card(head_small: str, h1: str, sub: str, body: str) -> str:
     lanes = "".join(f'<i style="background:{c}"></i>' for c in LANE_BG)
     return (f'<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>{CARD_CSS}</style></head><body><div class="c">'
             f'<div class="top"><small>{e(head_small)}</small><h1>{e(h1)}</h1><p>{e(sub)}</p></div><div class="lb">{lanes}</div>{body}'
-            f'<div class="ft">{gull_svg(64, bg="#ffffff", cls="f")}<span>数字はミカタのモデルの見込み(朝の出走表の時点・展示前)。<br>予想を楽しむための材料です。舟券は20歳から</span><b>@mikata_kyotei</b></div>'
+            f'<div class="ft">{gull_svg(64, bg="#ffffff", cls="f")}<span>数字はミカタの計算(朝の出走表から。展示の前)。<br>予想を楽しむための材料です。舟券は20歳から</span><b>@mikata_kyotei</b></div>'
             f'</div></body></html>')
 
 
@@ -260,7 +260,7 @@ def story(rr: dict, cards: dict | None) -> dict:
     nt = _type_of(n, mv["ner_type"], cards) if n else None
     hook = (f"{h['lane']}号艇 {nm[int(h['lane'])]}の{ht}か、{n['lane']}号艇 {nm[int(n['lane'])]}の{nt or '一撃'}か"
             if n else f"{h['lane']}号艇 {nm[int(h['lane'])]}の{ht}は堅い? 崩すなら誰だ")
-    br = [{"k": "本線", "lane": int(h["lane"]), "name": nm[int(h["lane"])], "type": ht if ht != "1着" else None, "p": h["p_win"], "why": _why(h, ht, cards),
+    br = [{"k": "本命", "lane": int(h["lane"]), "name": nm[int(h["lane"])], "type": ht if ht != "1着" else None, "p": h["p_win"], "why": _why(h, ht, cards),
            "second": mv["second"][:2]}]
     if n:
         br.append({"k": "狙い目かも?", "lane": int(n["lane"]), "name": nm[int(n["lane"])], "type": nt, "p": n["p_win"],
@@ -270,26 +270,26 @@ def story(rr: dict, cards: dict | None) -> dict:
     tj = _lab_pair("tenji", "展示タイム1位")
     if tj:
         who = n or h
-        checks.append(f"展示タイムの順位。{who['lane']}号艇が1位なら見込みアップ(1位は3着以内が100走で{tj[0]:.0f}回、ふだん{tj[1]:.0f}回)")
+        checks.append(f"展示タイムで{who['lane']}号艇がいちばん速いか。展示タイム1位の選手は、3着以内が100回中{tj[0]:.0f}回(ふつうは{tj[1]:.0f}回)")
     st = {int(b["lane"]): (b.get("traits") or {}).get("st") for b in boats}
     if all(st.get(k) is not None for k in (1, 2, 3, 4)) and st[4] <= min(st[1], st[2], st[3]) - 0.02:
         kd = _lab_pair("slowdash", "0.02秒以上速い")
         if kd:
-            checks.insert(0, f"カドの一撃の形: 4号艇の平均STが内の3人より速い(4コースの1着は100レースで{kd[0]:.0f}回、STが同じくらいなら{kd[1]:.0f}回)")
+            checks.insert(0, f"4号艇のスタートが内の3人より速い。こういうレースは4号艇の1着が100回中{kd[0]:.0f}回(ふつうは{kd[1]:.0f}回)")
     hot = [x for x in rr.get("theories") or [] if x.get("id") == "hot" and "連勝" in x.get("title", "")]
     if hot:
         hp = _lab_pair("hot", "今節、2連勝中")
         ln = "・".join(f"{l}号艇" for x in hot for l in x.get("lanes") or [])
         if ln and hp:
-            checks.append(f"今節2連勝中の{ln}。3着以内は100走で{hp[0]:.0f}回(その人のふだんは{hp[1]:.0f}回)")
+            checks.append(f"{ln}は今節2連勝中。こういう選手は3着以内が100回中{hp[0]:.0f}回(いつもは{hp[1]:.0f}回)")
     if not n:
-        checks.append(f"1号艇の展示タイムが4位以下なら、本線を疑う(展示の順位が下がったぶん見込みも下がる)")
+        checks.append("1号艇の展示タイムが4位以下なら、本命を疑う(展示の順位が下がるほど、勝つ見込みも下がる)")
     occ = [x for x in rr.get("theories") or [] if x.get("kind") == "occult"]
     gen = (f"{occ[0]['title']}か。関係ねえのは分かってる。でもワンチャン、あるだろ?" if occ else "理論もいいが、最後は展示だ。ピットを出ていく顔つきを見とけよ")
     who = n or h
-    short = [f"展示タイムで{who['lane']}号艇が1位か"]
-    if any(c.startswith("カドの一撃") for c in checks):
-        short.append("カドの一撃の形(4号艇のSTが内より速い)")
+    short = [f"展示タイムで{who['lane']}号艇がいちばん速いか"]
+    if any(c.startswith("4号艇のスタートが内の3人より速い") for c in checks):
+        short.append("4号艇のスタートが内より速い")
     return {"hook": hook, "branches": br, "rest": rest, "checks": checks[:2], "gen": gen, "mv": mv, "hon_type": ht, "ner_type": nt, "short": short}
 
 
@@ -313,16 +313,16 @@ def x_cards(series_name: str, grade: str, rr: dict, cards: dict | None, day: dt.
             i = x["lane"] - 1
             extra = ""
             if x.get("second"):
-                extra = "<small>2着は " + " / ".join(f"{s['lane']}号艇 {_pct(s['p'])}%" for s in x["second"]) + "</small>"
+                extra = f"<small>{x['lane']}号艇が勝ったときの2着: " + "・".join(f"{s['lane']}号艇 {_pct(s['p'])}%" for s in x["second"]) + "</small>"
             if x.get("ratio"):
-                extra = f"<small>ふだんの{x['lane']}号艇({LANE_BASE[x['lane']]:.0f}%)の{x['ratio']:.1f}倍</small>"
-            brs += (f'<div class="br{" n" if x["k"] != "本線" else ""}"><span class="k">{e(x["k"])}</span>'
+                extra = f"<small>いつもの{x['lane']}号艇は{LANE_BASE[x['lane']]:.0f}%。それより高い</small>"
+            brs += (f'<div class="br{" n" if x["k"] != "本命" else ""}"><span class="k">{e(x["k"])}</span>'
                     f'<div class="bm"><b><span class="lt" style="background:{LANE_BG[i]};color:{LANE_FG[i]}">{x["lane"]}</span>{e(x["name"])}{("の" + e(x["type"])) if x["type"] else ""}</b>'
                     f'{extra}' + (f'<p>{e(x["why"])}</p>' if x["why"] else "") + f'</div><div class="pc">{_pct(x["p"])}<small>%</small></div></div>')
         brs += f'<div class="br o"><span class="k">それ以外</span><div class="bm"><b>ほかの艇が勝つ</b></div><div class="pc">{_pct(st_["rest"])}<small>%</small></div></div>'
         chk = "".join(f"<li>{e(c)}</li>" for c in st_["checks"])
         body1 = (f'<div class="hook">{e(st_["hook"])}</div>'
-                 f'<div class="sec"><p class="h">展開の分かれ道(1着の見込み)</p>{brs}</div>'
+                 f'<div class="sec"><p class="h">どう決まる?(勝つ見込み)</p>{brs}</div>'
                  + (f'<div class="sec"><p class="h">ここを見て決める</p><ul class="lines sm">{chk}</ul></div>' if chk else ""))
     else:
         body1 = '<div class="hook">6人の材料を並べました</div>'
@@ -337,13 +337,13 @@ def x_cards(series_name: str, grade: str, rr: dict, cards: dict | None, day: dt.
         c = (cards or {}).get(int(b.get("racer_id") or 0))
         tg = sorted(rc.tags_for(c), key=lambda t: -t["score"])[:1] if c else []
         rows += (f'<div class="row"><span class="lt" style="background:{LANE_BG[i]};color:{LANE_FG[i]}">{i + 1}</span>'
-                 f'<div class="nm">{e(b.get("name") or "")}<small>{e(str(b.get("class") or ""))} ・ 平均ST {_st(stv)}'
+                 f'<div class="nm">{e(b.get("name") or "")}<small>{e(str(b.get("class") or ""))} ・ スタート{_st(stv)}秒'
                  + (f' ・ <em>{e(tg[0]["t"])}</em>' if tg else "") + '</small></div>'
                  f'<div class="bar{" n" if ner is b else ""}"><i style="width:{(b.get("p_win") or 0) / mx * 100:.0f}%"></i></div>'
                  f'<div class="p">{_pct(b.get("p_win"))}<small>%</small></div></div>')
     il = (rr.get("arashi") or {}).get("in_lose")
-    body2 = (f'<div class="sec"><p class="h">6人の材料(1着の見込み・平均ST・いちばん強い型)</p>{rows}</div>'
-             + (f'<div class="sec"><p class="h">荒れそう度</p><ul class="lines"><li class="m">1号艇以外が勝つ見込み {_pct(il)}%<small>ふだんは100レースで45回</small></li></ul></div>' if il is not None else "")
+    body2 = (f'<div class="sec"><p class="h">6人の勝つ見込み<span class="key">スタートは平均の速さ ・ 赤字はその人の得意な型</span></p>{rows}</div>'
+             + (f'<div class="sec"><p class="h">荒れそう度</p><ul class="lines"><li class="m">1号艇以外が勝つ見込み {_pct(il)}%<small>いつもは45%</small></li></ul></div>' if il is not None else "")
              + (f'<div class="sec gen"><span>ゲンさん</span><p>{e(st_["gen"])}</p></div>' if st_ else ""))
     out.append(_card(small, h1, sub + " ・ 2/2", body2))
     # 3枚目: 当てはまる理論(札と、何を見てどれくらい違うかの1行)と、ことばの説明
