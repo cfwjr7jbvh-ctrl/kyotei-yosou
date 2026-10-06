@@ -1,2 +1,21 @@
 鍵: あり / 自動投稿: ON
-鍵の確認: 200 mikata_kyotei
+--- 1 (206/280) ---
+「モーター番号の末尾が7」
+→ ふだんとほぼ同じ
+
+100走で3着以内に入るのは50.0回(ふだんは50.7回)
+(この差は、たまたまでも出るくらいの幅)
+
+検証ラボ「ラッキー7のモーターは当たり?」より📰 あなたの予想は当たってた?
+
+Traceback (most recent call last):
+  File "/home/runner/work/kyotei-yosou/kyotei-yosou/scripts/x_post.py", line 366, in <module>
+    main()
+  File "/home/runner/work/kyotei-yosou/kyotei-yosou/scripts/x_post.py", line 343, in main
+    mid = upload_media(s, media) if media else None
+          ^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/kyotei-yosou/kyotei-yosou/scripts/x_post.py", line 246, in upload_media
+    r.raise_for_status()
+  File "/opt/hostedtoolcache/Python/3.12.14/x64/lib/python3.12/site-packages/requests/models.py", line 1167, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 400 Client Error: Bad Request for url: https://api.x.com/2/media/upload
