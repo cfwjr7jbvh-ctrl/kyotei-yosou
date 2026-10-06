@@ -94,7 +94,7 @@ async def render_top(html: str, width: int = 1080, height: int = 1350) -> bytes:
     return png
 
 
-NETA_START = dt.date(2026, 10, 7)   # 「1枚1ネタ」の1日目(前の日の21:30に投票で出題 → 次の日の15:30に答え)
+NETA_START = dt.date(2026, 10, 6)   # 「1枚1ネタ」の1日目(前の日の21:30に投票で出題 → 次の日の15:30に答え)
 
 
 def polled_yesterday(today: dt.date) -> bool:
