@@ -19,7 +19,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -q requests
+      - run: pip install -q requests pandas numpy cryptography
       - run: python scripts/market_words.py
         env:
           SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
