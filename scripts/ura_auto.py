@@ -190,7 +190,7 @@ def main():
     # 検証ラボ(reports/lab/*.json、毎週1本)も記事タブに
     import lab as labmod
     labs = [json.loads(p.read_text(encoding="utf-8")) for p in (ROOT / "reports/lab").glob("*.json")]
-    for t in sorted(labs, key=lambda t: (t.get("made") or "", t["id"]), reverse=True)[:40]:   # ストック全部(新しい順)
+    for t in sorted(labs, key=lambda t: (t.get("made") or "", t["id"]), reverse=True)[:120]:   # ストック全部(新しい順。40本で切っていたため古い9本が出ていなかった)
         key = f"lab_{t['id']}"
         html_ = labmod.page(t, t.get("asof", ""))
         pages_ = save_pages(out, key, html_, a.no_images)
