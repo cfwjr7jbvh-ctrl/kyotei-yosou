@@ -322,7 +322,7 @@ def event_due(day: str, now: dt.datetime, posted: dict) -> list[dict]:
         tag = f"event:{it['label']}"
         if posted.get(tag) == day:
             continue
-        if hm(it["time"]) <= t < hm(it["deadline"]) - 10:
+        if hm(it["time"]) <= t < hm(it["deadline"]) - 15:   # 締切の15分前を過ぎたら出さない(読む時間がない)
             out.append({**it, "tag": tag})
     return out
 
@@ -405,6 +405,11 @@ def main():
         pngs = [load_enc("cards", f"ura/{f}") for f in files[:4]]
         pngs = [base64.b64decode(x["png"]) for x in pngs if x]
         media = pngs or None
+    if a.what in SLOTS and not a.dry:   # 遅れすぎた決まった時間の投稿は出さない(理論ぶつけは12時まで、など。x_due.py と同じ)
+        import x_due
+        until = x_due.LATE.get(a.what, (None, None))[1]
+        if until and now.hour * 60 + now.minute > hm(until):
+            print(f"{a.what} は {until} を過ぎたので出しません"); return
     qi = queue_item(day, a.what) if a.what in SLOTS else None
     if qi:
         texts, media, poll = [qi[0]], qi[1], qi[2]

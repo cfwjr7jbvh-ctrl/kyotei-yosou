@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import pathlib
 import pickle
 import sys
@@ -522,3 +523,15 @@ if __name__ == "__main__":
         day = dt.date.fromisoformat(sys.argv[2]) if len(sys.argv) > 2 else now().date()
         {"morning": morning, "live": live, "features": build_today}[mode](day)
     print(f"{time.time()-t0:.0f}s")
+    if mode == "live" and os.environ.get("GITHUB_ACTIONS") == "true":
+        # X の見回り(GitHub の定期実行の遅れ・飛びの保険): 出す時間が来た投稿があれば x_post.yml を起動する。
+        # 直前予想ループが5分ごとにここを通る。失敗しても予想の更新には影響させない(別プロセス・60秒で打ち切り)
+        import subprocess
+        try:
+            r = subprocess.run([sys.executable, str(ROOT / "scripts/x_due.py"), str(CACHE / "x_due.json")],
+                               capture_output=True, text=True, timeout=60)
+            for w in [x for x in r.stdout.split() if x]:
+                subprocess.run(["gh", "workflow", "run", "x_post.yml", "--ref", "main", "-f", f"what={w}"], timeout=30)
+                print("X: 起動", w)
+        except Exception as ex:  # noqa: BLE001
+            print("X の見回りに失敗:", ex)
