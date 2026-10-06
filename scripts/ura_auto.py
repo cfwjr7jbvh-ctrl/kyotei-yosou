@@ -330,19 +330,37 @@ def series_name_tag(x: dict) -> tuple[str, str]:
 FIXED_SLOTS = ["8:20", "12:10", "15:30", "18:30", "20:00", "21:30"]
 
 
+# 締切の時間帯ごとの、出す時間の候補(先にあるほど優先)。予想する人がスマホを見る時間帯(朝の通勤・昼休み・夕方・帰り道)
+STUDY = [(13 * 60, ["8:50", "9:40", "10:30"]),           # 朝〜昼前のレース
+         (17 * 60, ["11:40", "13:20", "14:20", "10:30"]),  # 昼のレース
+         (19 * 60 + 30, ["16:40", "17:20", "15:00"]),      # 夕方のレース
+         (22 * 60, ["17:40", "19:05", "16:50", "19:30"]),  # ナイター
+         (24 * 60, ["21:00", "20:30", "19:30"])]           # ミッドナイト
+GAP_MIN = 25   # ほかの投稿と、これだけ空ける(自分の投稿どうしで見られる時間を取り合わない)
+
+
 def study_time(deadline: str, used: list[str]) -> str:
-    """ミカタ新聞を出す時間: 締切の直前ではなく、予想する人がスマホを見る時間帯(朝の通勤・昼休み・夕方・帰り道)に。
+    """ミカタ新聞を出す時間: 締切の直前ではなく、予想する人がスマホを見る時間帯に。
     売上の9割は締切10分前から入る(展示を見てから買う)が、予想を組み立てるのはその前。
-    朝のレース(〜13時)→ 8:50、昼(〜17時)→ 11:40、夕方(〜19:30)→ 16:40、ナイター → 18:10。
-    締切の60分前より遅くならないように。同じ時間帯に2本なら25分ずらす(決まった投稿の時間とも重ねない)。"""
+    候補(STUDY)のうち、締切の60分前までで、ほかの投稿(決まった投稿・先に決めた新聞)と25分以上あく最初の時間。
+    見つからなければ、締切の60分前から25分ずつ前へずらす。"""
     hh, mm = map(int, deadline.split(":"))
     dl = hh * 60 + mm
-    base = 8 * 60 + 50 if dl < 13 * 60 else 11 * 60 + 40 if dl < 17 * 60 else 16 * 60 + 40 if dl < 19 * 60 + 30 else 18 * 60 + 10
-    t = min(base, dl - 60)
-    taken = {int(x.split(":")[0]) * 60 + int(x.split(":")[1]) for x in used + FIXED_SLOTS}
-    while any(abs(t - u) < 15 for u in taken) and t + 25 <= dl - 45:
-        t += 25
+    taken = [hm_(x) for x in used + FIXED_SLOTS]
+    cands = next(c for lim, c in STUDY if dl < lim)
+    for c in cands:
+        t = hm_(c)
+        if t <= dl - 60 and all(abs(t - u) >= GAP_MIN for u in taken):
+            return f"{t // 60}:{t % 60:02d}"
+    t = dl - 60
+    while any(abs(t - u) < GAP_MIN for u in taken) and t > 8 * 60:
+        t -= 25
     return f"{t // 60}:{t % 60:02d}"
+
+
+def hm_(x: str) -> int:
+    h, m = map(int, x.split(":"))
+    return h * 60 + m
 
 
 def news_posts(live: list[dict], races: list[dict], day: dt.date | None = None, top: int = 4, cards: dict | None = None) -> list[tuple]:
