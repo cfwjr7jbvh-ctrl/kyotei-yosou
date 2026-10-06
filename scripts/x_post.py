@@ -240,18 +240,19 @@ def session():
                          resource_owner_secret=c["X_ACCESS_SECRET"])
 
 
-def upload_media(s, png: bytes) -> str:
-    """v2 の media upload(INIT → APPEND → FINALIZE)。"""
-    r = s.post(f"{API}/media/upload", data={"command": "INIT", "total_bytes": len(png), "media_type": "image/png", "media_category": "tweet_image"})
-    r.raise_for_status()
-    mid = r.json()["data"]["id"]
-    for i in range(0, len(png), 4_000_000):
-        r = s.post(f"{API}/media/upload", data={"command": "APPEND", "media_id": mid, "segment_index": i // 4_000_000},
-                   files={"media": png[i:i + 4_000_000]})
-        r.raise_for_status()
-    r = s.post(f"{API}/media/upload", data={"command": "FINALIZE", "media_id": mid})
-    r.raise_for_status()
-    return mid
+def upload_media(s, png: bytes) -> str | None:
+    """画像のアップロード(v2、1回で送る形: multipart の media + media_category)。だめなら古い v1.1 で。両方だめなら None(文字だけで出す)。"""
+    r = s.post(f"{API}/media/upload", files={"media": ("image.png", png, "image/png")}, data={"media_category": "tweet_image"})
+    if r.ok:
+        d = r.json().get("data") or {}
+        if d.get("id"):
+            return d["id"]
+    print("画像のアップロード(v2)に失敗:", r.status_code, r.text[:300])
+    r = s.post("https://upload.twitter.com/1.1/media/upload.json", files={"media": png}, data={"media_category": "tweet_image"})
+    if r.ok and r.json().get("media_id_string"):
+        return r.json()["media_id_string"]
+    print("画像のアップロード(v1.1)にも失敗:", r.status_code, r.text[:300], "→ 文字だけで出します")
+    return None
 
 
 def post(s, text: str, media_id: str | None = None, reply_to: str | None = None, poll: dict | None = None) -> str:

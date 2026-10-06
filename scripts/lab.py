@@ -3042,7 +3042,7 @@ def neta_text(r: dict, from_poll: bool = False) -> str:
     v = {"多い": "ふだんより多い", "少ない": "ふだんより少ない", "ほぼ同じ": "ふだんとほぼ同じ"}[r["answer"]]
     tail = "\n(この差は、たまたまでも出るくらいの幅)" if r["answer"] == "ほぼ同じ" and r.get("a") is not None and abs(r["a"] - r["b"]) >= 0.5 else ""
     body = (f"{head}「{r['name']}」\n→ {v}\n\n{r['line']}{tail}\n\n"
-            f"検証ラボ「{r['title']}」より📰 あなたの予想は当たってた?")
+            f"検証ラボ「{r['title']}」より📰 " + ("あなたの予想は当たってた?" if from_poll else "あなたは、どっちだと思ってた?"))
     return body
 
 
