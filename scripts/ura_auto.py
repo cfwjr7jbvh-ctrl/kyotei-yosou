@@ -566,6 +566,24 @@ def main():
                 print("x arashi failed:", ex)
     except Exception as ex:  # noqa: BLE001  毎日の記事の失敗で、ほかの記事を止めない
         print("theory daily failed:", ex)
+    # 今日の返信ネタ(2026-10-07〜。フォロワーが少ないうちは返信がいちばん読まれる。開催場ごとの数字と、そのまま貼れる文)
+    try:
+        import reply_ideas
+        from kyotei.publish import read_json as _rjr
+        dpr = ROOT / f"docs/data/days/{today.isoformat()}.json"
+        if dpr.exists():
+            if d is None:
+                d = rc.load_table()
+            tr = reply_ideas.build(today, _rjr(dpr).get("races", []), d)
+            if tr:
+                key = f"reply_{today.strftime('%Y%m%d')}"
+                write_json(out / f"{key}.json", {"key": key, "title": tr["title"], "grade": "X", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"),
+                                                 "html": tr["html"], "note": tr["note"], "x": tr["x"], "picks": [], "images": [], "n": 0, "missing": [],
+                                                 "pages": [], "pdf": None, "asof": today.isoformat()})
+                items.insert(0, {"key": key, "title": tr["title"], "grade": "X", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"), "n": 0, "picks": [], "images": 0})
+                print("reply ideas:", tr["n"])
+    except Exception as ex:  # noqa: BLE001
+        print("reply ideas failed:", ex)
     # 夜: 火・金は検証ラボ(いちばん新しい1本)、ほかの日は次のグレードレースの注目選手
     try:
         if today.weekday() in (1, 4) and labs:
