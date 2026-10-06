@@ -2354,6 +2354,114 @@ def t_suji(ent, r):
     }
 
 
+VENUE_LL = {1: (36.39, 139.33), 2: (35.81, 139.66), 3: (35.69, 139.87), 4: (35.58, 139.74), 5: (35.62, 139.52), 6: (34.72, 137.60),
+            7: (34.82, 137.23), 8: (34.88, 136.84), 9: (34.72, 136.54), 10: (36.21, 136.14), 11: (35.03, 135.88), 12: (34.61, 135.47),
+            13: (34.72, 135.42), 14: (34.17, 134.61), 15: (34.29, 133.79), 16: (34.47, 133.81), 17: (34.31, 132.32), 18: (34.05, 131.80),
+            19: (33.95, 130.94), 20: (33.90, 130.81), 21: (33.89, 130.66), 22: (33.59, 130.40), 23: (33.46, 129.97), 24: (32.92, 129.96)}
+
+
+def _sunset_min(dates: pd.Series, jcd: pd.Series) -> pd.Series:
+    """日の入りの時刻(JST、0時からの分)。NOAA の近似式(誤差2〜3分)。"""
+    d = pd.to_datetime(dates)
+    doy = d.dt.dayofyear.values.astype(float)
+    lat = jcd.map({k: v[0] for k, v in VENUE_LL.items()}).values.astype(float)
+    lon = jcd.map({k: v[1] for k, v in VENUE_LL.items()}).values.astype(float)
+    g = 2 * np.pi / 365 * (doy - 1 + 0.5)
+    eqt = 229.18 * (0.000075 + 0.001868 * np.cos(g) - 0.032077 * np.sin(g) - 0.014615 * np.cos(2 * g) - 0.040849 * np.sin(2 * g))
+    decl = (0.006918 - 0.399912 * np.cos(g) + 0.070257 * np.sin(g) - 0.006758 * np.cos(2 * g) + 0.000907 * np.sin(2 * g)
+            - 0.002697 * np.cos(3 * g) + 0.00148 * np.sin(3 * g))
+    la = np.radians(lat)
+    ha = np.degrees(np.arccos(np.clip(np.cos(np.radians(90.833)) / (np.cos(la) * np.cos(decl)) - np.tan(la) * np.tan(decl), -1, 1)))
+    sunset_utc_min = 720 + 4 * (ha - lon) - eqt
+    return pd.Series(sunset_utc_min + 9 * 60, index=dates.index)
+
+
+def t_night(ent, r):
+    """日没後はインが強い(ナイターの法則)? 時間帯(モーニング・デイ・ナイター・ミッドナイト)でインの強さは違う?
+    同じ場・同じレース番号で、締切が日の入りの前か後か(季節で入れかわる)をくらべる。"""
+    dl = ent.drop_duplicates("race_id").set_index("race_id")["deadline"]
+    x = r.copy()
+    x["dl"] = x["race_id"].map(dl)
+    hm = x["dl"].astype(str).str.extract(r"^(\d{1,2}):(\d{2})")
+    x["tmin"] = pd.to_numeric(hm[0], errors="coerce") * 60 + pd.to_numeric(hm[1], errors="coerce")
+    x = x[x["tmin"].notna() & x["jcd"].isin(VENUE_LL)].copy()
+    x["sunset"] = _sunset_min(x["date"], x["jcd"]).values
+    x["after"] = x["tmin"] >= x["sunset"] + 15          # 日の入りの15分後より遅い締切 = 暗くなってからのレース
+    x["before"] = x["tmin"] <= x["sunset"] - 30
+    band = pd.cut(x["tmin"], [0, 10 * 60 + 30, 15 * 60, 18 * 60, 20 * 60 + 30, 24 * 60],
+                  labels=["モーニング(〜10:30)", "デイ(〜15:00)", "夕方(〜18:00)", "ナイター(〜20:30)", "ミッドナイト(20:30〜)"])
+    x["band"] = band
+    # ナイター場(同じ日に日没の前後のレースがある場)だけで、同じレース番号どうしをくらべる。
+    # 日の入り前のレースは夏の7・8Rにかたよる(9R以降はほぼ暗い)ので、前後の両方がある 7・8R だけで数える(番号の違いを混ぜない)
+    nv = x.groupby("jcd")["after"].mean()
+    night_venues = set(nv[nv > 0.15].index)
+    both = x["jcd"].isin(night_venues) & x["rno"].isin([7, 8])
+    m_after = measure(x, both & x["after"], ref=both & x["before"])
+    m_after.update({"ref_label": "同じ場の7・8Rで、日の入り前", "subject": "1号艇", "verb": "勝つ", "unit": "レース"})
+    # レース番号ごと(7〜9R)の前後
+    tbl_r = []
+    for rn in (7, 8, 9):
+        g = x[x["jcd"].isin(night_venues) & (x["rno"] == rn)]
+        a, b_ = g[g["after"]], g[g["before"]]
+        if len(a) >= 50 and len(b_) >= 50:
+            tbl_r.append([f"{rn}R", _rate(b_["c1"].mean()), f"{len(b_):,}", _rate(a["c1"].mean()), f"{len(a):,}", _rate_change(a["c1"].mean(), b_["c1"].mean())])
+    # 時間帯ごと(全体とくらべる)
+    ms_band = []
+    for b in band.cat.categories:
+        mb = x["band"] == b
+        if mb.sum() < 500:
+            continue
+        m = measure(x, mb)
+        m.update({"ref_label": "全レース", "subject": "1号艇", "verb": "勝つ", "unit": "レース"})
+        ms_band.append((f"{b}の締切", m, verdicts(m)))
+    v_after = verdicts(m_after)
+    # 表: 場ごと(ナイター場)の日没前後
+    tbl = []
+    for j in sorted(night_venues):
+        g = x[(x["jcd"] == j) & x["rno"].isin([7, 8])]
+        a, b_ = g[g["after"]], g[g["before"]]
+        if len(a) >= 60 and len(b_) >= 60:
+            tbl.append([VENUES[j], _rate(b_["c1"].mean()), _rate(a["c1"].mean()), _rate_change(a["c1"].mean(), b_["c1"].mean()), f"{len(a):,}"])
+    tbl2 = [[b, f"{int((x['band'] == b).sum()):,}", _rate(x.loc[x['band'] == b, 'c1'].mean()), _rate(x.loc[x['band'] == b, 'upset'].mean())] for b in band.cat.categories
+            if (x["band"] == b).sum() >= 500]
+    d_after = (m_after["in1"] - m_after["in1_ref"]) * 100
+    real = v_after["real"]
+    head = ("本当。暗くなるとインは少し強い" if real and d_after > 0 else ("ほぼ同じ。暗さより『場と番組』" if not real else "逆。暗くなるとインは少し弱い"))
+    mid = next((m for nm, m, v in ms_band if nm.startswith("ミッドナイト")), None)
+    mor = next((m for nm, m, v in ms_band if nm.startswith("モーニング")), None)
+    return {
+        "id": "night", "title": "日が沈むと、インは強くなる?", "belief": "ナイターは日没後に1号艇の1着率が上がる。夜は水面が静かで、視界も変わるから",
+        "subject": "1号艇", "unit": "レース", "compare": "同じ場・同じレース番号の、日の入り前のレース",
+        "x1": f"ナイター場の7・8R、日の入り後の締切なら1号艇が勝つのは{_rate(m_after['in1'])}。同じ場の7・8Rで日の入り前は{_rate(m_after['in1_ref'])}。",
+        "lead": f"ナイターの場では、同じ7・8Rでも、夏は明るいうちに締切、秋冬は暗くなってから締切になる。それを使って『同じ場・同じレース番号』で、"
+                f"日の入りの前と後をくらべた。1号艇が勝つのは、日の入り後{_rate(m_after['in1'])}、日の入り前{_rate(m_after['in1_ref'])}({_rate_change(m_after['in1'], m_after['in1_ref'])})。"
+                + (f"ナイター場{len(tbl)}場のうち、暗くなってインが上がったのは{sum(1 for t in tbl if '上がる' in t[3])}場。" if tbl else "")
+                + f"レース番号をそろえないで数えると差はもっと大きく見える(日の入り後のレースは10R・11Rにかたより、そこは番組が1号艇に強い人を置くため)。"
+                + f"\n\n時間帯で切ると、1号艇が勝つのは" + "、".join(f"{nm.replace('の締切', '')}{_rate(m['in1'])}" for nm, m, v in ms_band) + "。"
+                + (f"ミッドナイト(20:30以降の締切)は{_rate(mid['in1'])}で、" + ("人気以上に来る" if verdicts(mid).get("edge") == 1 else ("人気のわりにひかえめ" if verdicts(mid).get("edge") == -1 else "人気どおり")) + "。" if mid else "")
+                + f"ただし時間帯の差の多くは『場』の差(ナイターをやる場・モーニングをやる場が決まっている)と『番組』の差(12Rは1号艇に強い人を置く)。"
+                f"それを除いた純粋な『暗さ』の効き目が、上の{_rate_change(m_after['in1'], m_after['in1_ref'])}。",
+        "conclusion": [head, f"同じ場・同じレース番号でくらべると、日の入り後の1号艇は{_rate(m_after['in1'])}、日の入り前は{_rate(m_after['in1_ref'])}。"
+                       + ("差は本物だが小さい。" if real else "差は小さく、たまたまでも出るくらいの幅。") + "ナイターのイン勝率が高く見えるのは、暗さより『場と番組』"],
+        "tables": [("ナイター場ごとの、日の入り前後の1号艇(7・8R)", tbl, ["場", "日の入り前", "日の入り後", "差", "日の入り後のレース数"]),
+                   ("レース番号ごとの、日の入り前後の1号艇(ナイター場)", tbl_r, ["レース", "日の入り前", "レース数", "日の入り後", "レース数", "差"]),
+                   ("締切の時間帯ごとの数字(全場)", tbl2, ["時間帯", "レース数", "1号艇の1着", "万舟(30番人気以下)"])],
+        "measures": [("日の入り後の締切(ナイター場の7・8R)", m_after, v_after)] + ms_band,
+        "rules": ["日の入りの時刻は、場の緯度経度と日付から計算(誤差2〜3分)。『日の入り後』は日の入りの15分より後の締切、『前』は30分より前の締切",
+                  "ナイター場: 同じ日に日の入りの前後どちらのレースもある場(桐生・蒲郡・住之江・丸亀・若松・下関・大村)。7・8Rだけでくらべたのは、9R以降は一年中ほぼ暗く『前』のレースが無いのと、12Rは番組の作りが特別だから。夏と秋冬の季節の差(夏はインが1〜2ポイント弱い)は混ざっている",
+                  "時間帯の区切りは締切の時刻: モーニング(〜10:30)・デイ(〜15:00)・夕方(〜18:00)・ナイター(〜20:30)・ミッドナイト(20:30〜)"],
+        "faq": [("なぜ『同じ場・同じレース番号』でくらべる?", "ナイターの場は昼の場より1号艇が強い場が多く、12Rは1号艇に強い人を置く番組が多い。場と番組の差を『暗さの効き目』と取りちがえないため"),
+                ("ミッドナイトは堅い?", f"20:30以降の締切の1号艇は{_rate(mid['in1']) if mid else '-'}。ただしミッドナイトをやる場(大村・下関・若松など)はもともとインが強い場。場を除いた暗さの効き目は上の数字"),
+                ("モーニングは?", f"10:30までの締切の1号艇は{_rate(mor['in1']) if mor else '-'}。モーニングの1〜2Rは企画レース(1号艇にA級)が多く、番組の効き目が大きい")],
+        "use": ["『ナイターだからイン』は、場と番組の話。暗さそのものの効き目は小さいので、1号艇の判断はいつもどおり選手と展示で",
+                "ミッドナイトの1号艇は、場の性格(大村・下関・若松はもともとイン有利)を先に頭に入れる"],
+        "mikata": "夜の水面はきれいで、インが強く見える。でも数えてみると、強いのは『夜』じゃなくて『場と番組』だったみたい",
+        "gen": "ナイターは堅いって、みんな言うだろ。……場と番組か。まあ、堅いことに変わりはねえな",
+        "challenge": "ナイターの場で、日の入りの前の7Rと後の11Rの1号艇を見くらべてみて。暗さより『誰が1号艇か』で決まってるはず",
+        "numbers": {"night_venues": sorted(VENUES[j] for j in night_venues), "d_after": d_after},
+    }
+
+
 def t_season(ent, r):
     """夏はインが弱い? 季節で決まり手は変わる? 展示タイムは?"""
     x = r.copy()
@@ -2937,7 +3045,7 @@ BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in"
             "birthday": t_birthday, "blood": t_blood, "height": t_height, "furusato": t_furusato,
             "pressure": t_pressure, "humid": t_humid, "heat": t_heat,
             "lane6": t_lane6, "motor": t_motor, "entry": t_entry,
-            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season, "penalty": t_penalty, "slowdash": t_slowdash, "formation": t_formation, "samefin": t_samefin, "series": t_series, "fixed": t_fixed, "final": t_final, "saying": t_saying, "suji": t_suji}
+            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season, "penalty": t_penalty, "slowdash": t_slowdash, "formation": t_formation, "samefin": t_samefin, "series": t_series, "fixed": t_fixed, "final": t_final, "saying": t_saying, "suji": t_suji, "night": t_night}
 
 
 # ---------------------------------------------------------------- 記事
