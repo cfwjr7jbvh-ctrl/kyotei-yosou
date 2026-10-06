@@ -176,7 +176,7 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
         if kw in rt:
             m, v = _m("kikaku", i)
             if m:
-                notes.append(_note("kikaku", f"企画レース({kw}戦)", [1], f"{kw}戦の1号艇は100レースで{_n(m['in1'])}回勝つ。" + ("人気以上に来ているかは追試中" if "追試中" in (v.get("known") or "") else "堅いことは、みんな知っている"), v, +1))
+                notes.append(_note("kikaku", f"企画レース({kw}戦)", [1], f"{kw}戦の1号艇は100レースで{_n(m['in1'])}回勝つ(全レースは{_n(m['in1_ref'])}回)。" + ("" if "追試中" in (v.get("known") or "") else "堅いことは、みんな知っている"), v, +1))
     if int(r0.get("fixed_entry") or 0) == 1:
         m, v = _m("fixed", 1)
         notes.append(_note("fixed", "進入固定", [1], f"前づけができないので1号艇は助走を十分にとれる。力の差が同じくらいでも1号艇が{_cnt(m)}勝つ", v, +1))
