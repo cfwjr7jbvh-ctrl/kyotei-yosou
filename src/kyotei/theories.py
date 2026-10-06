@@ -6,7 +6,7 @@
 
 各ノートの形:
   {"id": 理論の id, "title": 見出し, "lanes": [関係する枠], "text": 説明(数字つき), "badge": 札, "kind": real/known/edge/occult/trial/info,
-   "dir": 1号艇への向き(+1=インに追い風、-1=インに向かい風、0=どちらでもない), "lab": 検証ラボの記事 id, "gen": ゲンさんのひと言 or None}
+   "dir": 1号艇への向き(+1=インに有利、-1=インに不利、0=どちらでもない), "lab": 検証ラボの記事 id, "gen": ゲンさんのひと言 or None}
 """
 from __future__ import annotations
 

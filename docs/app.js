@@ -654,7 +654,7 @@ function theoriesHTML(r) {
   const item = (n) => `<li class="th ${esc(n.kind)}"><div class="th-h"><b>${esc(n.title)}</b>${lanes(n.lanes)}<span class="th-b">${esc(n.badge)}</span></div>
     <p>${esc(n.text)}</p>${n.gen ? `<p class="th-gen">ゲンさん「${esc(n.gen)}」</p>` : ""}${n.lab_title ? `<p class="th-lab">検証ラボ『${esc(n.lab_title)}』</p>` : ""}</li>`;
   const head = sm.conflict
-    ? `<p class="th-conf">悩ましいレース: インに追い風(${esc((sm.plus || []).join("・"))})と、向かい風(${esc((sm.minus || []).join("・"))})がぶつかっている</p>` : "";
+    ? `<p class="th-conf">悩ましいレース: インに有利(${esc((sm.plus || []).join("・"))})と、不利(${esc((sm.minus || []).join("・"))})がぶつかっている</p>` : "";
   const first = ns.slice(0, 4).map(item).join("");
   const rest = ns.slice(4).map(item).join("");
   return `<div class="theories"><h3>理論ぶつけ<small>当てはまる理論${ns.length}つ。買い目ではなく、考え方のヒント</small></h3>${head}<ul>${first}</ul>${rest ? `<details><summary>ほかに${ns.length - 4}つ</summary><ul>${rest}</ul></details>` : ""}</div>`;

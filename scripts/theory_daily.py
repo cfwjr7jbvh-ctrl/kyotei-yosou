@@ -1,7 +1,7 @@
 """毎日の記事「今日の理論ぶつけ」。朝の予想(docs/data/days/YYYY-MM-DD.json)に付いた理論のノートから作る。
 
 買い目は出さない。出走表のレースごとに、検証ラボの理論のうち当てはまるものを並べ、
-「インに追い風の理論」と「向かい風の理論」がぶつかるレースを『悩ましいレース』として出す。
+「インに有利な理論」と「インに不利な理論」がぶつかるレースを『悩ましいレース』として出す。
   python scripts/theory_daily.py --day 2026-10-06 --out out/theory   (確認用。本番は ura_auto.py が記事タブに入れる)
 """
 from __future__ import annotations
@@ -71,7 +71,7 @@ def build(day: dt.date, data: dict) -> dict | None:
     if conf:
         top = conf[0]; sm0 = top["th_sum"]
         title = f"{base_title}|悩ましいのは{race_short(top)}"
-        lead = (f"いちばん悩ましいのは{race_name(top)}。インに追い風の『{sm0['plus'][0]}』と、向かい風の『{sm0['minus'][0]}』がぶつかる。"
+        lead = (f"いちばん悩ましいのは{race_name(top)}。インに有利な『{sm0['plus'][0]}』と、不利な『{sm0['minus'][0]}』がぶつかる。"
                 f"今日の出走表{len(races)}レースに検証ラボの理論をぶつけて、当てはまったのは{n_notes}。悩ましいレースは{len(conf)}つ。どの理論に乗るかは、あなた次第")
     else:
         top = rich[0] if rich else None
@@ -86,8 +86,8 @@ def build(day: dt.date, data: dict) -> dict | None:
     sec_conf = ""
     for r in conf[:6]:
         sm = r["th_sum"]
-        sec_conf += (f'<div class="rc"><p class="rc-h">{e(race_name(r))}</p><p class="vs"><span class="p">インに追い風: {e("・".join(sm["plus"]))}</span>'
-                     f'<span class="m">インに向かい風: {e("・".join(sm["minus"]))}</span></p><ul>{"".join(note_html(n) for n in r["theories"] if n["kind"] != "occult")}</ul></div>')
+        sec_conf += (f'<div class="rc"><p class="rc-h">{e(race_name(r))}</p><p class="vs"><span class="p">インに有利: {e("・".join(sm["plus"]))}</span>'
+                     f'<span class="m">インに不利: {e("・".join(sm["minus"]))}</span></p><ul>{"".join(note_html(n) for n in r["theories"] if n["kind"] != "occult")}</ul></div>')
     if not sec_conf:
         sec_conf = "<p>今日は、理論どうしがぶつかるレースは見つからなかった。素直な日かも</p>"
     sec_rich = "".join(f'<div class="rc"><p class="rc-h">{e(race_name(r))}<small>理論{len(r["theories"])}つ</small></p><ul>{"".join(note_html(n) for n in r["theories"])}</ul></div>'
@@ -131,7 +131,7 @@ def build(day: dt.date, data: dict) -> dict | None:
     lines = [f"【タイトル案】{title}", "", lead, "", "■今日の悩ましいレース"]
     for r in conf[:6]:
         sm = r["th_sum"]
-        lines += [f"・{race_name(r)}", f"  インに追い風: {'・'.join(sm['plus'])}", f"  インに向かい風: {'・'.join(sm['minus'])}"]
+        lines += [f"・{race_name(r)}", f"  インに有利: {'・'.join(sm['plus'])}", f"  インに不利: {'・'.join(sm['minus'])}"]
     lines += ["", "■理論別の索引"]
     for tid, nm in INDEX:
         if tid in idx:
@@ -141,14 +141,14 @@ def build(day: dt.date, data: dict) -> dict | None:
     # X
     if conf:
         r = conf[0]; sm = r["th_sum"]
-        body = (f"今日の悩ましいレース|{race_name(r)}\n\nインに追い風: {'・'.join(sm['plus'])}\nインに向かい風: {'・'.join(sm['minus'])}\n\n"
+        body = (f"今日の悩ましいレース|{race_name(r)}\n\nインに有利: {'・'.join(sm['plus'])}\nインに不利: {'・'.join(sm['minus'])}\n\n"
                 f"ゲンさん「どっちの理論に乗るかで、レースの見え方が変わるんだよ」\n\nあなたはどっちに乗る?\n#今日の理論ぶつけ {day.month}/{day.day}")
     else:
         body = f"【今日の理論ぶつけ】{day.month}/{day.day}\n\n今日の出走表{len(races)}レースに、検証ラボの理論をぶつけました。当てはまった理論は{n_notes}。\n\nゲンさん「理論にすがりたい日もあるさ」"
     if xlen(body) > 280 and conf:
-        body = (f"今日の悩ましいレース|{race_name(r)}\n\nインに追い風: {sm['plus'][0]}\nインに向かい風: {sm['minus'][0]}\n\nあなたはどっちに乗る?\n#今日の理論ぶつけ {day.month}/{day.day}")
+        body = (f"今日の悩ましいレース|{race_name(r)}\n\nインに有利: {sm['plus'][0]}\nインに不利: {sm['minus'][0]}\n\nあなたはどっちに乗る?\n#今日の理論ぶつけ {day.month}/{day.day}")
     if xlen(body) > 280:
-        body = f"【今日の理論ぶつけ】{day.month}/{day.day}\n\n悩ましいレース{len(conf)}つ。インに追い風の理論と向かい風の理論がぶつかっています。\n\nあなたはどっちに乗る?"
+        body = f"【今日の理論ぶつけ】{day.month}/{day.day}\n\n悩ましいレース{len(conf)}つ。インに有利な理論と不利な理論がぶつかっています。\n\nあなたはどっちに乗る?"
     return {"title": title, "html": page, "note": "\n".join(lines), "x": f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n記事のリンクは、この投稿への返信に付ける", "n_conf": len(conf), "n_races": len(races)}
 
 
