@@ -219,25 +219,39 @@ def win_text(sr: dict, fin: dict) -> str | None:
 
 
 def day_text(sr: dict, rs: list[dict], now: dt.datetime) -> str:
+    """1日のまとめ。荒れたか・インが強かったかを見出しに、外から勝った選手(よい面)と決まり手を足す。"""
     from collections import Counter
-    done = [r for r in rs if r.get("result")]
+    done = sorted([r for r in rs if r.get("result")], key=lambda r: int(r.get("rno") or 0))
+    n = len(done)
     w1 = sum(1 for r in done if str(r["result"]["tri_combo"]).startswith("1-"))
-    exp = f"(ふだんの{sr['venue']}なら{len(done)}レースで{round(sr['in1'] / 100 * len(done))}回くらい)" if sr.get("in1") else ""
+    ex = round(sr["in1"] / 100 * n) if sr.get("in1") else None
+    if ex is not None and w1 <= ex - 2:
+        head, q = f"今日の{sr['venue']}は荒れ模様🌊", "明日も荒れると思う?"
+    elif ex is not None and w1 >= ex + 2:
+        head, q = f"今日の{sr['venue']}はインが強かった💪", "明日もインを信じる?"
+    else:
+        head, q = f"今日の{sr['venue']}まとめ📊", "明日、気になる選手は?"
+    lines = [f"【{sr['name']}】{now.month}/{now.day} {head}", "",
+             f"1号艇の1着: {n}レース中{w1}回" + (f"(ふだんの{sr['venue']}なら{ex}回くらい)" if ex is not None else "")]
+    outs = []
+    for r in done:
+        w = _winner(r)
+        if w and int(w["lane"]) >= 4 and w.get("name"):
+            outs.append(f"{w['lane']}号艇 {w['name']}({r['rno']}R)")
     kc = Counter((r["result"].get("kimarite") or "").strip() for r in done if (r["result"].get("kimarite") or "").strip())
-    kims = "・".join(f"{k}{v}" for k, v in kc.most_common(4))
     wins = Counter((_winner(r) or {}).get("name") for r in done)
-    two = [n for n, c in wins.items() if n and c >= 2]
-    lines = [f"【{sr['name']}】{now.month}/{now.day}の{sr['venue']}まとめ📊", "",
-             f"1号艇の1着: {len(done)}レース中{w1}回{exp}"]
-    if kims:
-        lines.append(f"決まり手: {kims}")
+    two = [nm for nm, c in wins.items() if nm and c >= 2]
+    extra = []
+    if outs:
+        extra.append("外から1着: " + "・".join(outs[:3]) + (f" ほか{len(outs) - 3}" if len(outs) > 3 else ""))
     if two:
-        lines.append(f"今日2勝: {'・'.join(two[:3])}選手")
-    lines += ["", "明日、気になる選手は?", f"#{sr['tag']} #ボートレース"]
-    body = "\n".join(lines)
-    if xlen(body) > 280 and two:
-        body = body.replace(f"今日2勝: {'・'.join(two[:3])}選手\n", "")
-    return body
+        extra.append(f"今日2勝: {'・'.join(two[:3])}選手")
+    if kc:
+        extra.append("決まり手: " + "・".join(f"{k}{v}" for k, v in kc.most_common(4)))
+    tail = ["", q, f"#{sr['tag']} #ボートレース"]
+    while extra and xlen("\n".join(lines + extra + tail)) > 280:
+        extra.pop()
+    return "\n".join(lines + extra + tail)
 
 
 def flash_due(day: str, now: dt.datetime, posted: dict, races: list[dict]) -> list[dict]:
