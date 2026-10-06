@@ -124,7 +124,7 @@ def build(day: dt.date, data: dict) -> dict | None:
 <p>名前・モーター番号のオカルト: {e(occ_txt or "今日は見当たらない")}</p></section>
 <blockquote class="ft-quote">{gull_svg(64, bg="#ffffff", cls="q")}<p><small>ミカタのひと言</small>理論は『正解』じゃなくて『見方』。いくつかの理論がぶつかるレースほど、自分の予想を立てる楽しさがあるよ</p></blockquote>
 <blockquote class="ft-quote gen">{gull_svg(64, bg="#ffffff", cls="q", who="gen")}<p><small>ゲンさんの返し</small>理論にすがりたい日もあるさ。どの理論を信じるかで、レースの見え方が変わる。それが楽しいんだ</p></blockquote>
-<section class="method"><h3>データについて</h3><p>理論の数字は、ミカタ検証ラボで公式の成績データ(2023年10月〜)を集計したもの。『データで本物』は偶然では出にくい差、『オッズも知ってる』はオッズにもう反映されている差、『オカルト枠』は差が出なかった理論。
+<section class="method"><h3>データについて</h3><p>理論の数字は、ミカタ検証ラボで公式の成績データ(2023年10月〜)を集計したもの。『データで本物』は偶然では出にくい差、『人気どおり』は人気にも出ている差(配当は安め)、『人気以上に来る』は人気より多く来ている差、『オカルト枠』は差が出なかった理論。
 朝の出走表の時点の情報で作っています(展示の情報は入っていません)。この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
 <footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ 理論ぶつけ ・ 毎朝更新。買い目は売りません。</span></footer></main></body></html>"""
     # note 本文

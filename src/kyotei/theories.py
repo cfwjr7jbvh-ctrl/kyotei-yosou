@@ -1,7 +1,7 @@
 """出走表に「理論」をぶつける(毎日のレースカードと記事の『理論ぶつけ』)。
 
 買い目は出さない。レースごとに、検証ラボで確かめた理論のうち当てはまるものを並べ、
-「データで本物」「オッズも知ってる」「オカルト枠」などの札をつける。数字は reports/lab/*.json(毎週更新)から読むので、
+「データで本物」「人気どおり」「オカルト枠」などの札をつける。数字は reports/lab/*.json(毎週更新)から読むので、
 記事と食い違わない。
 
 各ノートの形:
@@ -58,20 +58,20 @@ def _cnt(m, per=100):
 
 
 def _badge(v, occult=False):
-    """札。オッズとの関係を優先して1つに。"""
+    """札。人気(オッズ)との関係を優先して1つに。"""
     if occult:
         return "オカルト枠", "occult"
     if not v:
         return "参考", "info"
     known = v.get("known") or ""
     if "追試中" in known:
-        return "データで本物・オッズ超えは追試中", "trial"
+        return "データで本物・人気以上かは追試中", "trial"
     if v.get("edge") == 1:
-        return "データで本物・オッズの見込みより来る", "edge"
+        return "データで本物・人気以上に来る", "edge"
     if v.get("edge") == -1:
-        return "データで本物・オッズの見込みより来ない", "edge"
+        return "データで本物・人気のわりにひかえめ", "edge"
     if v.get("real") and v.get("edge") == 0:
-        return "データで本物・オッズも知ってる", "known"
+        return "データで本物・人気どおり", "known"
     if v.get("real"):
         return "データで本物", "real"
     return "差は小さい", "info"
@@ -221,22 +221,22 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
         l2 = _last2(q.get("series_str"))
         if l2 == ["1", "1"]:
             m, v = _m("hot", 0)
-            notes.append(_note("hot", "今節2連勝中", [lane], f"{who}は今節2連勝中。こういう選手は3着に入る回数がふだんより多い(100走で{_cnt(m)})", v, +1 if lane == 1 else 0))
+            notes.append(_note("hot", "今節2連勝中", [lane], f"{who}は今節2連勝中。こういう選手は3着以内に入る回数がふだんより多い(100走で{_cnt(m)})", v, +1 if lane == 1 else 0))
         elif len(l2) == 2 and all(c in "56" for c in l2):
             m, v = _m("hot", 2)
-            notes.append(_note("hot", "2走続けて5・6着", [lane], f"{wl}は今節2走続けて5・6着。こういうときの次のレースは、3着内が100走で{_cnt(m)}", v, -1 if lane == 1 else 0))
+            notes.append(_note("hot", "2走続けて5・6着", [lane], f"{wl}は今節2走続けて5・6着。こういうときの次のレースは、3着以内が100走で{_cnt(m)}", v, -1 if lane == 1 else 0))
         fs = q.get("f_since")
         if fs == fs and fs is not None and fs <= 10:
             m, v = _m("flying", 0)
-            notes.append(_note("flying", "フライング直後", [lane], f"{wl}は最後のフライングから{int(fs)}走目。F直後の10走はスタートが控えめ(3着内は100走で{_cnt(m)})", v, -1 if lane == 1 else 0))
+            notes.append(_note("flying", "フライング直後", [lane], f"{wl}は最後のフライングから{int(fs)}走目。F直後の10走はスタートが控えめ(3着以内は100走で{_cnt(m)})", v, -1 if lane == 1 else 0))
         rd = q.get("rest_days")
         if rd == rd and rd is not None and rd >= 30:
             m, v = _m("rest", 1 if rd >= 90 else 0)
-            notes.append(_note("rest", "休み明け", [lane], f"{wl}は{int(rd)}日ぶりのレース。休み明けは3着内が100走で{_cnt(m)}", v, -1 if lane == 1 else 0))
+            notes.append(_note("rest", "休み明け", [lane], f"{wl}は{int(rd)}日ぶりのレース。休み明けは3着以内が100走で{_cnt(m)}", v, -1 if lane == 1 else 0))
         a = acc.get(int(q.get("racer_id") or 0))
         if a and a[1] <= 42 and a[0] >= 0.5:
             m, v = _m("penalty", 0)
-            notes.append(_note("penalty", "期末の事故率", [lane], f"{wl}は今期の事故率の目安が{a[0]:.2f}(0.70を超えるとB2級)。期末はスタートを控えめにしやすい(3着内は100走で{_cnt(m)})",
+            notes.append(_note("penalty", "期末の事故率", [lane], f"{wl}は今期の事故率の目安が{a[0]:.2f}(0.70を超えるとB2級)。期末はスタートを控えめにしやすい(3着以内は100走で{_cnt(m)})",
                                v, -1 if lane == 1 else 0))
         ma = q.get("motor_age")
         if lane == 1 and ma == ma and ma is not None and ma <= 14:
@@ -246,12 +246,12 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
             wd = q.get("w_dev")
             if wd == wd and wd is not None and abs(wd) >= 1.5:
                 m, v = _m("weight", 1 if wd > 0 else 0)
-                notes.append(_note("weight", "当日の体重", [lane], f"{wl}は当日の体重がふだんより{abs(wd):.1f}kg{'重い' if wd > 0 else '軽い'}(3着内は100走で{_cnt(m)})", v,
+                notes.append(_note("weight", "当日の体重", [lane], f"{wl}は当日の体重がふだんより{abs(wd):.1f}kg{'重い' if wd > 0 else '軽い'}(3着以内は100走で{_cnt(m)})", v,
                                    (-1 if wd > 0 else +1) if lane == 1 else 0))
             tl, cs = q.get("tilt"), q.get("course")
             if tl == tl and cs == cs and tl is not None and cs is not None and cs >= 4 and tl >= 1.5:
                 m, v = _m("tilt", 0)
-                notes.append(_note("tilt", "外でチルトを跳ねた", [lane], f"{who}は{int(cs)}コースでチルト{tl:+.1f}度。伸び勝負の合図(3着内は100走で{_cnt(m)})", v, -1))
+                notes.append(_note("tilt", "外でチルトを跳ねた", [lane], f"{who}は{int(cs)}コースでチルト{tl:+.1f}度。伸び勝負の合図(3着以内は100走で{_cnt(m)})", v, -1))
         # オカルト枠: 名前・ラッキー7
         for ch, tag in (("勝", "勝"), ("龍", "龍"), ("竜", "龍"), ("翔", "翔")):
             if ch in nm:
