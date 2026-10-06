@@ -126,7 +126,7 @@ def build(day: dt.date, data: dict) -> dict | None:
 <blockquote class="ft-quote gen">{gull_svg(64, bg="#ffffff", cls="q", who="gen")}<p><small>ゲンさんの返し</small>理論にすがりたい日もあるさ。どの理論を信じるかで、レースの見え方が変わる。それが楽しいんだ</p></blockquote>
 <section class="method"><h3>データについて</h3><p>理論の数字は、ミカタ検証ラボで公式の成績データ(2023年10月〜)を集計したもの。『データで本物』は偶然では出にくい差、『人気どおり』は人気にも出ている差(配当は安め)、『人気以上に来る』は人気より多く来ている差、『オカルト枠』は差が出なかった理論。
 朝の出走表の時点の情報で作っています(展示の情報は入っていません)。この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
-<footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ 理論ぶつけ ・ 毎朝更新。買い目は売りません。</span></footer></main></body></html>"""
+<footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ 理論ぶつけ ・ 毎朝更新。考え方を並べる。どれに乗るかは、あなた次第。</span></footer></main></body></html>"""
     # note 本文
     lines = [f"【タイトル案】{title}", "", lead, "", "■今日の悩ましいレース"]
     for r in conf[:6]:

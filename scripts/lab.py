@@ -3034,7 +3034,7 @@ def page(t: dict, asof: str) -> str:
 {'' if hook else gen_reply}
 <section class="method"><h3>データについて</h3><p>公式の成績データ(番組表・競走成績)と、締切時のオッズ(集めたレース分)を自分たちで集計。「人気から考えると◯回」は、締切時のオッズから逆算した見込み(払い戻しに回らない25%の分を除き、人気薄が買われすぎるいつもの傾向も差し引いた値)。
 「ふだん並み」かどうかは、同じ数のレースを何度も引き直したときに出るブレの幅で判定(ブレの外なら「本物の差」)。この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
-<footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ検証ラボ ・ 毎週1本。競艇をいろんな角度から。買い目は売りません。</span></footer></main></body></html>"""
+<footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ検証ラボ ・ 毎週1本。競艇をいろんな角度から。予想が楽しくなる材料を。</span></footer></main></body></html>"""
 
 
 def note_text(t: dict) -> str:

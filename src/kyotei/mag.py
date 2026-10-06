@@ -572,7 +572,7 @@ def page(title: str, venue: str | None, picks, sel: list[dict], wt: dict, trend:
 3着内率は、コースの有利不利を差し引いた「上積み」で比べている。決まり手の図は型を説明する模式図で、実際の航跡ではない。</p>
 <dl>{basis}</dl>
 <p>この新聞は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
-<footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ新聞 ・ 文・データ ミカタ(カモメの記者)・ {e(today)}<br>競艇をいろんな角度から。買い目は売りません。</span></footer>
+<footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ新聞 ・ 文・データ ミカタ(カモメの記者)・ {e(today)}<br>競艇をいろんな角度から。予想が楽しくなる材料を。</span></footer>
 </main></body></html>"""
 
 
