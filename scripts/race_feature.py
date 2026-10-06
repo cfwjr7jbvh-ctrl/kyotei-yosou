@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import datetime as dt
 import html as _h
+import re
 import pathlib
 import sys
 
@@ -187,6 +188,12 @@ CARD_CSS = f"""html,body{{margin:0}} .c{{width:1080px;height:1350px;background:#
 .br .lt{{width:44px;height:44px;flex:0 0 44px;font-size:28px}} .row em{{font-style:normal;color:#c8141c}}
 .gen{{display:flex;gap:14px;align-items:flex-start;background:#e8eef7;border:3px solid #0b5fb4;padding:12px 18px}} .gen span{{font:900 26px {F};color:#fff;background:#0b5fb4;padding:4px 10px;white-space:nowrap}}
 .gen p{{margin:0;font:700 30px/1.45 {F}}}
+.h .key{{display:block;margin-top:4px;font:700 22px {F};color:#56636e}} .ths{{list-style:none;margin:0;padding:0;display:grid;gap:12px}} .ths li{{background:#fff;border-left:10px solid #8a949c;padding:12px 18px}}
+.ths li.p{{border-color:#2e8b57}} .ths li.m{{border-color:#c8141c}} .ths li b{{font:900 32px {F}}}
+.ths .bd{{display:inline-block;margin-left:12px;padding:3px 12px;border-radius:999px;font:700 22px {F};background:#e3dcc6;color:#33404a;vertical-align:4px}}
+.ths .bd.real{{background:#2e8b57;color:#fff}} .ths .bd.edge{{background:#c8141c;color:#fff}} .ths .bd.known{{background:#14212c;color:#fff}}
+.ths li p{{margin:6px 0 0;font:700 26px/1.45 {F}}}
+.words{{list-style:none;margin:0;padding:0;display:grid;gap:8px}} .words li{{display:flex;gap:14px;align-items:flex-start;font:700 25px/1.45 {F}}} .words li b{{flex:0 0 150px;padding:2px 10px;background:#14212c;color:#ffe100;font:900 24px/1.45 {F};text-align:center}}
 .ft{{position:absolute;left:48px;right:48px;bottom:30px;display:flex;align-items:center;gap:16px;font:700 22px/1.4 {F};color:#56636e}}
 .ft b{{color:#c8141c;font:900 30px {F};margin-left:auto;white-space:nowrap}}"""
 
@@ -339,4 +346,70 @@ def x_cards(series_name: str, grade: str, rr: dict, cards: dict | None, day: dt.
              + (f'<div class="sec"><p class="h">荒れそう度</p><ul class="lines"><li class="m">1号艇以外が勝つ見込み {_pct(il)}%<small>ふだんは100レースで45回</small></li></ul></div>' if il is not None else "")
              + (f'<div class="sec gen"><span>ゲンさん</span><p>{e(st_["gen"])}</p></div>' if st_ else ""))
     out.append(_card(small, h1, sub + " ・ 2/2", body2))
+    # 3枚目: 当てはまる理論(札と、何を見てどれくらい違うかの1行)と、ことばの説明
+    th = theory_lines(rr)
+    if th:
+        lis = "".join(f'<li class="{x["cls"]}"><b>{e(x["title"])}</b><span class="bd {x["bcls"]}">{e(x["badge"])}</span><p>{e(x["text"])}</p></li>' for x in th)
+        words = glossary(st_, th)
+        body3 = (f'<div class="sec"><p class="h">このレースに当てはまる理論<span class="key">緑=インに有利 ・ 赤=インに不利</span></p><ul class="ths">{lis}</ul></div>'
+                 + (f'<div class="sec"><p class="h">ことば</p><ul class="words">' + "".join(f"<li><b>{e(k)}</b>{e(v)}</li>" for k, v in words) + "</ul></div>" if words else ""))
+        out.append(_card(small, h1, sub + " ・ 3/3", body3))
+        out[1] = out[1].replace(" ・ 2/2</p>", " ・ 2/3</p>")
     return out
+
+
+BADGE_CLS = {"データで本物": "real", "人気どおり": "known", "人気以上に来る": "edge", "人気のわりにひかえめ": "low", "追試中": "trial", "オカルト枠": "occ"}
+BADGE_NOTE = {"人気どおり": "人気どおり(配当は安め)", "人気以上に来る": "人気以上に来る(狙い目の材料)", "人気のわりにひかえめ": "人気のわりにひかえめ"}
+
+
+def theory_lines(rr: dict, k: int = 3) -> list[dict]:
+    """当てはまる理論を、札(信用度)と1行の説明(数字つき)で。インに有利なものを先、オカルト枠は最後に1つだけ。"""
+    notes = list(rr.get("theories") or [])
+    real = [n for n in notes if n.get("kind") != "occult"]
+    occ = [n for n in notes if n.get("kind") == "occult"][:1]
+    pri = {"人気以上に来る": 0, "データで本物": 1, "人気どおり": 2, "追試中": 3, "人気のわりにひかえめ": 4}
+    real.sort(key=lambda n: (pri.get(str(n.get("badge")), 5), n.get("title", "")))
+    # インに有利と不利を1つずつ必ず入れて(「悩ましい」の中身)、残りは信用度の高い札から
+    pick = [x for x in (next((n for n in real if (n.get("dir") or 0) > 0), None), next((n for n in real if (n.get("dir") or 0) < 0), None)) if x]
+    pick += [n for n in real if n not in pick][:max(0, k - len(pick))]
+    pick.sort(key=lambda n: (-(n.get("dir") or 0) if (n.get("dir") or 0) else 0.5, pri.get(str(n.get("badge")), 5)))
+    out = []
+    for n in pick + occ:
+        txt = str(n.get("text") or "")
+        sents = [x for x in txt.split("。") if x.strip()]
+        # 何を見て(1文目)+ どれくらい違うか(数字の入った最初の文)。数字が1文目にあればそれだけ
+        first = sents[0] if sents else txt
+        if not re.search(r"\d+(\.\d+)?回", first):
+            num = next((x for x in sents[1:] if re.search(r"\d+(\.\d+)?回", x)), None)
+            if num:
+                first = f"{first}。{num}"
+        first = first + "。"
+        if n.get("kind") == "occult":   # オカルト枠は「でも気分は大事」まで(楽しみ方として)
+            first = "。".join(sents[:3]) + "。"
+        d = n.get("dir") or 0
+        badge = str(n.get("badge") or "")
+        out.append({"title": n.get("title", ""), "badge": BADGE_NOTE.get(badge, badge), "bcls": BADGE_CLS.get(badge, ""),
+                    "text": first if len(first) <= 110 else first[:108] + "…", "cls": "p" if d > 0 else ("m" if d < 0 else "o")})
+    return out
+
+
+WORDS = [("カド", "4コースのこと。助走を長くとれるので、まくりが出やすい"),
+         ("逃げ", "1コースの艇が、そのまま先頭で回って勝つこと"),
+         ("差し", "前の艇がターンでふくらんだ内側を抜けて勝つこと"),
+         ("まくり", "外の艇が、内の艇の外を一気に回って抜くこと"),
+         ("まくり差し", "外の艇が、内の艇の間を割って差すこと"),
+         ("ST", "スタートタイミング。0に近いほど速い(.10 は 0.10秒)"),
+         ("展示タイム", "レース前の試走で測る直線のタイム。速いほど足がいい"),
+         ("前づけ", "外の枠の艇が、内のコースを取りにいくこと")]
+
+
+def glossary(st_: dict, th: list[dict], k: int = 2) -> list[tuple[str, str]]:
+    """このカードに出てくる言葉の説明(多くて2つ)。"""
+    parts = [x["title"] + x["text"] for x in th]
+    if st_:
+        parts += [st_.get("hook", "")] + [b.get("type") or "" for b in st_.get("branches") or []] + list(st_.get("checks") or [])
+    text = " ".join(parts)
+    used = [(w, d) for w, d in WORDS if w in text]
+    if any(w == "まくり差し" for w, _ in used):   # 「まくり差し」があるときは「まくり」「差し」を重ねて出さない
+        used = [(w, d) for w, d in used if w not in ("まくり", "差し")]
+    return used[:k]
