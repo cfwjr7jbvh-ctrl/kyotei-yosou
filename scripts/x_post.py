@@ -390,7 +390,7 @@ def main():
     tag = a.what
     ev_label = None
     if a.what == "event":
-        due = event_due(day, now, posted) or flash_due(day, now, posted, today_races())
+        due = event_due(day, now, posted)   # 速報(1日のまとめ・優勝の速報)は出さない(2026-10-06 ユーザー判断で却下。flash_due は残すが使わない)
         if not due:
             print("いま出す大会の投稿はありません"); return
         it = due[0]   # 1回に1本(重なったら次の15分で)。締切前の投稿を先に
