@@ -32,8 +32,9 @@ def x_tags(venue: str | None = None, series: str | None = None, general: str = "
 
 def with_tags(body: str, tags: str, limit: int = 280) -> str:
     """本文の最後にハッシュタグの行を足す(280字を超えるなら1個に減らす、それでも超えるなら足さない)。"""
-    for t in (tags, tags.split(" ")[0]):
-        b = f"{body}\n{t}"
+    parts = tags.split(" ")
+    for k in range(len(parts), 0, -1):   # 入らなければ後ろのタグから減らす
+        b = f"{body}\n{' '.join(parts[:k])}"
         if xlen(b) <= limit:
             return b
     return body

@@ -2245,6 +2245,115 @@ def t_c1lose(ent, r):
     }
 
 
+def t_suji(ent, r):
+    """スジ舟券(2026-10-07 ネットの理論から): 2コース差しなら2着は1コース(2-1)、まくりなら2着はその外、4コース差しは4-1、5コースは5-4。
+    1着の枠と決まり手ごとに「2着の枠」を数え、市場(3連単オッズから計算した、1着がその枠のときの2着の見込み)と比べる。枠なりのレースだけ。"""
+    from kyotei.data import _read
+    KM = {1: "逃げ", 2: "差し", 3: "まくり", 4: "まくり差し", 5: "抜き", 6: "恵まれ"}
+    # 枠なり(進入=枠)のレースだけ(オッズは枠番につくので、コース=枠のレースで見る)
+    e6 = ent[ent["course"].between(1, 6)]
+    nari = e6.groupby("race_id").apply(lambda g: bool((g["course"] == g["lane"]).all()) and len(g) == 6)
+    nari_ids = set(nari[nari].index)
+    x = r[r["race_id"].isin(nari_ids) & r["tri_combo"].astype(str).str.match(r"^[1-6]-[1-6]-[1-6]$")].copy()
+    tc = x["tri_combo"].astype(str).str.split("-", expand=True).astype(int)
+    x["w"], x["s"] = tc[0].values, tc[1].values
+    x["km"] = pd.to_numeric(x["kimarite"], errors="coerce").map(KM)
+    # 市場: 1着が w のときの「2着が d」の見込み(3連単オッズから。控除を除いて正規化)
+    o = _read("odds/odds3t_*.csv.gz", None)
+    o = o[o["odds"] > 0].copy(); o["race_id"] = o["race_id"].astype(str)
+    o["q"] = 1 / o["odds"]; o["q"] = o["q"] / o.groupby("race_id")["q"].transform("sum")
+    sp = o["combo"].str.split("-", expand=True).astype(int)
+    o["w"], o["s"] = sp[0].values, sp[1].values
+    qws = o.groupby(["race_id", "w", "s"])["q"].sum()
+    qw = o.groupby(["race_id", "w"])["q"].sum()
+    del o
+    parts = []
+    for d in range(1, 7):
+        z = x[["race_id", "date", "late", "upset", "w", "s", "km"]].copy()
+        z = z[z["w"] != d]
+        z["d"] = d
+        z["h"] = (z["s"] == d).astype(float)
+        key = pd.MultiIndex.from_arrays([z["race_id"], z["w"], pd.Series(d, index=z.index)])
+        kw = pd.MultiIndex.from_arrays([z["race_id"], z["w"]])
+        z["q"] = (qws.reindex(key).values / qw.reindex(kw).values)
+        parts.append(z)
+    Z = pd.concat(parts, ignore_index=True)
+    def M(mask, ref, label, subj):
+        m = measure(Z, mask, ref=ref, col="h", qcol="q")
+        m.update({"ref_label": label, "subject": subj, "verb": "2着になる", "unit": "レース"})
+        return m
+    W, S, D, K = Z["w"], Z["s"], Z["d"], Z["km"]
+    # 市場とくらべる物差しは、決まり手を使わない「1着の枠→2着の枠」(買える形。決まり手はレース後にしか分からない)。
+    # 比べる相手は「その枠が2着になる割合(1着がほかの枠のとき全部)」
+    specs = [("2-1: 2号艇が1着のとき、2着が1号艇", (W == 2) & (D == 1), (W != 1) & (D == 1), "1号艇以外が1着のとき", "1号艇"),
+             ("3-1: 3号艇が1着のとき、2着が1号艇", (W == 3) & (D == 1), (W != 1) & (D == 1), "1号艇以外が1着のとき", "1号艇"),
+             ("3-4: 3号艇が1着のとき、2着が4号艇", (W == 3) & (D == 4), (W != 4) & (D == 4), "4号艇以外が1着のとき", "4号艇"),
+             ("4-1: 4号艇が1着のとき、2着が1号艇", (W == 4) & (D == 1), (W != 1) & (D == 1), "1号艇以外が1着のとき", "1号艇"),
+             ("4-5: 4号艇が1着のとき、2着が5号艇", (W == 4) & (D == 5), (W != 5) & (D == 5), "5号艇以外が1着のとき", "5号艇"),
+             ("5-4: 5号艇が1着のとき、2着が4号艇", (W == 5) & (D == 4), (W != 4) & (D == 4), "4号艇以外が1着のとき", "4号艇"),
+             ("6-1: 6号艇が1着のとき、2着が1号艇", (W == 6) & (D == 1), (W != 1) & (D == 1), "1号艇以外が1着のとき", "1号艇")]
+    ms = [(nm, M(mk, rf, lb, sj), None) for nm, mk, rf, lb, sj in specs]
+    ms = [(nm, m, verdicts(m)) for nm, m, _ in ms]
+    # 決まり手ごとの筋(しくみの説明用。市場とは比べない)
+    def share(w, k, d):
+        g = x[(x["w"] == w) & (x["km"] == k)]
+        return float((g["s"] == d).mean()) if len(g) else float("nan")
+    k21, k41, k34, k45, k54 = share(2, "差し", 1), share(4, "差し", 1), share(3, "まくり", 4), share(4, "まくり", 5), share(5, "まくり差し", 4)
+    # 表: 1着の枠×決まり手 → 2着の枠(%)。レース数100以上の組だけ
+    tbl = []
+    for w in range(2, 7):
+        for k in ("差し", "まくり", "まくり差し"):
+            g = x[(x["w"] == w) & (x["km"] == k)]
+            if len(g) < 100:
+                continue
+            vc = g["s"].value_counts(normalize=True)
+            top = vc.index[0]
+            tbl.append([f"{w}号艇", k, f"{len(g):,}", f"{top}号艇 {_rate(vc.iloc[0])}", f"{vc.index[1]}号艇 {_rate(vc.iloc[1])}" if len(vc) > 1 else "-",
+                        _rate(vc.get(1, 0.0)) if w != 1 else "-"])
+    # 市場との差をまとめる: スジが人気以上か、ひかえめか
+    edges = {nm: v.get("edge") for nm, _, v in ms}
+    over = [nm for nm, e_ in edges.items() if e_ == 1]
+    under = [nm for nm, e_ in edges.items() if e_ == -1]
+    m21, m31, m34, m41, m45, m54, m61 = (m for _, m, _ in ms)
+    real_suji = sum(1 for _, m, v in ms if v.get("real") and m["in1"] > m["in1_ref"])
+    con_head = ("本当。スジは本物。でも人気どおり" if real_suji >= 4 and not over and not under else
+                ("本当。スジは本物。しかも一部は人気以上に来る" if over else ("本当。スジは本物。ただ買われすぎの筋もある" if under else "半分本当。筋によって違う")))
+    return {
+        "id": "suji", "title": "スジ舟券は本当か。差しなら1号艇が残り、まくりなら外が来る?",
+        "belief": "2コースが差したら2着は1コース(2-1)。まくりが決まったら2着はその外(3まくりなら4、4まくりなら5)。4コースの差しは4-1、5コースは5-4",
+        "subject": "2着の枠", "verb": "2着になる", "unit": "レース", "compare": "同じ枠が1着のときの全部",
+        "x1": f"2号艇が差して1着なら、2着が1号艇なのは{_rate(k21)}。4号艇がまくって1着なら、2着が5号艇なのは{_rate(k45)}。",
+        "lead": f"枠なり(進入が枠のとおり)のレースで、1着の枠と決まり手ごとに『2着は誰か』を数えた。"
+                f"2号艇が差して1着のとき、2着が1号艇なのは{_rate(k21)}(2号艇が1着のとき全部では{_rate(m21['in1'])})。"
+                f"4号艇が差して1着なら、2着が1号艇なのは{_rate(k41)}。差しは1コースの内側をすくうので、1コースの艇はすぐ後ろに残る。"
+                f"\n\nまくりは逆。3号艇がまくって1着のとき、2着が4号艇なのは{_rate(k34)}(3号艇が1着のとき全部では{_rate(m34['in1'])})。"
+                f"4号艇がまくって1着なら、2着が5号艇なのは{_rate(k45)}。まくられた内の艇は引き波に沈み、まくった艇のすぐ外が付いてくる。"
+                f"\n\n問題は、みんなもこれを知っているか。決まり手はレースが終わるまで分からないので、買える形の『1着の枠→2着の枠』で、"
+                f"3連単のオッズから出した『1着がその枠のときの2着の見込み』と比べると、"
+                + (f"人気以上に来ているのは{'・'.join(over)}。" if over else "")
+                + (f"人気のわりにひかえめなのは{'・'.join(under)}。" if under else "")
+                + ("どの筋も、だいたい人気どおり。" if not over and not under else ""),
+        "conclusion": [con_head,
+                       "。".join([f"差されたら1号艇が2着に残る({_rate(k21)})、まくられたら外が続く(4まくり→5号艇 {_rate(k45)})。筋は本物"]
+                                + ([f"人気以上に来る筋: {'、'.join(over)}"] if over else [])
+                                + ([f"買われすぎの筋: {'、'.join(under)}(差しのイメージで1号艇を2着に置く人が多いが、4号艇の1着の6割はまくり。まくられた1号艇は沈む)"] if under else []))],
+        "tables": [("1着の枠×決まり手ごとの、2着の枠(枠なりのレース、%)", tbl, ["1着", "決まり手", "レース数", "2着で多い枠", "2番目", "2着が1号艇"])],
+        "measures": ms,
+        "rules": ["スジ舟券: 1着の艇の決まり手から、2着に来やすい艇を決める買い方。差し→1コースが残る、まくり→まくった艇のすぐ外、が基本の筋",
+                  "枠なり(スタート展示と本番の進入が枠のとおり)のレースだけで数えた。前づけがあると枠とコースがずれて、筋が読めないため",
+                  "『人気から考えると』は、3連単のオッズから計算した『1着がその枠のとき、2着がその枠になる見込み』(控除を除いた値)"],
+        "faq": [("決まり手はレースが終わるまで分からないのでは?", "そのとおり。だからスジは『どう勝つと思うか』を先に決めてから使う。2号艇の差しを本線にするなら2-1、4号艇のまくりなら4-5、という順番"),
+                ("5-4の『反転』って?", f"5号艇がまくり差しで1着のとき、4号艇が2着になるのは{_rate(k54)}。4号艇がまくりに行って内が空き、5号艇が差して、4号艇がそのまま続く形"),
+                ("6号艇が勝ったら2着は?", f"6号艇が1着のとき、2着が1号艇なのは{_rate(m61['in1'])}。大外がまくり切ると、内の5艇は引き波で崩れ、いちばん内の1号艇が残りやすい")],
+        "use": ["1着を決めたら、次は『どう勝つか』。差しなら1号艇を2着に、まくりならすぐ外を2着に。筋は本物",
+                "人気との差が出た筋だけ、2着の候補の順番を入れかえる(人気以上なら厚めに、ひかえめなら薄めに)"],
+        "mikata": "1着の次は『どう勝つか』。差しなら1号艇が残り、まくりなら外が続く。筋って、ちゃんとあるんだね",
+        "gen": "スジ舟券は昔からの基本だ。2-1、4-5。……で、どの筋がオッズより来るんだ? そこを教えろよ",
+        "challenge": "次のレースで、本命の『勝ち方』を先に決めてから2着を選ぶ。差しなら1号艇、まくりなら外。結果と答え合わせ",
+        "numbers": {"n_nari": int(len(x)), "edges": edges, "k21": k21, "k41": k41, "k34": k34, "k45": k45, "k54": k54},
+    }
+
+
 def t_season(ent, r):
     """夏はインが弱い? 季節で決まり手は変わる? 展示タイムは?"""
     x = r.copy()
@@ -2828,7 +2937,7 @@ BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in"
             "birthday": t_birthday, "blood": t_blood, "height": t_height, "furusato": t_furusato,
             "pressure": t_pressure, "humid": t_humid, "heat": t_heat,
             "lane6": t_lane6, "motor": t_motor, "entry": t_entry,
-            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season, "penalty": t_penalty, "slowdash": t_slowdash, "formation": t_formation, "samefin": t_samefin, "series": t_series, "fixed": t_fixed, "final": t_final, "saying": t_saying}
+            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season, "penalty": t_penalty, "slowdash": t_slowdash, "formation": t_formation, "samefin": t_samefin, "series": t_series, "fixed": t_fixed, "final": t_final, "saying": t_saying, "suji": t_suji}
 
 
 # ---------------------------------------------------------------- 記事

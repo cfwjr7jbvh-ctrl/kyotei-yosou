@@ -471,6 +471,15 @@ def main():
         d = rc.load_table()
         cards, meta = rc.build(d)
     allg = series_in_window(today, 60)
+    # 今日開催中のいちばん格の高い大会のタグを、毎日の投稿のタグに足す(大会のタグはファンが見に行く。2026-10-07 フォロワー施策)
+    day_tags = "#競艇 #ボートレース"
+    try:
+        live_now = [x for x in series_in_window(today, 0) if dt.datetime.strptime(x["hd"], "%Y%m%d").date() <= today and x.get("grade") in ("SG", "G1", "G2")]
+        live_now.sort(key=lambda x: ({"SG": 0, "G1": 1, "G2": 2}.get(x["grade"], 9), x["hd"]))
+        if live_now:
+            day_tags += f" #{series_name_tag(live_now[0])[1]}"
+    except Exception as ex:  # noqa: BLE001
+        print("day tags failed:", ex)
     for s in series:
         venue = rc.VENUES.get(s["jcd"], s.get("venue", ""))
         title = short_title(s.get("title") or s.get("title_page", ""), venue, s["grade"])
@@ -574,7 +583,7 @@ def main():
                          if (dt.date(2026, 10, 6) + dt.timedelta(days=k)).weekday() in (1, 4))
             t = order[max(n_slot - 1, 0) % len(order)]
             hits = theory_hits(today, t["id"])   # 投稿の最後の「今日なら◯◯R」に
-            xq.append(("20:00", f"検証ラボ: {t['title']}", seo.with_tags(x_first(labmod.x_text(t, hits)), "#競艇 #ボートレース"),
+            xq.append(("20:00", f"検証ラボ: {t['title']}", seo.with_tags(x_first(labmod.x_text(t, hits)), day_tags),
                        x_image(out, f"lab_{t['id']}", labmod.page(t, t.get("asof", "")), "03_検証ラボ.png", a.no_images)))
         elif evening:
             import x_post
@@ -590,11 +599,11 @@ def main():
             k = (today - NETA_START).days
             if k >= 0:
                 r_ = rows[k % len(rows)]
-                xq.append(("15:30", "1枚1ネタ", seo.with_tags(labmod.neta_text(r_, from_poll=polled_yesterday(today), hits=theory_hits(today, r_["lab"])), "#競艇 #ボートレース"),
+                xq.append(("15:30", "1枚1ネタ", seo.with_tags(labmod.neta_text(r_, from_poll=polled_yesterday(today), hits=theory_hits(today, r_["lab"])), day_tags),
                            neta_image(out, r_, a.no_images)))
             r2 = rows[(k + 1) % len(rows)]
             pq = labmod.neta_poll(r2)
-            xq.append(("21:30", "投票(答えは明日15:30)", seo.with_tags(pq["text"], "#競艇 #ボートレース") + "\n\n選択肢: " + " / ".join(pq["options"]), None))
+            xq.append(("21:30", "投票(答えは明日15:30)", seo.with_tags(pq["text"], day_tags) + "\n\n選択肢: " + " / ".join(pq["options"]), None))
             poll_today = pq
     except Exception as ex:  # noqa: BLE001
         print("x neta failed:", ex)
