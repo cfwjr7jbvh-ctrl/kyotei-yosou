@@ -3434,9 +3434,10 @@ def x_text(t: dict, hits: list[dict] | None = None) -> str:
         h2 = f"ゲンさん「{gx}」\nミカタ「{mx}」\n\n"
         ask = "あなたのゲンかつぎも教えて。次に数えます"
         cands = [h2 + f"{l1}\n{l2}\n{l4}\n\n{ask}" if l4 else "", h2 + f"{l1}\n{l2}\n\n{ask}", h2 + f"{l1}\n{l2}", h2 + l2]
-    else:    # 実用の説: 数字 → 結論 → 使いどころ → 今日の該当レース
-        cands = [f"{l1}\n{l2}\n{l3}\n\n{l4}" if l3 and l4 else "", f"{l1}\n{l2}\n\n{l4}" if l4 else "", f"{l1}\n{l2}\n{l3}" if l3 else "",
-                 f"{l1}\n{l2}\n\nみんなは信じてた?", f"{l1}\n{l2}"]
+    else:    # 実用の説: 数字 → 結論 → 今日の該当レース → ミカタのひと言(ミカタが喋るのは最後だけ。1行目は情報のまま)
+        mk = t.get("mikata", "")
+        cands = [f"{l1}\n{l2}\n{l4}\n\n{mk}" if mk and l4 else "", f"{l1}\n{l2}\n{l4}\n\n{l3}" if l3 and l4 else "", f"{l1}\n{l2}\n\n{l4}" if l4 else "",
+                 f"{l1}\n{l2}\n\n{mk}" if mk else "", f"{l1}\n{l2}\n{l3}" if l3 else "", f"{l1}\n{l2}\n\nみんなは信じてた?", f"{l1}\n{l2}"]
     cands = [c for c in cands if c]
     body = next((c for c in cands if xlen(c) <= 256), cands[-1])
     return (f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 結果のカード(ゲンさんの返しは画像の中に)\n"
