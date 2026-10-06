@@ -31,6 +31,7 @@ from kyotei import racer_card as rc  # noqa: E402
 from kyotei.card_render import card_image_html  # noqa: E402
 from kyotei.mag import chart_image_html  # noqa: E402
 from kyotei import demand  # noqa: E402
+from kyotei import seo  # noqa: E402
 from kyotei.xtext import xlen as xlen_  # noqa: E402
 from kyotei.publish import write_json  # noqa: E402
 import ura_shinbun  # noqa: E402
@@ -252,7 +253,7 @@ def study_time(deadline: str, used: list[str]) -> str:
     return f"{t // 60}:{t % 60:02d}"
 
 
-def news_posts(live: list[dict], races: list[dict], day: dt.date | None = None, top: int = 4) -> list[tuple]:
+def news_posts(live: list[dict], races: list[dict], day: dt.date | None = None, top: int = 4, cards: dict | None = None) -> list[tuple]:
     """ミカタ新聞(これからのレースの1レース特集): 今日の全レースから、買う人が多そうなレース(3連単の売上の見込み)を選ぶ。
     1場1レースずつ大きい順に、足りなければ2レース目も。予想する人が見る時間帯(study_time)に X へ(画像=新聞の上の部分)。
     → [(時刻, 見出し, 本文, 締切, 見込み, レース, 大会 or None, 大会名 or "")]"""
@@ -288,17 +289,24 @@ def news_posts(live: list[dict], races: list[dict], day: dt.date | None = None, 
         used.append(at)
         sm = rr.get("th_sum") or {}
         notes = [n for n in (rr.get("theories") or []) if n.get("kind") != "occult"]
-        head = f"【ミカタ新聞】{nm + ' ' if nm else ''}{rr['venue']}{rr['rno']}R {rt}({rr['deadline']}締切)"
-        foot = f"#{tag} #ミカタ新聞"
+        # 検索される言葉: 1行目に場名+R・レースの種類・大会名、本文に選手名、タグは2個(src/kyotei/seo.py)
+        head = f"{rr['venue']}{rr['rno']}R {rt}{('|' + nm) if nm else ''}({rr['deadline']}締切)【ミカタ新聞】"
+        foot = seo.x_tags(rr["venue"], nm or None)
+        import race_feature as _rf
+        who = _rf.type_names(rr, cards, 2)
         body = None
         for k in (3, 2, 1, 0):
+            if who and k < 3:
+                who_ = who if k >= 1 else ""
+            else:
+                who_ = who
             if sm.get("conflict"):
                 mid = f"インに有利: {'・'.join(sm['plus'][:max(k, 1)])}\nインに不利: {'・'.join(sm['minus'][:max(k, 1)])}\n\n6人の型は画像で📰 あなたはどっちに乗る?"
             elif notes and k:
                 mid = "当てはまる理論: " + "・".join(n["title"] for n in notes[:k + 1]) + "\n\n6人の型は画像で📰 どの理論に乗る?"
             else:
                 mid = "6人それぞれの強い型を1枚にしました📰 あなたは誰から?"
-            b = f"{head}\n\n{mid}\n{foot}"
+            b = f"{head}\n" + (f"注目の型: {who_}\n" if who_ else "") + f"\n{mid}\n{foot}"
             if xlen(b) <= 280:
                 body = b
                 break
@@ -434,7 +442,7 @@ def main():
             n_slot = sum(1 for k in range((today - dt.date(2026, 10, 6)).days + 1)
                          if (dt.date(2026, 10, 6) + dt.timedelta(days=k)).weekday() in (1, 4))
             t = order[max(n_slot - 1, 0) % len(order)]
-            xq.append(("20:00", f"検証ラボ: {t['title']}", x_first(labmod.x_text(t)),
+            xq.append(("20:00", f"検証ラボ: {t['title']}", seo.with_tags(x_first(labmod.x_text(t)), "#競艇 #ボートレース"),
                        x_image(out, f"lab_{t['id']}", labmod.page(t, t.get("asof", "")), "03_検証ラボ.png", a.no_images)))
         elif evening:
             import x_post
@@ -450,10 +458,10 @@ def main():
             k = (today - NETA_START).days
             if k >= 0:
                 r_ = rows[k % len(rows)]
-                xq.append(("15:30", "1枚1ネタ", labmod.neta_text(r_, from_poll=polled_yesterday(today)), neta_image(out, r_, a.no_images)))
+                xq.append(("15:30", "1枚1ネタ", seo.with_tags(labmod.neta_text(r_, from_poll=polled_yesterday(today)), "#競艇 #ボートレース"), neta_image(out, r_, a.no_images)))
             r2 = rows[(k + 1) % len(rows)]
             pq = labmod.neta_poll(r2)
-            xq.append(("21:30", "投票(答えは明日15:30)", pq["text"] + "\n\n選択肢: " + " / ".join(pq["options"]), None))
+            xq.append(("21:30", "投票(答えは明日15:30)", seo.with_tags(pq["text"], "#競艇 #ボートレース") + "\n\n選択肢: " + " / ".join(pq["options"]), None))
             poll_today = pq
     except Exception as ex:  # noqa: BLE001
         print("x neta failed:", ex)
@@ -468,7 +476,7 @@ def main():
             if not series:
                 d = rc.load_table()
                 cards, meta = rc.build(d)
-            for at, lbl, body, dl, sc, rr, x, nm in news_posts(live, races, today):
+            for at, lbl, body, dl, sc, rr, x, nm in news_posts(live, races, today, cards=cards):
                 img = None
                 try:
                     f_ = race_feature.make(nm, x["grade"] if x else "", rr, cards, sc, today)

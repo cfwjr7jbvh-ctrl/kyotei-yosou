@@ -32,7 +32,7 @@ KIND = [("今日の荒れそうなレース", "朝:荒れそうなレース"), (
 
 
 SLOT_KIND = {"8:20": "8:20 理論ぶつけ", "12:10": "12:10 荒れそうなレース", "15:30": "15:30 1枚1ネタ", "21:30": "21:30 投票"}
-KIND = [("今日の悩ましいレース", "8:20 理論ぶつけ"), ("【今日の理論ぶつけ】", "8:20 理論ぶつけ"), ("今日の荒れそうなレース", "12:10 荒れそうなレース"),
+KIND = [("【ミカタ新聞】", "ミカタ新聞"), ("今日の悩ましいレース", "8:20 理論ぶつけ"), ("【今日の理論ぶつけ】", "8:20 理論ぶつけ"), ("今日の荒れそうなレース", "12:10 荒れそうなレース"),
         ("昨日の投票の答え", "15:30 1枚1ネタ"), ("【明日答えます】", "21:30 投票"), ("#今日の理論ぶつけ", "大会の締切前"),
         ("検証ラボ", "20:00 検証ラボ"), ("の注目選手", "20:00 注目選手カード")] + KIND
 
@@ -58,6 +58,8 @@ def published_kinds() -> dict:
             k = "20:00 検証ラボ" if "検証ラボ" in ((r.get("snapshot") or {}).get("x") or "") or r["key"].startswith("lab_") else "20:00 注目選手カード"
         elif sl.startswith("大会"):
             k = "大会の締切前"
+        elif sl.startswith("新聞"):
+            k = "ミカタ新聞"
         elif r["key"].startswith("lab_"):
             k = "検証ラボ(手で)"
         else:
@@ -113,6 +115,16 @@ def main():
         old["by_kind"][k] = {"n": b["n"], **{m: round(b[m] / b["n"], 1) for m in M},
                              "react_pct": round((b["likes"] + b["replies"] + b["reposts"] + b["bookmarks"] + b["votes"]) / imp * 100, 2),
                              "profile_per_1000": round(b["profile_clicks"] / imp * 1000, 1)}
+    # 出した時間帯ごと(何時に出すと見られるか。ミカタ新聞の時間を決める材料)
+    bh: dict = {}
+    for v in old["posts"].values():
+        h = (v.get("jst") or " 00:00").split(" ")[-1][:2]
+        b = bh.setdefault(h, {"n": 0, "impressions": 0, "profile_clicks": 0})
+        b["n"] += 1
+        b["impressions"] += v.get("impressions") or 0
+        b["profile_clicks"] += v.get("profile_clicks") or 0
+    old["by_hour"] = {h: {"n": b["n"], "impressions": round(b["impressions"] / b["n"], 1),
+                          "profile_per_1000": round(b["profile_clicks"] / max(b["impressions"], 1) * 1000, 1)} for h, b in sorted(bh.items())}
     old["followers"] = me.get("public_metrics", {}).get("followers_count")
     old["asof"] = dt.datetime.now(JST).strftime("%Y-%m-%d %H:%M")
     hist = old.setdefault("followers_hist", [])
@@ -129,6 +141,9 @@ def main():
     print("種類 | 本数 | 平均の表示 | 反応率 | 1000表示あたりプロフィールへ | 平均の返信 | 平均の票")
     for k, b in old["by_kind"].items():
         print(f"{k} | {b['n']} | {b['impressions']} | {b['react_pct']}% | {b['profile_per_1000']} | {b['replies']} | {b['votes']}")
+    print("出した時 | 本数 | 平均の表示 | 1000表示あたりプロフィールへ")
+    for h, b in old["by_hour"].items():
+        print(f"{h}時 | {b['n']} | {b['impressions']} | {b['profile_per_1000']}")
 
 
 def replies(s, handle, asof):

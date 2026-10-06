@@ -17,6 +17,7 @@ from kyotei import mag  # noqa: E402
 from kyotei import racer_card as rc  # noqa: E402
 from kyotei.card_render import gull_svg, LANE_BG, LANE_FG  # noqa: E402
 from kyotei.demand import stars  # noqa: E402
+from kyotei import seo  # noqa: E402
 
 e = _h.escape
 WEEK = "月火水木金土日"
@@ -34,6 +35,18 @@ def racer_row(b: dict, cards: dict | None) -> tuple[str, str]:
            + (f'<p>{e(why)}</p>' if why else "") + "</div></li>")
     note = f"{i + 1}号艇 {b.get('name')}({b.get('class') or ''}): " + ("・".join(t["t"] for t in tags) or "ふだんどおりの強さ") + (f"。{why}" if why else "")
     return row, note
+
+
+def type_names(rr: dict, cards: dict | None, k: int = 2) -> str:
+    """X 用: 強い型を持つ選手を k 人(検索される選手名を本文に)。「1号艇 今垣光太郎(まくり屋)」"""
+    rows = []
+    for b in sorted(rr.get("boats", []), key=lambda b: int(b["lane"])):
+        c = (cards or {}).get(int(b.get("racer_id") or 0))
+        tg = sorted(rc.tags_for(c), key=lambda t: -t["score"]) if c else []
+        if tg and b.get("name"):
+            rows.append((tg[0]["score"], f"{b['lane']}号艇 {b['name']}({tg[0]['t']})"))
+    rows.sort(key=lambda x: -x[0])
+    return "・".join(r for _, r in rows[:k])
 
 
 def make(series_name: str, grade: str, rr: dict, cards: dict | None, score: float, day: dt.date) -> dict:
@@ -54,7 +67,8 @@ def make(series_name: str, grade: str, rr: dict, cards: dict | None, score: floa
                 f"どれに乗るかは、あなた次第")
     rows = [racer_row(b, cards) for b in sorted(rr.get("boats", []), key=lambda b: int(b["lane"]))]
     th_html = "".join(f'<li class="th {e(n["kind"])}"><b>{e(n["title"])}</b><span class="bd">{e(n["badge"])}</span><p>{e(n["text"])}</p></li>' for n in notes)
-    title = f"ミカタ新聞 {day.month}/{day.day}|{(series_name + ' ') if series_name else ''}{race} {rt}の6人の型と理論"
+    # 検索で見つけてもらう: 先頭に場名+R・レースの種類・大会名(src/kyotei/seo.py)
+    title = f"【競艇】{race} {rt}{('|' + series_name) if series_name else ''} 6人の型と理論|ミカタ新聞 {day.month}/{day.day}"
     page = f"""<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><title>{e(title)}</title>{mag.FONTS}<style>{mag.CSS}
 .six{{list-style:none;margin:0;padding:0;display:grid;gap:8px}} .six li{{display:flex;gap:10px;align-items:flex-start;background:var(--card);border:2px solid var(--rule);padding:10px 12px}}
 .six .lt{{flex:0 0 34px;height:34px;display:grid;place-items:center;font:900 20px var(--num);border:1px solid #111}} .six b{{font:700 17px var(--sans)}} .six small{{margin-left:6px;color:var(--mute);font-size:12px}}
@@ -84,5 +98,6 @@ def make(series_name: str, grade: str, rr: dict, cards: dict | None, score: floa
                      + ["", "■このレースに当てはまる理論"]
                      + ([f"インに有利: {'・'.join(sm['plus'])}", f"インに不利: {'・'.join(sm['minus'])}"] if sm.get("conflict") else [])
                      + [f"・{n['title']}: {n['text']}" for n in notes]
-                     + ["", "この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。"])
+                     + ["", "この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。",
+                        "", seo.note_tags(rr["venue"], series_name or None, [b.get("name") for b in sorted(rr.get("boats", []), key=lambda b: int(b["lane"]))][:6])])
     return {"title": title, "html": page, "note": note}

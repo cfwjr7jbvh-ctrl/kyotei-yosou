@@ -132,10 +132,10 @@ def morning_text(races: list[dict], now: dt.datetime) -> str | None:
     head = f"今日の荒れそうなレース🌊 {now:%-m/%-d}\n\n" + "\n".join(lines)
     for k in (3, 2, 1, 0):
         w = f"\n\n{top[0]['venue']}{top[0]['rno']}R:{'、'.join(why[:k])}" if why[:k] else ""
-        body = head + w + "\n\n荒れそう=当てやすい、ではないです。どのレースが荒れると思う?"
+        body = head + w + "\n\n荒れそう=当てやすい、ではないです。どのレースが荒れると思う?\n#競艇 #ボートレース"
         if xlen(body) <= 280:
             return body
-    return head + "\n\nどのレースが荒れると思う?"
+    return head + "\n\nどのレースが荒れると思う?\n#競艇 #ボートレース"
 
 
 def evening_pick(idx: dict, posted: dict) -> tuple[dict, dict, dict] | None:
@@ -165,11 +165,12 @@ def evening_text(p: dict, card: dict | None) -> str:
     q = {"スタート職人": "スリットで前に出たら、どう組み立てる?", "イン逃げ番長": "1号艇のとき、信じる派? 崩す派?",
          "まくり屋": "外に入ったときの一撃、狙う?", "差し職人": "2コースに入ったら差しの筋、考える?",
          "まくり差しの職人": "3コースより外のとき、すき間を突く筋、見る?"}.get(tag, "あなたはこの選手、どう見る?")
-    body = f"{p['title']}({p['venue']}、{hd}〜)の注目選手📰\n\n{p['name']}「{tag}」\n{why}\n\n{q}"
+    tg = f"#ボートレース{p['venue']} #競艇"
+    body = f"{p['title']}({p['venue']}、{hd}〜)の注目選手📰\n\n{p['name']}「{tag}」\n{why}\n\n{q}\n{tg}"
     if xlen(body) > 280:
-        body = f"{p['title']}({hd}〜)の注目選手📰\n\n{p['name']}「{tag}」\n{why}\n\n{q}"
+        body = f"{p['title']}({hd}〜)の注目選手📰\n\n{p['name']}「{tag}」\n{why}\n\n{q}\n{tg}"
     if xlen(body) > 280:
-        body = f"{p['name']}「{tag}」\n{why}\n\n{q}\n#{p['venue']} #競艇"
+        body = f"{p['name']}「{tag}」\n{why}\n\n{q}\n#ボートレース{p['venue']} #競艇"
     return body
 
 
