@@ -251,7 +251,10 @@ def main():
     posted = json.loads(POSTED.read_text(encoding="utf-8")) if POSTED.exists() else {}
     live = bool(creds()) and os.environ.get("X_AUTOPOST") == "1" and not a.dry
     print("鍵:", "あり" if creds() else "なし", "/ 自動投稿:", "ON" if live else "OFF(下書きだけ)")
-    if a.what == "test":
+    if a.what == "test":   # 鍵が通るか(自分のアカウント名を1回だけ読む。投稿はしない)
+        if creds():
+            r = session().get(f"{API}/users/me")
+            print("鍵の確認:", r.status_code, (r.json().get("data") or {}).get("username") if r.ok else r.text[:300])
         return
     day = now.strftime("%Y-%m-%d")
     texts, media = [], None
