@@ -1073,7 +1073,9 @@ function uraMeta(it) {
   if (it.grade === "LAB") return `毎週の検証 ・ ${hd}` + (pub || " ・ まだ出していない");
   if (it.grade === "毎日") return `毎日の理論ぶつけ ・ ${hd}の分(その日に出す)` + pub;
   if (it.grade === "X") return `今日の X 投稿 ・ ${hd}の分` + pub;
-  return `${esc(it.venue)} ${hd}〜 ・ 出場${it.n}人 ・ 注目${(it.picks || []).length}人` + pub;
+  if (it.grade === "大一番") return (it.stars ? `<b class="ura-stars">注目度${esc(it.stars)}</b> ` : "") + `大一番の1レース特集 ・ ${esc(it.venue)} ${hd}(その日に出す)` + pub;
+  return (it.stars ? `<b class="ura-stars" title="注目度(買う人・見る人が多そうか)">注目度${esc(it.stars)}</b> ` : "") +
+    `${esc(it.venue)} ${hd}〜 ・ 出場${it.n}人 ・ 注目${(it.picks || []).length}人` + pub;
 }
 async function xStatsHTML() {
   let st = null, rep = null;
@@ -1083,9 +1085,9 @@ async function xStatsHTML() {
   let html = "";
   if (st && st.by_kind) {
     const rows = Object.entries(st.by_kind).sort((a, b) => b[1].impressions - a[1].impressions).map(([k, v]) =>
-      `<tr><td>${esc(k)}</td><td>${v.n}</td><td>${v.impressions}</td><td>${v.likes}</td><td>${v.replies}</td><td>${v.bookmarks}</td><td>${v.profile_clicks ?? "-"}</td></tr>`).join("");
+      `<tr><td>${esc(k)}</td><td>${v.n}</td><td>${v.impressions}</td><td>${v.react_pct ?? "-"}%</td><td>${v.profile_per_1000 ?? "-"}</td><td>${v.replies}</td><td>${v.votes ?? 0}</td></tr>`).join("");
     html += `<div class="ura-sec"><h3>X の反応(投稿の種類ごとの平均)<small> ${esc(st.asof || "")}${st.followers != null ? ` ・ フォロワー ${st.followers}` : ""}</small></h3>
-      <div class="scroll"><table class="tbl"><thead><tr><th>種類</th><th>本</th><th>表示</th><th>いいね</th><th>返信</th><th>保存</th><th>プロフ</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+      <div class="scroll"><table class="tbl"><thead><tr><th>種類</th><th>本</th><th>表示</th><th>反応率</th><th>プロフへ<br>(1000表示)</th><th>返信</th><th>票</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
   if (rep && rep.replies && rep.replies.length) {
     html += `<div class="ura-sec"><h3>返信待ち(${rep.replies.length}件)</h3>` + rep.replies.slice(0, 20).map((r) =>

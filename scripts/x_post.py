@@ -189,13 +189,95 @@ def thread_texts(key: str, note_url: str | None) -> list[str]:
     return posts
 
 
+# ---------------------------------------------------------------- 大会の速報(レース結果から。注目度の高い大会だけ)
+def _is_final(r: dict) -> bool:
+    rt = str(r.get("race_type") or "")
+    return "優勝戦" in rt and "準" not in rt
+
+
+def _winner(r: dict) -> dict | None:
+    try:
+        lane = int(str(r["result"]["tri_combo"]).split("-")[0])
+    except (KeyError, ValueError, TypeError):
+        return None
+    return next((b for b in r.get("boats", []) if int(b.get("lane", 0)) == lane), {"lane": lane, "name": ""})
+
+
+def win_text(sr: dict, fin: dict) -> str | None:
+    w = _winner(fin)
+    if not w or not w.get("name"):
+        return None
+    kim = (fin.get("result") or {}).get("kimarite") or ""
+    note = next((n for n in fin.get("theories") or [] if n.get("id") == "final"), None)
+    base = note["text"].split("。")[0] + "。" if note else ""
+    how = f"{w['lane']}号艇が{kim}で決めた" if kim else f"{w['lane']}号艇が勝った"
+    body = (f"【速報】{sr['name']} 優勝は{w['lane']}号艇 {w['name']}選手🏆\n" + (f"決まり手: {kim}\n" if kim else "")
+            + f"\n{base}今日は{how}\n\nおめでとうございます!\n#{sr['tag']} #ボートレース")
+    if xlen(body) > 280:
+        body = f"【速報】{sr['name']} 優勝は{w['lane']}号艇 {w['name']}選手🏆\n\nおめでとうございます!\n#{sr['tag']} #ボートレース"
+    return body
+
+
+def day_text(sr: dict, rs: list[dict], now: dt.datetime) -> str:
+    from collections import Counter
+    done = [r for r in rs if r.get("result")]
+    w1 = sum(1 for r in done if str(r["result"]["tri_combo"]).startswith("1-"))
+    exp = f"(ふだんの{sr['venue']}なら{len(done)}レースで{round(sr['in1'] / 100 * len(done))}回くらい)" if sr.get("in1") else ""
+    kc = Counter((r["result"].get("kimarite") or "").strip() for r in done if (r["result"].get("kimarite") or "").strip())
+    kims = "・".join(f"{k}{v}" for k, v in kc.most_common(4))
+    wins = Counter((_winner(r) or {}).get("name") for r in done)
+    two = [n for n, c in wins.items() if n and c >= 2]
+    lines = [f"【{sr['name']}】{now.month}/{now.day}の{sr['venue']}まとめ📊", "",
+             f"1号艇の1着: {len(done)}レース中{w1}回{exp}"]
+    if kims:
+        lines.append(f"決まり手: {kims}")
+    if two:
+        lines.append(f"今日2勝: {'・'.join(two[:3])}選手")
+    lines += ["", "明日、気になる選手は?", f"#{sr['tag']} #ボートレース"]
+    body = "\n".join(lines)
+    if xlen(body) > 280 and two:
+        body = body.replace(f"今日2勝: {'・'.join(two[:3])}選手\n", "")
+    return body
+
+
+def flash_due(day: str, now: dt.datetime, posted: dict, races: list[dict]) -> list[dict]:
+    """優勝戦の結果が出たら優勝の速報。優勝戦の無い日は、その場の最終レースの結果が出たら1日のまとめ(G1 以上)。"""
+    from kyotei import demand
+    out = []
+    for sr in xpost(day).get("series_today") or []:
+        rs = [r for r in races if r.get("jcd") == sr["jcd"]]
+        if not rs:
+            continue
+        fin = next((r for r in rs if _is_final(r)), None)
+        if fin:
+            tag = f"win:{sr['jcd']}"
+            if fin.get("result") and posted.get(tag) != day:
+                t = win_text(sr, fin)
+                if t:
+                    out.append({"tag": tag, "text": t, "label": f"速報: {sr['name']} 優勝"})
+        elif demand.GRADE_W.get(str(sr.get("grade")), 1.0) >= 4:
+            tag = f"day:{sr['jcd']}"
+            last = max(rs, key=lambda r: int(r.get("rno") or 0))
+            if last.get("result") and sum(1 for r in rs if r.get("result")) >= len(rs) - 1 and posted.get(tag) != day:
+                out.append({"tag": tag, "text": day_text(sr, rs, now), "label": f"速報: {sr['name']} {sr['venue']}のまとめ"})
+    return out
+
+
 # ---------------------------------------------------------------- X API
 SLOTS = {"theory": "8:20", "morning": "12:10", "neta": "15:30", "evening": "20:00", "poll": "21:30"}
 
 
+_XP: dict = {}
+
+
+def xpost(day: str) -> dict:
+    if day not in _XP:
+        _XP[day] = load_enc("cards", f"ura/xpost_{day.replace('-', '')}.json") or {}
+    return _XP[day]
+
+
 def queue(day: str) -> list[dict]:
-    q = load_enc("cards", f"ura/xpost_{day.replace('-', '')}.json")
-    return (q or {}).get("queue", [])
+    return xpost(day).get("queue", [])
 
 
 def queue_item(day: str, slot: str) -> tuple[str, bytes | None, dict | None] | None:
@@ -290,12 +372,16 @@ def main():
     day = now.strftime("%Y-%m-%d")
     texts, media, poll = [], None, None
     tag = a.what
+    ev_label = None
     if a.what == "event":
-        due = event_due(day, now, posted)
+        due = event_due(day, now, posted) or flash_due(day, now, posted, today_races())
         if not due:
             print("いま出す大会の投稿はありません"); return
-        it = due[0]   # 1回に1本(同じ時間に重なったら次の15分で)
-        texts, tag = [it["text"]], it["tag"]
+        it = due[0]   # 1回に1本(重なったら次の15分で)。締切前の投稿を先に
+        texts, tag, ev_label = [it["text"]], it["tag"], it["label"]
+        if it.get("image"):
+            img = load_enc("cards", f"ura/{it['image']}")
+            media = base64.b64decode(img["png"]) if img else None
     qi = queue_item(day, a.what) if a.what in SLOTS else None
     if qi:
         texts, media, poll = [qi[0]], qi[1], qi[2]
@@ -354,7 +440,7 @@ def main():
     print("投稿しました:", ids)
     try:   # 出した記事の履歴(reports/published.json)にも残す
         import publish_log
-        slot = SLOTS.get(a.what) or (texts and a.what == "event" and tag.split(":", 1)[1]) or None
+        slot = SLOTS.get(a.what) or ev_label
         key = f"xpost_{day.replace('-', '')}" if (qi or a.what == "event") else f"x:{tag}"
         publish_log.add(key, "X", f"https://x.com/i/web/status/{ids[0]}", now.date(), slot, via="自動投稿", text=texts[0])
     except SystemExit as ex:

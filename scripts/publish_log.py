@@ -30,7 +30,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 LEDGER = ROOT / "reports/published.json"
 JST = dt.timezone(dt.timedelta(hours=9))
-KINDS = [("lab_", "検証ラボ"), ("theory_", "理論ぶつけ"), ("xpost_", "今日のX投稿"), ("x:", "X(自動)")]
+KINDS = [("lab_", "検証ラボ"), ("theory_", "理論ぶつけ"), ("race_", "大一番"), ("xpost_", "今日のX投稿"), ("x:", "X(自動)")]
 
 
 def load() -> list[dict]:
@@ -89,7 +89,7 @@ def check(rows, key, channel, date, asof, update, slot=None):
         errs.append(f"公開日 {date} が未来です")
     if asof and str(date) < str(asof)[:10]:
         errs.append(f"公開日 {date} が数字の集計日 {asof} より前です")
-    m = re.match(r"^(theory|xpost)_(\d{8})$", key)
+    m = re.match(r"^(theory|xpost|race)_(\d{8})(?:_\d+)?$", key)
     if m and m.group(2) != date.strftime("%Y%m%d"):
         errs.append(f"{key} は {m.group(2)[4:6]}/{m.group(2)[6:]} の分です。公開日 {date} と合いません(その日の分はその日に出す)")
     dup = [r for r in rows if r["key"] == key and r["channel"] == channel and r.get("slot") == slot]

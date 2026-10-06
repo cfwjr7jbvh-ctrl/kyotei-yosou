@@ -614,7 +614,7 @@ def chart_image_html(title: str, venue: str | None, wt: dict) -> str:
     rows = []
     for crs in range(1, 7):
         mt = nerai.METRIC[crs]
-        lab = "逃げ切り" if crs == 1 else ("1着率" if mt == "win" else "3着内率")
+        lab = "逃げ切り" if crs == 1 else ("1着率" if mt == "win" else "3着以内")
         ps = "".join(f'<div class="p"><b>{e(r["name"])}</b><em>{r["rate"]:.0%}</em><small>{r["k"]}/{r["n"]}走</small></div>' for r in wt.get(crs, []))
         ps += '<div class="p"></div>' * (3 - len(wt.get(crs, [])))
         rows.append(f'<div class="row"><div class="lab"><span class="lt" style="background:{LANE_BG[crs - 1]};color:{LANE_FG[crs - 1]}">{crs}</span>'
@@ -625,4 +625,4 @@ def chart_image_html(title: str, venue: str | None, wt: dict) -> str:
 <p>{f'<b>{e(grade)}</b>' if grade else ''}{e(venue or '')} {e(name)}</p><p>コースが決まったら、ここを見る</p></div>
 <div class="rows">{''.join(rows)}</div>
 <div class="ft">{gull_svg(110, bg="#f4efdf", cls="wl")}<div><b>出場選手の、そのコースでの成績の上位3人</b><br>
-1〜4コースは1着率、5・6コースは3着内率(過去3年、進入したコースで集計。走数が少ない選手は補正して選出)。舟券は20歳になってから</div></div></div>"""
+1〜4コースは1着率、5・6コースは3着以内の率(過去3年、進入したコースで集計。走数が少ない選手は補正して選出)。舟券は20歳になってから</div></div></div>"""
