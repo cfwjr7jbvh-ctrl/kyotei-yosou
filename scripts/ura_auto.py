@@ -234,43 +234,58 @@ def series_name_tag(x: dict) -> tuple[str, str]:
     return nm, re.sub(r"[\s・･!！?？\-]", "", unicodedata.normalize("NFKC", nm))
 
 
-def event_posts(live: list[dict], races: list[dict], day: dt.date | None = None) -> list[tuple[str, str, str, str]]:
-    """大会の準優・優勝戦: 締切の70分前に、そのレースの理論ぶつけ(大会のタグ1つ+#今日の理論ぶつけ)。(時刻, 見出し, 本文, 締切)"""
+def news_posts(live: list[dict], races: list[dict], day: dt.date | None = None, top: int = 4) -> list[tuple]:
+    """ミカタ新聞(これからのレースの1レース特集): 今日の全レースから、買う人が多そうなレース(3連単の売上の見込み)を選ぶ。
+    1場1レースずつ大きい順に、足りなければ2レース目も。締切の70分前に X へ(画像=新聞の上の部分)。
+    → [(時刻, 見出し, 本文, 締切, 見込み, レース, 大会 or None, 大会名 or "")]"""
     from kyotei.xtext import xlen
-    out, seen = [], set()
+    ser = {}
     for x in live:
-        if x["jcd"] in seen:   # 同じ節が2つの日付で載っていることがある
+        ser.setdefault(x["jcd"], x)
+    a1s = {j: demand.day_a1(races, j) for j in {r.get("jcd") for r in races}}
+    cands = []
+    for rr in races:
+        if not rr.get("deadline") or not rr.get("boats"):
             continue
-        seen.add(x["jcd"])
-        nm, tag = series_name_tag(x)
-        for rr in races:
-            rt = str(rr.get("race_type") or "")
-            if rr.get("jcd") != x["jcd"] or not any(w in rt for w in ("準優", "優勝戦", "ドリーム")) or not rr.get("deadline"):
+        x = ser.get(rr.get("jcd"))
+        rt = str(rr.get("race_type") or "")
+        sc = demand.score(x["grade"] if x else None, rt, rr.get("rno"), day, rr["deadline"], rr.get("jcd"), a1s.get(rr.get("jcd")))
+        cands.append((sc, rr, x))
+    cands.sort(key=lambda c: -c[0])
+    picked, per = [], {}
+    for rnd in (1, 2):
+        for sc, rr, x in cands:
+            if len(picked) >= top:
+                break
+            if sc < 0.5 or rr in [p[1] for p in picked] or per.get(rr["jcd"], 0) >= rnd:
                 continue
-            hh, mm = map(int, rr["deadline"].split(":"))
-            at = (dt.datetime(2000, 1, 1, hh, mm) - dt.timedelta(minutes=70)).strftime("%-H:%M")
-            sm = rr.get("th_sum") or {}
-            notes = [n for n in (rr.get("theories") or []) if n.get("kind") != "occult"]
-            head = f"【{nm}】{rt} {rr['venue']}{rr['rno']}R({rr['deadline']}締切)"
-            foot = f"#{tag} #今日の理論ぶつけ"
-            body = None
-            for k in (3, 2, 1):
-                if sm.get("conflict"):
-                    mid = f"インに有利: {'・'.join(sm['plus'][:k])}\nインに不利: {'・'.join(sm['minus'][:k])}\n\nあなたはどっちに乗る?"
-                elif notes:
-                    mid = "当てはまる理論: " + "・".join(n["title"] for n in notes[:k + 1]) + "\n\nどの理論に乗る?"
-                else:
-                    break
-                b = f"{head}\n\n{mid}\n{foot}"
-                if xlen(b) <= 280:
-                    body = b
-                    break
-            if body:
-                sc = demand.score(x["grade"], rt, rr.get("rno"), day, rr["deadline"], rr.get("jcd"), demand.day_a1(races, rr.get("jcd")))
-                if sc >= 0.8:   # 3連単の売上の見込み0.8億円以上(G1 の準優・優勝戦くらいから)
-                    out.append((at, f"大会: {rr['venue']}{rr['rno']}R {rt}", body, rr["deadline"], sc, rr, x, nm))
-    # 注目度(3連単の売上の見込みが大きい順)で、1日4本まで
-    return sorted(out, key=lambda o: -o[4])[:4]
+            picked.append((sc, rr, x))
+            per[rr["jcd"]] = per.get(rr["jcd"], 0) + 1
+    out = []
+    for sc, rr, x in picked:
+        rt = str(rr.get("race_type") or "")
+        nm, tag = series_name_tag(x) if x else ("", f"ボートレース{rr['venue']}")
+        hh, mm = map(int, rr["deadline"].split(":"))
+        at = (dt.datetime(2000, 1, 1, hh, mm) - dt.timedelta(minutes=70)).strftime("%-H:%M")
+        sm = rr.get("th_sum") or {}
+        notes = [n for n in (rr.get("theories") or []) if n.get("kind") != "occult"]
+        head = f"【ミカタ新聞】{nm + ' ' if nm else ''}{rr['venue']}{rr['rno']}R {rt}({rr['deadline']}締切)"
+        foot = f"#{tag} #ミカタ新聞"
+        body = None
+        for k in (3, 2, 1, 0):
+            if sm.get("conflict"):
+                mid = f"インに有利: {'・'.join(sm['plus'][:max(k, 1)])}\nインに不利: {'・'.join(sm['minus'][:max(k, 1)])}\n\n6人の型は画像で📰 あなたはどっちに乗る?"
+            elif notes and k:
+                mid = "当てはまる理論: " + "・".join(n["title"] for n in notes[:k + 1]) + "\n\n6人の型は画像で📰 どの理論に乗る?"
+            else:
+                mid = "6人それぞれの強い型を1枚にしました📰 あなたは誰から?"
+            b = f"{head}\n\n{mid}\n{foot}"
+            if xlen(b) <= 280:
+                body = b
+                break
+        if body:
+            out.append((at, f"新聞: {rr['venue']}{rr['rno']}R {rt}", body, rr["deadline"], sc, rr, x, nm))
+    return out
 
 
 def main():
@@ -423,35 +438,37 @@ def main():
             poll_today = pq
     except Exception as ex:  # noqa: BLE001
         print("x neta failed:", ex)
-    # 大会のドリーム戦・準優・優勝戦: 締切の70分前に、そのレースの理論ぶつけ(大会のタグ1つ+#今日の理論ぶつけ)
+    # ミカタ新聞: これからのレースのうち、買う人が多そうなレース(全場から)。締切の70分前に、1レース特集の上の部分を画像にして X へ
     try:
         from kyotei.publish import read_json as _rj2
         dp2 = ROOT / f"docs/data/days/{today.isoformat()}.json"
         live = [x for x in series_in_window(today, 0) if dt.datetime.strptime(x["hd"], "%Y%m%d").date() <= today]
-        if dp2.exists() and live:
+        if dp2.exists():
             races = _rj2(dp2).get("races", [])
             import race_feature
-            for k_, (at, lbl, body, dl, sc, rr, x, nm) in enumerate(event_posts(live, races, today)):
+            if not series:
+                d = rc.load_table()
+                cards, meta = rc.build(d)
+            for at, lbl, body, dl, sc, rr, x, nm in news_posts(live, races, today):
                 img = None
-                if sc >= 2.0 and k_ < 2:   # 注目度の高い2レースは1レース特集の記事も(上の部分を投稿の画像に)
-                    try:
-                        f_ = race_feature.make(nm, x["grade"], rr, cards if series else None, sc, today)
-                        key_f = f"race_{today:%Y%m%d}_{rr['jcd']:02d}{int(rr['rno']):02d}"
-                        img = x_image(out, key_f, f_["html"], "大一番.png", a.no_images)
-                        pages_f = save_pages(out, key_f, f_["html"], a.no_images)
-                        write_json(out / f"{key_f}.json", {"key": key_f, "title": f_["title"], "grade": "大一番", "venue": rr["venue"], "jcd": rr["jcd"],
-                                                           "hd": f"{today:%Y%m%d}", "html": f_["html"], "note": f_["note"],
-                                                           "x": f"--- 投稿1({xlen_(body)}/280) {at} ---\n{body}\n\n出し方: {at}に自動で出ます(画像つき)",
-                                                           "picks": [], "images": [img] if img else [], "pages": pages_f,
-                                                           "pdf": f"{key_f}_pdf.json" if pages_f else None, "n": 6, "missing": [], "asof": today.isoformat()})
-                        items.insert(0, {"key": key_f, "title": f_["title"], "grade": "大一番", "venue": rr["venue"], "jcd": rr["jcd"], "hd": f"{today:%Y%m%d}",
-                                         "score": sc, "stars": demand.stars(sc), "n": 6, "picks": [], "images": 1 if img else 0})
-                    except Exception as ex:  # noqa: BLE001
-                        print("race feature failed:", ex)
+                try:
+                    f_ = race_feature.make(nm, x["grade"] if x else "", rr, cards, sc, today)
+                    key_f = f"race_{today:%Y%m%d}_{rr['jcd']:02d}{int(rr['rno']):02d}"
+                    img = x_image(out, key_f, f_["html"], "ミカタ新聞.png", a.no_images)
+                    pages_f = save_pages(out, key_f, f_["html"], a.no_images)
+                    write_json(out / f"{key_f}.json", {"key": key_f, "title": f_["title"], "grade": "新聞", "venue": rr["venue"], "jcd": rr["jcd"],
+                                                       "hd": f"{today:%Y%m%d}", "html": f_["html"], "note": f_["note"],
+                                                       "x": f"--- 投稿1({xlen_(body)}/280) {at} ---\n{body}\n\n出し方: {at}に自動で出ます(画像つき)",
+                                                       "picks": [], "images": [img] if img else [], "pages": pages_f,
+                                                       "pdf": f"{key_f}_pdf.json" if pages_f else None, "n": 6, "missing": [], "asof": today.isoformat()})
+                    items.insert(0, {"key": key_f, "title": f_["title"], "grade": "新聞", "venue": rr["venue"], "jcd": rr["jcd"], "hd": f"{today:%Y%m%d}",
+                                     "score": sc, "stars": demand.stars(sc), "n": 6, "picks": [], "images": 1 if img else 0})
+                except Exception as ex:  # noqa: BLE001
+                    print("race feature failed:", ex)
                 xq.append((at, lbl, body, img))
                 event_items.append({"time": at, "deadline": dl, "label": lbl[4:]})
     except Exception as ex:  # noqa: BLE001
-        print("x event failed:", ex)
+        print("x news failed:", ex)
     # 大会の速報(x_post.py の event が、レース結果を見て出す): 今日開催中のグレードレースの名前・タグ・この場の1号艇のふだん
     # 前の日: 18:30 に「明日から◯◯」+ 出場選手のコース別ベスト3(早見表の画像)
     series_today: list = []
@@ -509,7 +526,7 @@ def main():
                                                     "image": im["file"] if im else None,
                                                     **({"poll": poll_today} if tm == "21:30" and poll_today else {}),
                                                     **({"deadline": next(e["deadline"] for e in event_items if e["time"] == tm and e["label"] in lbl)}
-                                                       if lbl.startswith("大会:") else {})} for tm, lbl, b, im in xq],
+                                                       if lbl.startswith("新聞:") else {})} for tm, lbl, b, im in xq],
                                          "n": 0, "missing": [], "pages": [], "pdf": None, "asof": today.isoformat(), "series_today": series_today})
         items.insert(0, {"key": key, "title": title, "grade": "X", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"), "n": 0, "picks": [], "images": len(imgs)})
         print("x queue:", [(tm, lbl) for tm, lbl, _b, _i in xq])

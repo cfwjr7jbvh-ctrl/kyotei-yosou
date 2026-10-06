@@ -300,7 +300,7 @@ def queue_item(day: str, slot: str) -> tuple[str, bytes | None, dict | None] | N
     """記事タブの「今日のX投稿」から、その時間帯の投稿(本文, 画像, 投票)を取る。"""
     want = SLOTS[slot]
     for it in queue(day):
-        if it.get("time") == want and not str(it.get("label", "")).startswith("大会:"):
+        if it.get("time") == want and not str(it.get("label", "")).startswith(("大会:", "新聞:")):
             img = load_enc("cards", f"ura/{it['image']}") if it.get("image") else None
             return it["text"], (base64.b64decode(img["png"]) if img else None), it.get("poll")
     return None
@@ -316,7 +316,7 @@ def event_due(day: str, now: dt.datetime, posted: dict) -> list[dict]:
     t = now.hour * 60 + now.minute
     out = []
     for it in queue(day):
-        if not str(it.get("label", "")).startswith("大会:") or not it.get("deadline"):
+        if not str(it.get("label", "")).startswith(("大会:", "新聞:")) or not it.get("deadline"):
             continue
         tag = f"event:{it['label']}"
         if posted.get(tag) == day:

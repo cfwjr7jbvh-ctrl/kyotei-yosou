@@ -1073,7 +1073,7 @@ function uraMeta(it) {
   if (it.grade === "LAB") return `毎週の検証 ・ ${hd}` + (pub || " ・ まだ出していない");
   if (it.grade === "毎日") return `毎日の理論ぶつけ ・ ${hd}の分(その日に出す)` + pub;
   if (it.grade === "X") return `今日の X 投稿 ・ ${hd}の分` + pub;
-  if (it.grade === "大一番") return (it.stars ? `<b class="ura-stars">注目度${esc(it.stars)}</b> ` : "") + `大一番の1レース特集 ・ ${esc(it.venue)} ${hd}(その日に出す)` + pub;
+  if (it.grade === "新聞" || it.grade === "大一番") return (it.stars ? `<b class="ura-stars">注目度${esc(it.stars)}</b> ` : "") + `ミカタ新聞(1レース特集) ・ ${esc(it.venue)} ${hd}(その日に出す)` + pub;
   return (it.stars ? `<b class="ura-stars" title="注目度(買う人・見る人が多そうか)">注目度${esc(it.stars)}</b> ` : "") +
     `${esc(it.venue)} ${hd}〜 ・ 出場${it.n}人 ・ 注目${(it.picks || []).length}人` + pub;
 }
