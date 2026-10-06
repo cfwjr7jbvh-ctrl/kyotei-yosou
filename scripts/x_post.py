@@ -124,8 +124,8 @@ def morning_text(races: list[dict], now: dt.datetime) -> str | None:
     top = up[:3]
     if not top:
         return None
-    lines = [f"{'①②③'[i]} {r['venue']}{r['rno']}R({r['deadline']}) 1号艇が負ける{round(r['arashi']['in_lose'] * 100)}%" for i, r in enumerate(top)]
-    why = reasons(top[0])
+    lines = [f"{'①②③'[i]} {r['venue']}{r['rno']}R({r['deadline']}) 1号艇以外が勝つ見込み{round(r['arashi']['in_lose'] * 100)}%" for i, r in enumerate(top)]
+    why = [w for w in reasons(top[0]) if "不安材料" not in w]   # 不利な面を強調しない(発信方針)。挑む側の強みだけ
     head = f"今日の荒れそうなレース🌊 {now:%-m/%-d}\n\n" + "\n".join(lines)
     for k in (3, 2, 1, 0):
         w = f"\n\n{top[0]['venue']}{top[0]['rno']}R:{'、'.join(why[:k])}" if why[:k] else ""

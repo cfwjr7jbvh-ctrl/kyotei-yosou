@@ -2750,6 +2750,60 @@ def t_final(ent, r):
 
 
 THEORIES = {t["id"]: t for t in []}
+def t_saying(ent, r):
+    """コメントでよく見る「◯号艇の◯◯」「◯◯は◯◯巧者」「◯◯のまくり」は本当か(scripts/saying_lab.py の結果を読む)。"""
+    S = json.loads((ROOT / "reports/saying.json").read_text(encoding="utf-8"))
+    T, ex = S["traits"], S["examples"]
+
+    def m_(k, name):
+        x = T[k]
+        m = {"n": x["n"], "in1": x["keep"], "in1_ref": x["chance"], "unit": "組" if k in ("course", "venue") else "人", "cu": "人", "ref_label": "偶然なら"}
+        real = x["lo"] > x["chance"] + 0.03
+        v = {"real": real, "exists": "その人の性質" if real else "偶然とほぼ同じ"}
+        return (name, m, v)
+    ms = [m_("st", "スタートが速い人"), m_("out", "外からでも届く人"), m_("front", "前づけする人"), m_("nige", "インが強い人"),
+          m_("makuri", "まくり屋"), m_("sashi", "差し屋"), m_("course", "「◯コースの◯◯」(その人のふだんより、そのコースだけ強い)"),
+          m_("venue", "「◯◯巧者」(その人のふだんより、その場だけ強い)"), m_("rough", "「荒れ水面の◯◯」"), m_("big", "「大一番の◯◯」")]
+    n100 = lambda k: round(T[k]["keep"] * 100)  # noqa: E731
+    mine = S.get("mine", {})
+    c4 = (mine.get("course") or {}).get("4") or [[None, 0], [None, 0]]
+    mine_txt = (f"峰竜太の4コース(カド)は、2つの期間とも本人のふだんより上(100走あたり{c4[0][0]:+.0f}回・{c4[1][0]:+.0f}回)。"
+                if c4[0][0] is not None and c4[1][0] is not None and c4[0][0] > 0 and c4[1][0] > 0 else "")
+    tbl = [["スタートが速い", "、".join(ex["st"][:5])], ["インが強い", "、".join(ex["nige"][:5])], ["まくり屋", "、".join(ex["makuri"][:5])],
+           ["差し屋", "、".join(ex["sashi"][:5])], ["外からでも届く", "、".join(ex["out"][:5])], ["前づけ", "、".join(ex["front"][:5])]]
+    tbl2 = [[x] for x in ex["course"][:8]]
+    return {
+        "id": "saying", "title": "「4号艇の◯◯」「◯◯巧者」は本当? コメントでよく見る言い回しを数えた",
+        "belief": "◯◯は大村巧者、峰は4カド、荒れ水面なら◯◯。選手には得意な水面とコースがあるんだよ",
+        "subject": "上位2割の人", "verb": "もう一方の期間も上位2割に入る", "no_market": True, "unit": "人", "ref_label": "偶然なら",
+        "howto": "数字は「片方の期間で上位2割だった100人のうち、もう片方の期間も上位2割に入った人数」。偶然なら20人。多いほど、その人の性質(たまたまではない)",
+        "key_line": f"『◯◯巧者』は100人中{n100('venue')}人(偶然なら20人)。スタートの速い人は{n100('st')}人、まくり屋は{n100('makuri')}人が上位のまま",
+        "lead": (f"同じ選手を2つの期間(月の奇数・偶数)に分けて、片方で上位2割だった人が、もう片方でも上位2割に入るかを数えた。偶然なら100人中20人。"
+                 f"スタートが速い人は{n100('st')}人、外からでも届く人は{n100('out')}人、インが強い人は{n100('nige')}人、まくり屋は{n100('makuri')}人と、"
+                 f"その人の性質としてはっきり残る。ところが『その人のふだんより、この場だけ強い』(◯◯巧者)は{n100('venue')}人で、偶然とほぼ同じ。"
+                 f"『このコースだけ強い』は{n100('course')}人で、少しだけある。{mine_txt}"),
+        "conclusion": ["半分本当。『その人の型』は本物、『◯◯巧者』はほぼ偶然",
+                       f"スタート・イン・まくり・前づけは、期間を分けても同じ顔ぶれ(100人中{n100('makuri')}〜{n100('st')}人)。"
+                       f"『この場だけ強い』は100人中{n100('venue')}人で、偶然(20人)とほぼ同じ"],
+        "tables": [("期間を分けても上位だったA1(その型の本物)", tbl, ["型", "選手(例)"]),
+                   ("『◯コースの◯◯』で、2つの期間とも上位1割だったA1(例)", tbl2, ["コースと選手"])],
+        "measures": ms,
+        "rules": ["2つの期間は、月の奇数(1・3・5…月)と偶数(2・4・6…月)。季節や時期のかたよりが出にくい分け方",
+                  "『その人のふだんより』は、コースの有利不利を差し引いた3着以内の回数を、その人自身の平均とくらべたもの(もともと強い人がどこでも強いのは除く)",
+                  "各期間で一定の走数(コース・場は10走以上)がある人と組だけを数えた"],
+        "faq": [("じゃあ『◯◯巧者』は気にしなくていい?", f"『この場だけ強い』は、期間を分けると顔ぶれがほぼ入れかわる(100人中{n100('venue')}人)。走った回数が少ないと、たまたまの好成績が目立つため。場の相性より、その人のスタートと型を見るほうが確か"),
+                ("『4号艇の◯◯』は?", f"『このコースだけ強い』は100人中{n100('course')}人(偶然は20人)。少しはあるが、多くは入れかわる。"
+                 f"ただ、まくり屋・外からでも届く人のような『型』は本物なので、『4カドの◯◯』はその人がまくり屋かどうかで確かめるのがいい。{mine_txt}"),
+                ("大一番に強い人は?", f"準優・優勝戦だけ強い人は100人中{n100('big')}人、荒れ水面だけ強い人は{n100('rough')}人で、どちらも偶然とほぼ同じ。大一番でも、ふだんの強さどおり")],
+        "use": ["コメントの『◯◯巧者』より、その人の平均STと型(まくり・差し・イン)を見る",
+                "『4カドの◯◯』は、その人がまくり屋かどうかで確かめる(まくり屋は期間を分けても100人中" + str(n100("makuri")) + "人が上位のまま)",
+                "前づけする人は、ほぼ毎回する(100人中" + str(n100("front")) + "人)。進入の予想に使える"],
+        "mikata": "『その人の型』はうそをつかない。でも『この場だけ』は、思い出に残った1回かも",
+        "gen": "大村巧者は気のせいだったか……。でも、まくり屋のまくりは本物だろ? 4カドはやっぱり熱いんだよ",
+        "challenge": "次に『◯◯巧者』とコメントで見かけたら、その人の平均STと型をアプリの選手カードで見てみよう",
+    }
+
+
 BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke, "tenji": t_tenji, "flying": t_flying, "combo": t_combo,
             "rest": t_rest, "travel": t_travel, "weight": t_weight, "dayno": t_dayno, "twice": t_twice, "tilt": t_tilt,
             "moon": t_moon, "manshu": t_manshu, "lucky7": t_lucky7,
@@ -2757,7 +2811,7 @@ BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in"
             "birthday": t_birthday, "blood": t_blood, "height": t_height, "furusato": t_furusato,
             "pressure": t_pressure, "humid": t_humid, "heat": t_heat,
             "lane6": t_lane6, "motor": t_motor, "entry": t_entry,
-            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season, "penalty": t_penalty, "slowdash": t_slowdash, "formation": t_formation, "samefin": t_samefin, "series": t_series, "fixed": t_fixed, "final": t_final}
+            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season, "penalty": t_penalty, "slowdash": t_slowdash, "formation": t_formation, "samefin": t_samefin, "series": t_series, "fixed": t_fixed, "final": t_final, "saying": t_saying}
 
 
 # ---------------------------------------------------------------- 記事
@@ -2832,6 +2886,7 @@ def measures_html(ms, subject="1号艇", verb="勝つ", no_market=False, compare
     for name, m, v in ms:
         n_ = (lambda v_: f"{v_ * per:.1f}" if v_ == v_ and v_ is not None else "-") if _fine(m, per) else (lambda v_: _n100(v_, per))  # noqa: E731
         refl = m.get("ref_label") or default_ref
+        cu = m.get("cu", "回")   # 数える単位(ふつうは「回」。選手を数えるときは「人」)
         w1, w2 = m["in1_ref"] / top * 100, m["in1"] / top * 100
         d = (m["in1"] - m["in1_ref"]) * per
         tone = "up" if d >= 0.5 else ("down" if d <= -0.5 else "flat")
@@ -2858,9 +2913,9 @@ def measures_html(ms, subject="1号艇", verb="勝つ", no_market=False, compare
             exp_ = m["in1"] / r_ * (m.get("market_ref") or 1.0)   # オッズの見込みを、いつものずれ(全体の平均)で直した回数
             odds = f'<p class="rc-odds">人気から考えると {n_(exp_)}回 → 実際 {n_(m["in1"])}回</p>'
         cards += (f'<div class="rc"><p class="rc-h">{e(name)}<small>{m["n"]:,}{e(m.get("unit", unit))}</small></p>'
-                  f'<div class="rc-row"><span>{e(refl)}</span><div class="bar"><i style="width:{w1:.0f}%"></i></div><b>{n_(m["in1_ref"])}回</b></div>'
-                  f'<div class="rc-row this {tone}"><span>この条件</span><div class="bar"><i style="width:{w2:.0f}%"></i></div><b>{n_(m["in1"])}回</b></div>'
-                  f'<p class="rc-d {tone}">{per}{e(m.get("unit", unit))}で{e(m.get("subject", subject))}が{e(m.get("verb", verb))}のは <b>{e(_diff_words(m, m.get("verb", verb), per))}</b></p>'
+                  f'<div class="rc-row"><span>{e(refl)}</span><div class="bar"><i style="width:{w1:.0f}%"></i></div><b>{n_(m["in1_ref"])}{cu}</b></div>'
+                  f'<div class="rc-row this {tone}"><span>この条件</span><div class="bar"><i style="width:{w2:.0f}%"></i></div><b>{n_(m["in1"])}{cu}</b></div>'
+                  f'<p class="rc-d {tone}">{per}{e(m.get("unit", unit))}で{e(m.get("subject", subject))}が{e(m.get("verb", verb))}のは <b>{e(_diff_words(m, m.get("verb", verb), per).replace("回", cu))}</b></p>'
                   f'{odds}<div class="rc-b">{"".join(badges)}</div></div>')
     return f'<div class="rcs">{cards}</div>'
 
@@ -2928,6 +2983,8 @@ def _main_measure(t):
 
 def key_line(t) -> str:
     """結論のすぐ下に置く数字の1行(いちばん大事な物差し)。"""
+    if t.get("key_line"):
+        return t["key_line"]
     name, m, _ = _main_measure(t)
     unit = m.get("unit") or t.get("unit") or ("走" if t.get("no_market") else "レース")
     refl = m.get("ref_label") or t.get("ref_label") or ("ふだん" if t.get("no_market") else "全レース")
@@ -2984,6 +3041,7 @@ def page(t: dict, asof: str) -> str:
                    else f'<p class="more">ここから先は、くわしい数字。場ごと・年ごとの表も</p><section class="howto"><span class="label">くわしく</span><p>{e(t["lead"])}</p></section>')
 
     tables = "".join(table_html(*tb) for tb in t["tables"])
+    howto_html = e(t["howto"]) if t.get("howto") else (f"""数字はぜんぶ「{t.get('per', 100)}{t.get('unit') or ('走' if t.get('no_market') else 'レース')}あたり何回か」。棒の上が<b>くらべる相手</b>、下が<b>この条件</b>。差がはっきりしていて、たまたまでは出ない差なら「<b>本物の差</b>」のしるしが付きます。{'' if t.get('no_market') else '人気にも同じ差が出ていれば「<b>人気どおり</b>」=配当はそのぶん安め。人気よりも多く来ていれば「<b>人気以上に来る</b>」。'}""")
     use_l = t["use"] if hook else t["use"][1:]
     use_html = (f'<section class="side"><h3>{"予想に使うなら" if hook else "ほかの使いどころ"}</h3><ul>' + "".join(f"<li>{e(x)}</li>" for x in use_l) + "</ul></section>") if use_l else ""
     todai = f'<section class="todai"><span class="label">今日のお題</span><div class="td-box">{gull_svg(48, bg="#fff", cls="td")}<p>{e(t.get("challenge", "次に行く場で、この説が本当か自分の目で確かめてみよう"))}</p></div></section>'
@@ -3027,7 +3085,7 @@ def page(t: dict, asof: str) -> str:
 <div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ(カモメの記者)/ 説の持ち込み ゲンさん<br>公式の成績データ 2023-10〜{e(asof)} を独自に集計</span></div></div></header>
 <main class="mag">
 {(hook_html + stamp + gen_reply) if hook else (stamp + rules + hook_html + use_html + todai)}
-{detail_html}<section class="howto"><span class="label">数字の見方</span><p>数字はぜんぶ「{t.get('per', 100)}{t.get('unit') or ('走' if t.get('no_market') else 'レース')}あたり何回か」。棒の上が<b>くらべる相手</b>、下が<b>この条件</b>。差がはっきりしていて、たまたまでは出ない差なら「<b>本物の差</b>」のしるしが付きます。{'' if t.get('no_market') else '人気にも同じ差が出ていれば「<b>人気どおり</b>」=配当はそのぶん安め。人気よりも多く来ていれば「<b>人気以上に来る</b>」。'}</p></section>
+{detail_html}<section class="howto"><span class="label">数字の見方</span><p>{howto_html}</p></section>
 {rules if hook else ''}<section><span class="label">結果</span>{measures_html(t['measures'], t.get('subject', '1号艇'), t.get('verb', '勝つ'), t.get('no_market', False), t.get('compare', '全体'), t.get('ref_label'), t.get('unit'), t.get('per', 100))}{tables}</section>{faq}
 {(use_html + todai) if hook else ''}
 <blockquote class="ft-quote">{gull_svg(64, bg="#ffffff", cls="q")}<p><small>ミカタのひと言</small>{e(t['mikata'])}</p></blockquote>
@@ -3060,7 +3118,8 @@ def note_text(t: dict) -> str:
         refl = m.get("ref_label") or t.get("ref_label") or ("ふだん" if t.get("no_market") else "全レース")
         per = t.get("per", 100)
         nn = (lambda v_: f"{v_ * per:.1f}") if _fine(m, per) else (lambda v_: _n100(v_, per))  # noqa: E731
-        line = f"・{name}: {per}{unit}で{nn(m['in1'])}回({refl}は{nn(m['in1_ref'])}回)→ {_diff_words(m, m.get('verb', t.get('verb', '勝つ')), per)}"
+        cu = m.get("cu", "回")
+        line = f"・{name}: {per}{unit}で{nn(m['in1'])}{cu}({refl}は{nn(m['in1_ref'])}{cu})→ {_diff_words(m, m.get('verb', t.get('verb', '勝つ')), per).replace('回', cu)}"
         tags = [("本物の差" if v.get("real") else "差は小さい")] if not v.get("baseline") else ["基準"]
         if v.get("stable") and not v.get("baseline"):
             tags.append("前の2年も最近の1年も同じ向き" if v["stable"].startswith("前の2年") else "年によって変わる")
