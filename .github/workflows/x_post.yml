@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       what:
-        description: "theory / morning / neta / evening / poll / event / thread / test / stats"
+        description: "theory / morning / neta / evening / poll / event / thread / test / stats / queue(今日の予定)"
         default: "test"
       key:
         description: "thread のとき: 場コード_初日(例 04_20261013)"

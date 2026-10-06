@@ -370,7 +370,7 @@ def post(s, text: str, media_id: str | None = None, reply_to: str | None = None,
 # ---------------------------------------------------------------- 本体
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["theory", "morning", "neta", "evening", "poll", "event", "thread", "test"])
+    ap.add_argument("what", choices=["theory", "morning", "neta", "evening", "poll", "event", "thread", "test", "queue"])
     ap.add_argument("--key", default=None)
     ap.add_argument("--note-url", default=os.environ.get("NOTE_URL") or None)
     ap.add_argument("--dry", action="store_true")
@@ -386,6 +386,11 @@ def main():
             print("鍵の確認:", r.status_code, (r.json().get("data") or {}).get("username") if r.ok else r.text[:300])
         return
     day = now.strftime("%Y-%m-%d")
+    if a.what == "queue":   # 今日の予定の一覧(投稿しない)
+        for it in sorted(queue(day), key=lambda q: hm(q["time"])):
+            done = posted.get(f"event:{it['label']}") == day or posted.get({v: k for k, v in SLOTS.items()}.get(it["time"], "-")) == day
+            print(f"{it['time']:>5} {'済' if done else '  '} {it['label']}" + (f"(締切 {it['deadline']})" if it.get("deadline") else "") + (" 画像つき" if it.get("image") else ""))
+        return
     texts, media, poll = [], None, None
     tag = a.what
     ev_label = None
