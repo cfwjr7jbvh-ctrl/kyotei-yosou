@@ -556,7 +556,7 @@ def main():
                                                  "pages": pages_, "pdf": f"{key}_pdf.json" if pages_ else None, "asof": today.isoformat()})
                 items.insert(0, {"key": key, "title": t["title"], "grade": "毎日", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"), "n": 0, "picks": [], "images": 0})
                 print("theory daily:", t["n_races"], "races", t["n_conf"], "conflicts")
-                xq.append(("8:20", "今日の理論ぶつけ", x_first(t["x"]), x_image(out, key, t["html"], "01_理論ぶつけ.png", a.no_images)))
+                xq.append(("8:20", "今日の理論ぶつけ", x_first(t["x"]), x_image(out, key, t["card"], "01_理論ぶつけ.png", a.no_images) if t.get("card") else None))
             try:   # 昼: 今日の荒れそうなレース(文字だけ)
                 import x_post
                 now = dt.datetime.now(JST).replace(hour=12, minute=10, second=0, microsecond=0)
@@ -603,7 +603,7 @@ def main():
             t = order[max(n_slot - 1, 0) % len(order)]
             hits = theory_hits(today, t["id"])   # 投稿の最後の「今日なら◯◯R」に
             xq.append(("20:00", f"検証ラボ: {t['title']}", seo.with_tags(x_first(labmod.x_text(t, hits)), day_tags),
-                       x_image(out, f"lab_{t['id']}", labmod.page(t, t.get("asof", "")), "03_検証ラボ.png", a.no_images)))
+                       x_image(out, f"lab_{t['id']}", labmod.x_card(t), "03_検証ラボ.png", a.no_images)))
         elif evening:
             import x_post
             p_ = {"title": evening["title"], "venue": evening["venue"], "hd": evening["hd"], "name": evening["name"], "tag": evening["tag"]}

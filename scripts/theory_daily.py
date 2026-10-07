@@ -189,7 +189,20 @@ def build(day: dt.date, data: dict) -> dict | None:
         body = (f"今日の悩ましいレース|{race_short(r)}{dl}\n\nインに有利: {sm['plus'][0]}\nインに不利: {sm['minus'][0]}\n\nあなたはどっちに乗る?\n#今日の理論ぶつけ #ボートレース{r['venue']} #競艇")
     if xlen(body) > 280:
         body = f"【今日の理論ぶつけ】{day.month}/{day.day}\n\n悩ましいレース{len(conf)}つ。インに有利な理論と不利な理論がぶつかっています。\n\nあなたはどっちに乗る?"
-    return {"title": title, "html": page, "note": "\n".join(lines), "x": f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 記事の上部(悩ましいレースのところ)\n出し方: 記事のリンクは本文に入れず、この投稿への自分の返信に付ける", "n_conf": len(conf), "n_races": len(races)}
+    # X の画像: 記事の紙面は撮らない(スマホで文字が5pxになる)。悩ましいレース1つを大きな文字のカードに(kyotei.xcard)
+    card = None
+    if conf:
+        from kyotei.xcard import theory_card_html
+        r = conf[0]; sm = r["th_sum"]
+
+        def items(titles):
+            return [{"title": t_, "lanes": next((x.get("lanes") or [] for x in r["theories"] if x.get("title") == t_), []), "num": clash_num(r, t_)}
+                    for t_ in titles]
+        card = theory_card_html(f"{day.month}/{day.day}({WEEK[day.weekday()]})", race_short(r), r.get("deadline") or "", str(r.get("race_type") or ""),
+                                items(sm["plus"]), items(sm["minus"]), len(conf) - 1)
+    return {"title": title, "html": page, "card": card, "note": "\n".join(lines),
+            "x": f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 悩ましいレースのカード(大きな文字の1枚)\n出し方: 記事のリンクは本文に入れず、この投稿への自分の返信に付ける",
+            "n_conf": len(conf), "n_races": len(races)}
 
 
 def main():

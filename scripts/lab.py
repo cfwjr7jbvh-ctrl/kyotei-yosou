@@ -3769,6 +3769,34 @@ def x_first_line(t: dict) -> str:
     return f"{name}なら、{sv}のは{_rate(m['in1'], fine)}。{refl}は{_rate(m['in1_ref'], fine)}。"
 
 
+def x_card(t: dict) -> str:
+    """X に載せる画像(1080×1350 の専用カード。kyotei.xcard)。記事の紙面は撮らない(スマホで文字が読めないため。2026-10-07 ユーザー)。
+    結論のハンコ → いちばん大事な物差しの2本の棒 → 人気とのくらべ → ゲンさんの返し。"""
+    from kyotei.xcard import lab_card_html
+    con = conclusion(t)
+    name, m, v = _main_measure(t)
+    unit = m.get("unit") or t.get("unit") or ("走" if t.get("no_market") else "レース")
+    per, cu = t.get("per", 100), m.get("cu", "回")
+    refl = m.get("ref_label") or t.get("ref_label") or ("ふだん" if t.get("no_market") else "全レース")
+    subj = m.get("subject", t.get("subject", "1号艇"))
+    sv = ("" if subj.startswith("その") or subj in name else f"{subj}が") + m.get("verb", t.get("verb", "勝つ"))
+    real = not con[0].startswith("ふだんと同じ")
+    market = ""
+    if real and not t.get("no_market") and m.get("market_ratio") and m["market_ratio"] == m["market_ratio"]:
+        market = odds_words(m)
+    gen = (t.get("gen") or "").strip()
+    if len(gen) > 75:   # 吹き出しは3行まで(36px で1行25字)。長いときは文の切れ目で、入るところまで
+        out_ = ""
+        for sen in [x + "。" for x in gen.split("。") if x]:
+            if len(out_ + sen) > 75:
+                break
+            out_ += sen
+        gen = out_ or gen[:74] + "…"
+    rate = _is_rate(unit, cu, per) and m.get("in1") is not None and m.get("in1_ref") is not None
+    return lab_card_html(t["title"], con[0], real, name, sv, m["in1"] if rate else None, m["in1_ref"] if rate else None, refl,
+                         "" if rate else key_line(t), market, gen)
+
+
 LANE_THEORIES = {"hot", "flying", "rest", "penalty", "tilt", "weight", "a1in", "slowdash", "formation", "lucky7", "name"}
 
 
