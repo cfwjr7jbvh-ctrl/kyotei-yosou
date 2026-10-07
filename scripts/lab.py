@@ -3614,14 +3614,15 @@ def page(t: dict, asof: str) -> str:
     if hook:
         rows = "".join(f'<div class="hk {w}">{gull_svg(44, bg="#ffffff", cls="hk-g", who="gen" if w == "g" else "mikata")}<p><small>{"ゲンさん" if w == "g" else "ミカタ"}</small>{e(x)}</p></div>'
                        for w, x in hook["lines"])
-        hook_html = (f'<section class="hook"><span class="label">はじめに(正直に言うと)</span><div class="hks">{rows}</div>'
+        hook_html = (f'<section class="hook"><span class="label">はじめに(正直に言うと)</span>'
+                     f'<p class="who">ゲンさん=ゲンかつぎ歴40年の大先輩。ストップウォッチ片手に展示を見る目は確かで、ジンクスも信じる。ミカタ=データにくわしいカモメの記者</p><div class="hks">{rows}</div>'
                      f'<p class="ask">あなたは、どっちだと思う? <b>答えは、すぐ下。</b></p></section>')
     else:   # 実用の説: 結論のあとに、説と短い掛け合い(どこで使えるか)
         lines = practical_lines(t, con)
         rows = "".join(f'<div class="hk {w}">{gull_svg(44, bg="#ffffff", cls="hk-g", who="gen" if w == "g" else "mikata")}<p><small>{"ゲンさん" if w == "g" else "ミカタ"}</small>{e(x)}</p></div>'
                        for w, x in lines)
-        hook_html = (f'<section class="hook pr"><span class="label">ゲンさんの説</span><div class="hks">{rows}</div>'
-                     f'<p class="who">ゲンさん=ゲンかつぎ歴40年の大先輩。ストップウォッチ片手に展示を見る目は確か</p></section>')
+        hook_html = (f'<section class="hook pr"><span class="label">ゲンさんの説</span>'
+                     f'<p class="who">ゲンさん=ゲンかつぎ歴40年の大先輩。ストップウォッチ片手に展示を見る目は確か</p><div class="hks">{rows}</div></section>')
     # オカルト枠は表紙で答えを言わない(問いだけ)。答えは掛け合いのすぐ下。実用の説は表紙で結論まで言う
     deck = (f"「{hook['x'][0]}」――関係ないのは分かってる。でも、ワンチャン大いなる力が働いてるかも? ギャンブラーの気持ちを、{count_words(t)}のデータで確かめた。" if hook
             else con[1])
@@ -3677,7 +3678,7 @@ def page(t: dict, asof: str) -> str:
 <div class="cv-top"><div class="brand">ミカタ検証ラボ<small>「◯◯理論」を同じ物差しで試す</small></div><div class="issue"><b>LAB</b><br>{e(today)}</div></div>
 <p class="cv-kicker">{"オカルト枠" if hook else "検証する説"}</p><h1 class="cv-h">{e(t['title'])}</h1>{cv_con}
 <p class="cv-deck">{e(deck)}</p>
-<div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ(カモメの記者)/ 説の持ち込み ゲンさん<br>公式の成績データ 2023-10〜{e(asof)} を独自に集計</span></div></div></header>
+<div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ(カモメの記者)/ 説の持ち込み ゲンさん(ゲンかつぎ歴40年の大先輩)<br>公式の成績データ 2023-10〜{e(asof)} を独自に集計</span></div></div></header>
 <main class="mag">
 {(hook_html + stamp + gen_reply) if hook else (stamp + rules + hook_html + use_html + todai)}
 {detail_html}<section class="howto"><span class="label">数字の見方</span><p>{howto_html}</p></section>
@@ -3696,7 +3697,7 @@ def note_text(t: dict) -> str:
     who = lambda w: "ゲンさん" if w == "g" else "ミカタ"  # noqa: E731
     if hk:   # オカルト枠: 問いのタイトル → 掛け合い → あなたはどっち? → すぐ結論
         out = ["【タイトル案】", f"1. {t['title']} {count_words(t)}で数えてみた", f"2. 関係ないのは分かってる。{t['title']}", "",
-               "■はじめに(正直に言うと)", *[f"{who(w)}「{x}」" for w, x in hk["lines"]], "", "あなたは、どっちだと思う? 答えは、すぐ下。", "",
+               "■はじめに(正直に言うと)", "(ゲンさん=ゲンかつぎ歴40年の大先輩。ミカタ=データにくわしいカモメの記者)", *[f"{who(w)}「{x}」" for w, x in hk["lines"]], "", "あなたは、どっちだと思う? 答えは、すぐ下。", "",
                f"■ミカタの結論:{con[0]}", key_line(t), con[1], "", f"ゲンさんの返し:「{t.get('gen', '')}」", "", "■くわしく", t["lead"], ""]
     else:    # 実用の説: タイトルで結論 → 結論と数字 → 説と短い掛け合い → 使いどころ・お題 → (ここから有料にするなら)くわしく
         out = ["【タイトル案】", f"1. {t['title']}|{con[0]}", f"2. {t['title']}→{con[0].split('。')[0]}。{count_words(t)}で確かめた", "",
@@ -3826,7 +3827,7 @@ def x_text(t: dict, hits: list[dict] | None = None) -> str:
     hk = _hook(t)
     if hk:   # オカルト枠: ゲンさんのゲンかつぎ → ミカタ → 数字 → 結論 → 読み手のゲンかつぎを聞く
         gx, mx = hk["x"]
-        h2 = f"ゲンさん「{gx}」\nミカタ「{mx}」\n\n"
+        h2 = f"ゲンかつぎ歴40年のゲンさん「{gx}」\nミカタ「{mx}」\n\n"   # 「ゲンさんってだれ?」とならないよう紹介つき
         ask = "あなたのゲンかつぎも教えて。次に数えます"
         cands = [h2 + f"{l1}\n{l2}\n{l4}\n\n{ask}" if l4 else "", h2 + f"{l1}\n{l2}\n\n{ask}", h2 + f"{l1}\n{l2}", h2 + l2]
     else:    # 実用の説: 数字 → 結論 → 今日の該当レース → ミカタのひと言(ミカタが喋るのは最後だけ。1行目は情報のまま)

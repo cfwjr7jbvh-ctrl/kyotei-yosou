@@ -105,7 +105,7 @@ def lab_card_html(title: str, verdict: str, real: bool, cond: str, sv: str,
     head, _, rest = verdict.partition("。")
     stamp = f'<div class="v">{e(head)}</div>' + (f'<div class="vr">{e(rest)}</div>' if rest else "")
     mk = f'<div class="mk">{e(market)}</div>' if market else ""
-    gn = (f'<div class="gen">{gull_svg(96, bg="#ffffff", cls="g", who="gen")}<p><small>ゲンさん</small>{e(gen)}</p></div>' if gen else "")
+    gn = (f'<div class="gen">{gull_svg(96, bg="#ffffff", cls="g", who="gen")}<p><small>ゲンさん(ゲンかつぎ歴40年の大先輩)</small>{e(gen)}</p></div>' if gen else "")
     css = BASE_CSS + f"""
 .top h1{{margin:12px 0 0;font:900 56px/1.3 {F}}}
 .v{{margin:54px 60px 0;background:{col};color:#fff;padding:18px 34px;font:900 76px/1.1 {F};display:inline-block}}

@@ -99,7 +99,7 @@ def make(series_name: str, grade: str, rr: dict, cards: dict | None, score: floa
 <header class="cover"><div class="lanebar"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cv-in">
 <div class="cv-top"><div class="brand">ミカタ新聞<small>{e((grade + ' ' + series_name).strip() or 'これからのレース')}</small></div><div class="issue"><b>{e(stars(score))}</b><br>{day.month}/{day.day}({WEEK[day.weekday()]})</div></div>
 <p class="cv-kicker">{e(rt)} ・ {e(race)} ・ {e(str(rr.get('deadline') or ''))}締切</p><h1 class="cv-h">{e(head)}</h1><p class="cv-deck">{e(lead)}</p>
-<div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ / ゲンかつぎ担当 ゲンさん<br>型は選手カード、理論は検証ラボ(公式の成績データを独自に集計)から</span></div></div></header>
+<div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ / ゲンかつぎ担当 ゲンさん(ゲンかつぎ歴40年の大先輩)<br>型は選手カード、理論は検証ラボ(公式の成績データを独自に集計)から</span></div></div></header>
 <main class="mag">
 {view_html}
 <section><span class="label">6人の型(よい面だけ)</span><ul class="six">{''.join(r for r, _ in rows)}</ul></section>
@@ -186,7 +186,8 @@ CARD_CSS = f"""html,body{{margin:0}} .c{{width:1080px;height:1350px;background:#
 .br .bm{{flex:1}} .br .bm b{{display:flex;align-items:center;gap:12px;font:900 36px/1.25 {F}}} .br .bm small{{display:block;font:700 26px/1.4 {F};color:#14212c;margin-top:4px}}
 .br .bm p{{margin:4px 0 0;font:700 23px/1.4 {F};color:#56636e}} .br .pc{{font:900 52px {F};white-space:nowrap}} .br .pc small{{font-size:26px}}
 .br .lt{{width:44px;height:44px;flex:0 0 44px;font-size:28px}} .row em{{font-style:normal;color:#c8141c}}
-.gen{{display:flex;gap:14px;align-items:flex-start;background:#e8eef7;border:3px solid #0b5fb4;padding:12px 18px}} .gen span{{font:900 26px {F};color:#fff;background:#0b5fb4;padding:4px 10px;white-space:nowrap}}
+.gen{{background:#e8eef7;border:3px solid #0b5fb4;padding:12px 18px}} .gw{{display:flex;gap:12px;align-items:center;margin-bottom:6px}}
+.gen span{{font:900 26px {F};color:#fff;background:#0b5fb4;padding:4px 10px;white-space:nowrap}} .gw small{{font:700 24px {F};color:#0b5fb4}}
 .gen p{{margin:0;font:700 30px/1.45 {F}}}
 .h .key{{display:block;margin-top:4px;font:700 22px {F};color:#56636e}} .ths{{list-style:none;margin:0;padding:0;display:grid;gap:12px}} .ths li{{background:#fff;border-left:10px solid #8a949c;padding:12px 18px}}
 .ths li.p{{border-color:#2e8b57}} .ths li.m{{border-color:#c8141c}} .ths li b{{font:900 32px {F}}}
@@ -345,7 +346,7 @@ def x_cards(series_name: str, grade: str, rr: dict, cards: dict | None, day: dt.
     il = (rr.get("arashi") or {}).get("in_lose")
     body2 = (f'<div class="sec"><p class="h">6人の勝つ見込み<span class="key">スタートは平均の速さ ・ 赤字はその人の得意な型</span></p>{rows}</div>'
              + (f'<div class="sec"><p class="h">荒れそう度</p><ul class="lines"><li class="m">1号艇以外が勝つ見込み {_pct(il)}%<small>いつもは45%</small></li></ul></div>' if il is not None else "")
-             + (f'<div class="sec gen"><span>ゲンさん</span><p>{e(st_["gen"])}</p></div>' if st_ else ""))
+             + (f'<div class="sec gen"><div class="gw"><span>ゲンさん</span><small>ゲンかつぎ歴40年の大先輩</small></div><p>{e(st_["gen"])}</p></div>' if st_ else ""))
     out.append(_card(small, h1, sub + " ・ 2/2", body2))
     # 3枚目: 当てはまる理論(札と、何を見てどれくらい違うかの1行)と、ことばの説明
     th = theory_lines(rr)

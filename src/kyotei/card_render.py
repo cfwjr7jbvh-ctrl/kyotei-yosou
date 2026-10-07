@@ -61,6 +61,11 @@ def _emb(tag: str, size: int) -> str:
     return emblem_svg(tag, size, cls="emb")
 
 
+# ゲンさんの紹介(2026-10-07 ユーザー「ゲンさんってなに?ってなることが無いように」): どの記事・投稿・画像でも、最初に出るところで添える
+GEN_WHO = "ゲンかつぎ歴40年の大先輩"
+GEN_NAME = f"ゲンさん({GEN_WHO})"
+
+
 def gull_svg(size: int = 104, ring: str = "#c8141c", bg: str = "#eef1e4", cls: str = "gull", who: str = "mikata") -> str:
     """カモメのアイコン(輪の中の顔)。公式のキャラとは無関係の自作。カード画像・下書き・アプリで共通。
 

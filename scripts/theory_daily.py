@@ -144,13 +144,13 @@ def build(day: dt.date, data: dict) -> dict | None:
 <header class="cover"><div class="lanebar"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="cv-in">
 <div class="cv-top"><div class="brand">ミカタ 理論ぶつけ<small>出走表に、検証ラボの理論を全部ぶつける</small></div><div class="issue"><b>DAILY</b><br>{e(day.isoformat())}</div></div>
 <p class="cv-kicker">{e(base_title)} ・ 考え方を並べる</p><h1 class="cv-h">{e(headline)}</h1><p class="cv-deck">{e(lead)}</p>
-<div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ / 暦とオカルト担当 ゲンさん<br>理論の数字は検証ラボ(公式の成績データを独自に集計)から</span></div></div></header>
+<div class="cv-by">{gull_svg(52, bg="#f4efdf", cls="cv")}<span>文・データ ミカタ / 暦とオカルト担当 ゲンさん(ゲンかつぎ歴40年の大先輩)<br>理論の数字は検証ラボ(公式の成績データを独自に集計)から</span></div></div></header>
 <main class="mag">
 <section><span class="label">今日の悩ましいレース</span><p>インに有利な理論と不利な理論が、同じレースでぶつかっている。どっちに乗る?</p>{sec_conf}</section>
 <section><span class="label">理論がいちばん集まったレース</span>{sec_rich}</section>
 <section><span class="label">理論別の索引</span>{sec_idx}</section>
 <section><span class="label">おまけ: ゲンさんのゲンかつぎ(オカルト枠)</span>
-<p class="dlg"><b class="g">ゲンさん</b>「関係ねえのは分かってる。でもワンチャン、大いなる力が働いてるかもしれねえだろ?」 <b class="m">ミカタ</b>「乗るかどうかは、気分しだいだね」</p><ul>{cal_html or "<li>今日は特別な暦の日ではない。……ふつうの日こそ、データの出番</li>"}</ul>
+<p class="dlg"><b class="g">ゲンさん(ゲンかつぎ歴40年の大先輩)</b>「関係ねえのは分かってる。でもワンチャン、大いなる力が働いてるかもしれねえだろ?」 <b class="m">ミカタ</b>「乗るかどうかは、気分しだいだね」</p><ul>{cal_html or "<li>今日は特別な暦の日ではない。……ふつうの日こそ、データの出番</li>"}</ul>
 <p>名前・モーター番号のオカルト: {e(occ_txt or "今日は見当たらない")}</p></section>
 <blockquote class="ft-quote">{gull_svg(64, bg="#ffffff", cls="q")}<p><small>ミカタのひと言</small>理論は『正解』じゃなくて『見方』。いくつかの理論がぶつかるレースほど、自分の予想を立てる楽しさがあるよ</p></blockquote>
 <blockquote class="ft-quote gen">{gull_svg(64, bg="#ffffff", cls="q", who="gen")}<p><small>ゲンさんの返し</small>理論にすがりたい日もあるさ。どの理論を信じるかで、レースの見え方が変わる。それが楽しいんだ</p></blockquote>
@@ -166,7 +166,7 @@ def build(day: dt.date, data: dict) -> dict | None:
     for tid, nm in INDEX:
         if tid in idx:
             lines.append(f"・{nm}: " + "、".join(race_name(r) for r, n in idx[tid][:8]))
-    lines += ["", "■おまけ: ゲンさんのゲンかつぎ(オカルト枠)"] + [f"・{x}" for x in cal] + ([f"・名前・モーター番号: {occ_txt}"] if occ_txt else [])
+    lines += ["", "■おまけ: ゲンさんのゲンかつぎ(オカルト枠)", "(ゲンさん=ゲンかつぎ歴40年の大先輩)"] + [f"・{x}" for x in cal] + ([f"・名前・モーター番号: {occ_txt}"] if occ_txt else [])
     lines += ["", "この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。"]
     # X
     if conf:
@@ -184,7 +184,7 @@ def build(day: dt.date, data: dict) -> dict | None:
         if not body:
             body = f"今日の悩ましいレース|{race_short(r)}{dl}\n\nインに有利: {'・'.join(sm['plus'])}\nインに不利: {'・'.join(sm['minus'])}{tail_}"
     else:
-        body = f"【今日の理論ぶつけ】{day.month}/{day.day}\n\n今日の出走表{len(races)}レースに、検証ラボの理論をぶつけました。当てはまった理論は{n_notes}。\n\nゲンさん「理論にすがりたい日もあるさ」"
+        body = f"【今日の理論ぶつけ】{day.month}/{day.day}\n\n今日の出走表{len(races)}レースに、検証ラボの理論をぶつけました。当てはまった理論は{n_notes}。\n\nゲンかつぎ歴40年のゲンさん「理論にすがりたい日もあるさ」"
     if xlen(body) > 280 and conf:
         body = (f"今日の悩ましいレース|{race_short(r)}{dl}\n\nインに有利: {sm['plus'][0]}\nインに不利: {sm['minus'][0]}\n\nあなたはどっちに乗る?\n#今日の理論ぶつけ #ボートレース{r['venue']} #競艇")
     if xlen(body) > 280:
