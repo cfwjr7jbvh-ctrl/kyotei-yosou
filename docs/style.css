@@ -482,3 +482,7 @@ details.hits{margin-top:6px}
 details.hits .tbl th,details.hits .tbl td{padding:6px 4px}
 details.hits .tbl td{font-size:14px}
 details.hits .tbl th small{font-weight:400}
+.box.intro .ex{background:var(--soft);border-radius:8px;padding:10px 12px;margin:0 0 8px;font-size:13px;line-height:1.7}
+.box.intro .ex>b{display:block;margin-bottom:2px}
+.box.intro .ex ul{margin:6px 0 0;padding-left:1.1em}
+.box.intro .ex li{margin:3px 0}
