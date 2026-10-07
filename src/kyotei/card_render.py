@@ -166,7 +166,7 @@ def card_image_html(c: dict, jcd: int | None = None, kicker: str = "データで
     st_ = "" if not tag or tag.get("cat") in ("front", "growth", "exlate", "ex2") or sc is None else \
         ("★★★" if sc >= 99 else "★★" if sc >= 95 else "★" if sc >= 90 else "")
     from .mag import big_stat
-    num, lbl = big_stat(c, tag) if tag else (f"{c['top3']:.0%}", "3着内率")
+    num, lbl = big_stat(c, tag) if tag else (f"{c['top3']:.0%}", "3着以内率")
     k1 = c["kim"]["nige"]
     nige = f"{k1['w'] / k1['n']:.0%}" if k1["n"] else "-"
     stv = rc.st_fmt(c["st"]["avg"]) if c["st"]["avg"] is not None else "-"
@@ -192,7 +192,7 @@ def card_image_html(c: dict, jcd: int | None = None, kicker: str = "データで
     <div class="mid"><div><div class="big"><b>{e(num)}</b><small>{e(lbl)}</small></div>
       <div class="mini"><div><span>1コース逃げ率</span><b>{nige}</b></div><div><span>平均ST</span><b>{stv}</b></div></div></div>
       <div>{radar_svg(c['radar'], W=540, H=330, R=104, cls='rimg')}<div class="cap">{e(g)}の中での位置(100がトップ)</div></div></div>
-    <div class="bars"><h4>コース別の成績<span>1着率 / 3着内率</span></h4>{bars}</div>
+    <div class="bars"><h4>コース別の成績<span>1着率 / 3着以内率</span></h4>{bars}</div>
   </div>
   <div class="foot"><span>公式の成績データ({e(c['period'][0][:7].replace('-', '/'))}〜{e(c['asof'][:7].replace('-', '/'))}、{c['n']}走)を独自に集計<br>舟券は20歳になってから</span><b>競艇をいろんな角度から</b></div>
 </div>"""

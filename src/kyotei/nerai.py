@@ -1,7 +1,7 @@
 """狙い目の材料: 裏新聞で「枠(コース)が決まったらチェックする」ための集計。
 
 買い目や的中を示すものではなく、出走表が出たときに読者が自分で組み立てるための材料。
-- waku_table: 出場選手の、進入したコースごとの成績の上位(1〜4コースは1着率、5・6コースは3着内率)
+- waku_table: 出場選手の、進入したコースごとの成績の上位(1〜4コースは1着率、5・6コースは3着以内率)
 - best_course: 選手ごとに、同じ級別の平均と比べて一番光るコース(2〜6コース)
 - venue_trend: その場の傾向(1コースの強さ、1コース以外が勝つときの決まり手、人気薄で決まった割合)。
   配当の額(万舟など)は使わない(儲けを思わせる表現は避ける。公営競技の広告の指針に自主的に合わせる)。
@@ -20,7 +20,7 @@ UPSET_POP = 30         # 「人気薄で決まった」= 3連単の結果がこ�
 MIN_N = 8              # 早見表に載せる最低の走数
 KIM = {1: "逃げ", 2: "差し", 3: "まくり", 4: "まくり差し", 5: "抜き", 6: "恵まれ"}
 METRIC = {1: "win", 2: "win", 3: "win", 4: "win", 5: "top3", 6: "top3"}
-METRIC_NAME = {"win": "1着率", "top3": "3着内率"}
+METRIC_NAME = {"win": "1着率", "top3": "3着以内率"}
 
 
 def _runs(d: pd.DataFrame) -> pd.DataFrame:
@@ -32,7 +32,7 @@ def _runs(d: pd.DataFrame) -> pd.DataFrame:
 
 
 def course_base(d: pd.DataFrame) -> pd.DataFrame:
-    """級別 × コースの平均(1着率・3着内率)。index = (grp, course)。"""
+    """級別 × コースの平均(1着率・3着以内率)。index = (grp, course)。"""
     return _runs(d).groupby(["grp", "course"])[["win", "top3"]].mean()
 
 
@@ -41,7 +41,7 @@ def _shrunk(rate, n, prior):
 
 
 def _expect(c: dict, base: pd.DataFrame) -> dict[int, dict]:
-    """コースごとの見込み(1着率・3着内率)と、そのコースだけの得意(bump、3着内率のポイント)。"""
+    """コースごとの見込み(1着率・3着以内率)と、そのコースだけの得意(bump、3着以内率のポイント)。"""
     rows = {}
     for crs in range(1, 7):
         x = c["courses"][crs - 1]
@@ -64,7 +64,7 @@ def _expect(c: dict, base: pd.DataFrame) -> dict[int, dict]:
 
 
 def waku_table(sel: list[dict], base: pd.DataFrame, top: int = 3) -> dict[int, list[dict]]:
-    """コースごとの上位。{course: [{id, name, n, k, rate, avg}]}(k は1着か3着内の回数、avg は同じ級別の平均)。
+    """コースごとの上位。{course: [{id, name, n, k, rate, avg}]}(k は1着か3着以内の回数、avg は同じ級別の平均)。
     順位は見込み(_expect)で付け、表示は実際の回数と率。"""
     exp = {c["id"]: _expect(c, base) for c in sel}
     out = {}
@@ -84,7 +84,7 @@ def waku_table(sel: list[dict], base: pd.DataFrame, top: int = 3) -> dict[int, l
 
 
 def best_course(c: dict, base: pd.DataFrame, min_bump: float = 0.03) -> dict | None:
-    """2〜6コースのうち、本人のほかのコースと比べて3着内率が一番上回るコース(偶然の分を差し引いた見込みで +3ポイント以上)。"""
+    """2〜6コースのうち、本人のほかのコースと比べて3着以内率が一番上回るコース(偶然の分を差し引いた見込みで +3ポイント以上)。"""
     best = None
     for crs, r in _expect(c, base).items():
         if crs == 1 or r["n"] < 20 or r["top3"] is None:

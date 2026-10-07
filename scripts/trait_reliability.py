@@ -1,7 +1,7 @@
 """選手の「型」が本物か(たまたまか)を確かめる: 同じ選手を2つの期間に分け、片方で強い選手がもう片方でも強いか(相関)を見る。
 
 分け方: 月の奇数・偶数(時期のかたよりを避ける)。各期間で決まった走数以上ある選手だけ。
-状況の強さは「その状況の3着内の上積み − その期間の本人の普段の上積み」(本人比)。
+状況の強さは「その状況の3着以内の上積み − その期間の本人の普段の上積み」(本人比)。
 相関が 0 に近い型は、選手の性質ではなく偶然の可能性が高い → タグや記事の見出しには使わない。
 
 python scripts/trait_reliability.py → reports/trait_reliability.json
@@ -112,7 +112,7 @@ def main():
         print(name, label, out["traits"][name])
     # 比べるための「本物の性質」
     add("st", "平均ST(参考)", lambda g: g.groupby("racer_id")["st"].agg(["mean", "size"]).query("size >= 40")["mean"])
-    add("res3", "3着内の上積み(参考)", lambda g: g.groupby("racer_id")["res3"].agg(["mean", "size"]).query("size >= 60")["mean"])
+    add("res3", "3着以内の上積み(参考)", lambda g: g.groupby("racer_id")["res3"].agg(["mean", "size"]).query("size >= 60")["mean"])
     add("nige", "1コースの1着率(参考)", lambda g: g[g["course"] == 1].groupby("racer_id")["win"].agg(["mean", "size"]).query("size >= 15")["mean"])
     # 状況ごとの強さ(本人比)
     add("first", "節の初戦", lambda g: own_rel(g, "first", 12))
@@ -129,7 +129,7 @@ def main():
 
 
 def pair_corr(h0: pd.DataFrame, h1: pd.DataFrame, key: str, min_n: int) -> dict:
-    """選手×場、選手×コースのような組ごとの本人比の上積み(その組の3着内の上積み − 本人の普段)。"""
+    """選手×場、選手×コースのような組ごとの本人比の上積み(その組の3着以内の上積み − 本人の普段)。"""
     def f(g):
         base = g.groupby("racer_id")["res3"].mean()
         x = g.groupby(["racer_id", key])["res3"].agg(["mean", "size"])
@@ -159,7 +159,7 @@ def extra():
         "sashi": ("差しで勝つ割合", lambda g: rate(g, lambda z: z["course"] >= 2, 2, 15)),
         "makuri": ("まくりで勝つ割合", lambda g: rate(g, lambda z: z["course"] >= 2, 3, 15)),
         "mz": ("まくり差しで勝つ割合", lambda g: rate(g, lambda z: z["course"] >= 3, 4, 15)),
-        "out": ("4〜6コースの3着内の上積み", lambda g: g[g["course"] >= 4].groupby("racer_id")["res3"].agg(["mean", "size"]).query("size >= 15")["mean"]),
+        "out": ("4〜6コースの3着以内の上積み", lambda g: g[g["course"] >= 4].groupby("racer_id")["res3"].agg(["mean", "size"]).query("size >= 15")["mean"]),
     }
     for k, (label, fn) in tests.items():
         out["traits"][k] = {"label": label, **corr(fn(h0), fn(h1))}

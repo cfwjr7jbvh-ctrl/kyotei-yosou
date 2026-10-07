@@ -120,21 +120,21 @@ def body(c: dict, t: dict, bc: dict | None) -> list[str]:
         paras.append(f"{x['n']}走のうち{name}での1着が{x['w']}回。{how}"
                      f"この決まり手での勝ち数は、{g}の中で{topp(x['grp'])}に入る。")
     elif cat == "out":
-        paras.append(f"4〜6コースからの{c['out']['n']}走で、3着内率はコースごとの平均を{c['out']['res'] * 100:+.0f}ポイント上回る。"
+        paras.append(f"4〜6コースからの{c['out']['n']}走で、3着以内率はコースごとの平均を{c['out']['res'] * 100:+.0f}ポイント上回る。"
                      "外枠は不利が大きいぶん、そこで踏ん張れる選手は貴重だ。")
     elif cat == "front":
         paras.append(f"2枠より外に入った{c['front']['n']}走のうち、{c['front']['rate']:.0%}で枠より内のコースを取っている。"
                      "スタート展示の進入から、レースはもう始まっている。")
     elif cat == "exlate":
         ex = c["exlate"]
-        paras.append(f"展示タイムがレース内で4位以下だった{ex['n']}走でも、3着内率は普段から{ex['res'] * 100:+.0f}ポイント。"
+        paras.append(f"展示タイムがレース内で4位以下だった{ex['n']}走でも、3着以内率は普段から{ex['res'] * 100:+.0f}ポイント。"
                      f"全選手の平均({(ex['pop'] or 0) * 100:+.0f}ポイント)より落ち込みが小さい。展示の数字に一喜一憂しないほうがいい選手だ。")
     elif cat == "growth":
         gr = c["growth"]
         paras.append(f"直近90日の{gr['n90']}走で勝率{gr['pts90']:.2f}。前の1年は{gr['prev']:.2f}だった。"
                      f"成長指数(伸び×0.41)は{gr['index']:+.2f}。過去3年の傾向では、直近の伸びの4割ほどが次の3か月も残っている。")
     elif cat == "stable":
-        paras.append(f"集計した{c['n']}走の3着内率は{c['top3']:.0%}。1号艇が多い選手ほど数字は良く見えるので、コースごとの平均を差し引いて比べても、"
+        paras.append(f"集計した{c['n']}走の3着以内率は{c['top3']:.0%}。1号艇が多い選手ほど数字は良く見えるので、コースごとの平均を差し引いて比べても、"
                      f"なお{c['res3'] * 100:+.0f}ポイント上回る。外を回されても、内を突いても、最後は3着までに入ってくる。")
     # 2) もうひとつの顔
     rest = [x for x in c["tags"] if x["t"] != t["t"]]
@@ -144,12 +144,12 @@ def body(c: dict, t: dict, bc: dict | None) -> list[str]:
         paras.append(f"もうひとつの顔は「{r0['t']}」。{r0['why']}。{more}")
     # 3) コース
     if bc:
-        paras.append(f"コース別に見ると、光るのは{bc['c']}コースだ。{bc['n']}走で1着率{bc['win']:.0%}、3着内率{bc['top3']:.0%}。"
-                     f"{g}の{bc['c']}コース平均(1着率{bc['avg_win']:.0%}・3着内率{bc['avg_top3']:.0%})を上回り、本人のほかのコースと比べても高い。")
+        paras.append(f"コース別に見ると、光るのは{bc['c']}コースだ。{bc['n']}走で1着率{bc['win']:.0%}、3着以内率{bc['top3']:.0%}。"
+                     f"{g}の{bc['c']}コース平均(1着率{bc['avg_win']:.0%}・3着以内率{bc['avg_top3']:.0%})を上回り、本人のほかのコースと比べても高い。")
     else:
         c1 = c["courses"][0]
         if c1["n"]:
-            paras.append(f"1コースでは{c1['n']}走で1着率{pct(c1['win'])}、3着内率{pct(c1['top3'])}。")
+            paras.append(f"1コースでは{c1['n']}走で1着率{pct(c1['win'])}、3着以内率{pct(c1['top3'])}。")
     # 4) 最近
     sr = c.get("series")
     gr = c["growth"]
@@ -215,14 +215,14 @@ def lane_tile(i: int, cls: str = "lt") -> str:
 
 
 def course_bars(c: dict) -> str:
-    """コース別の1着率(濃い)と3着内率(薄い)の横棒。"""
+    """コース別の1着率(濃い)と3着以内率(薄い)の横棒。"""
     rows = []
     for x in c["courses"]:
         w, t3 = (x["win"] or 0), (x["top3"] or 0)
         rows.append(f'<div class="cb">{lane_tile(x["c"] - 1)}<div class="cb-tr"><i class="t3" style="width:{t3 * 100:.0f}%"></i>'
                     f'<i class="w" style="width:{w * 100:.0f}%"></i></div><span class="cb-n"><b>{pct(x["win"])}</b>/{pct(x["top3"])}'
                     f'<small>{x["n"]}走</small></span></div>')
-    return '<div class="cbars"><div class="cb-h"><span>コース</span><span>1着/3着内</span></div>' + "".join(rows) + "</div>"
+    return '<div class="cbars"><div class="cb-h"><span>コース</span><span>1着/3着以内</span></div>' + "".join(rows) + "</div>"
 
 
 def diagram(cat: str) -> str:
@@ -472,14 +472,14 @@ def big_stat(c: dict, t: dict) -> tuple[str, str]:
         name = {"sashi": "差し", "makuri": "まくり", "mz": "まくり差し"}[cat]
         return f"{k[cat]['w']}", f"{name}で勝った回数"
     if cat == "out":
-        return f"{c['out']['res'] * 100:+.0f}", "4〜6コースの3着内率(コース平均との差、ポイント)"
+        return f"{c['out']['res'] * 100:+.0f}", "4〜6コースの3着以内率(コース平均との差、ポイント)"
     if cat == "front":
         return f"{c['front']['rate']:.0%}", "枠より内のコースに入った割合"
     if cat == "growth":
         return f"{c['growth']['pts90']:.2f}", f"直近90日の勝率(前の1年 {c['growth']['prev']:.2f})"
     if cat == "exlate":
-        return f"{c['exlate']['res'] * 100:+.0f}", "展示タイム4位以下のときの3着内率(普段との差)"
-    return f"{c['top3']:.0%}", "3着内率"
+        return f"{c['exlate']['res'] * 100:+.0f}", "展示タイム4位以下のときの3着以内率(普段との差)"
+    return f"{c['top3']:.0%}", "3着以内率"
 
 
 def feature(i: int, c: dict, t: dict, heads: list[str], bc: dict | None) -> str:
@@ -489,7 +489,7 @@ def feature(i: int, c: dict, t: dict, heads: list[str], bc: dict | None) -> str:
     prose = "".join(f'<p{" class=dc" if j == 0 and not p[:1].isdigit() else ""}>{e(p)}</p>' for j, p in enumerate(paras))
     tags = "".join(f"<li>{emblem_svg(x['t'], 20)}<b>{e(x['t'])}<i>{stars(x)}</i></b>{e(x['why'])}</li>" for x in c["tags"][:5])
     alt = "".join(f"<li>{e(h)}</li>" for h in heads[1:])
-    side = (f'<div class="ft-side"><b>狙い目のコース</b>{bc["c"]}コースに入ったら注目。{bc["n"]}走で1着率{bc["win"]:.0%}・3着内率{bc["top3"]:.0%}'
+    side = (f'<div class="ft-side"><b>狙い目のコース</b>{bc["c"]}コースに入ったら注目。{bc["n"]}走で1着率{bc["win"]:.0%}・3着以内率{bc["top3"]:.0%}'
             f'({g}の{bc["c"]}コース平均は{bc["avg_top3"]:.0%})</div>') if bc else ""
     return f"""<article class="feat" id="r{c['id']}">
 <div class="ft-head"><span class="ft-no">{i:02d}</span><div><span class="ft-meta">{e(c['class'] or '')} ・ {e(c['branch'] or '')}支部 ・ {int(c['age'] or 0)}歳</span><h2>{e(c['name'])}</h2></div></div>
@@ -510,7 +510,7 @@ def chart(wt: dict) -> str:
     rows = []
     for crs in range(1, 7):
         m = nerai.METRIC[crs]
-        lab = "逃げ切り" if crs == 1 else ("1着率" if m == "win" else "3着内率")
+        lab = "逃げ切り" if crs == 1 else ("1着率" if m == "win" else "3着以内率")
         cells = "".join(f"<div><b>{e(r['name'])}</b><em>{r['rate']:.0%}</em><small>{r['k']}/{r['n']}走</small></div>" for r in wt.get(crs, []))
         cells += "<div></div>" * (3 - len(wt.get(crs, [])))
         rows.append(f'<div class="wk-row"><div class="wk-l">{lane_tile(crs - 1)}<span>{lab}</span></div><div class="wk-r">{cells}</div></div>')
@@ -575,7 +575,7 @@ def page(title: str, venue: str | None, picks, sel: list[dict], wt: dict, trend:
 <section class="method"><h3>この号のデータについて</h3>
 <p>数字はすべて、公式の成績データ(番組表・競走成績)を自分たちで集計したもの。出走表・オッズの表・写真は使っていない。
 「上位◯%」は同じ級別(A1・A2・B級)の中での位置で、★★★は上位1%、★★は上位5%、★は上位10%。
-3着内率は、コースの有利不利を差し引いた「上積み」で比べている。決まり手の図は型を説明する模式図で、実際の航跡ではない。</p>
+3着以内率は、コースの有利不利を差し引いた「上積み」で比べている。決まり手の図は型を説明する模式図で、実際の航跡ではない。</p>
 <dl>{basis}</dl>
 <p>この新聞は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません。舟券の購入は20歳になってから。</p></section>
 <footer class="colophon">{gull_svg(44, bg="#f4efdf", cls="co")}<span>ミカタ新聞 ・ 文・データ ミカタ(カモメの記者)・ {e(today)}<br>競艇をいろんな角度から。予想が楽しくなる材料を。</span></footer>

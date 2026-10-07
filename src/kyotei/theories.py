@@ -230,7 +230,7 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
         l2 = _last2(q.get("series_str"))
         if l2 == ["1", "1"]:
             m, v = _m("hot", 0)
-            notes.append(_note("hot", "今節2連勝中", [lane], f"{who}は今節2連勝中。こういう選手は3着以内が{_cnt(m)}", v, +1 if lane == 1 else 0))
+            notes.append(_note("hot", "今節2連勝中", [lane], f"{who}は今節2連勝中。今節2連勝中の艇は3着以内が{_cnt(m)}", v, +1 if lane == 1 else 0))
         elif len(l2) == 2 and all(c in "56" for c in l2):
             m, v = _m("hot", 2)
             notes.append(_note("hot", "2走続けて5・6着", [lane], f"{wl}は今節2走続けて5・6着。こういうときの次のレースは、3着以内が{_cnt(m)}", v, -1 if lane == 1 else 0))

@@ -401,7 +401,7 @@ TAG_RULES = [
      "why": lambda c: f"展示タイムで1位か2位になるのが{c['extime']['top']:.0%}のレース({grp(c)}の中で{top(c['extime']['grp'])})",
      "score": lambda c: c["extime"]["grp"]},
     {"tag": "展示は控えめ、本番で化ける", "cat": "exlate",
-     "rule": "展示タイムがレース内4位以下の走でも、3着以内の上積みが本人の普段とほぼ変わらない(ふだんとの差が全選手の平均より100走あたり6回以上良い、30走以上)",
+     "rule": "展示タイムがレース内4位以下の走でも、3着以内の上積みが本人の普段とほぼ変わらない(ふだんとの差が全選手の平均より6ポイント以上良い、30走以上)",
      "test": lambda c: c["exlate"]["n"] >= 30 and c["exlate"]["res"] is not None and c["exlate"]["res"] - (c["exlate"]["pop"] or 0) >= 0.06,
      "why": lambda c: f"展示タイムが4位以下でも、本番であまり崩れない(3着以内が{abs(c['exlate']['res'] * 100):.0f}ポイント下がるだけ。ふつうの選手は{abs((c['exlate']['pop'] or 0) * 100):.0f}ポイント下がる)",
      "score": lambda c: 60 + 300 * (c["exlate"]["res"] - (c["exlate"]["pop"] or 0))},

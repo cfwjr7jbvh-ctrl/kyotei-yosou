@@ -69,29 +69,29 @@ def headlines(c: dict, t: dict) -> list[str]:
         return [f"まくり差しの職人{n} 3コース以遠から{x['w']}勝",
                 f"{n}、ハンドル一閃のまくり差しは{g}{rc.top(x['grp'])}"]
     if cat == "out":
-        return [f"外枠でも消せない{n} 4〜6コースで3着内率がコース平均{rc.pts(c['out']['res'])}",
+        return [f"外枠でも消せない{n} 4〜6コースで3着以内率がコース平均{rc.pts(c['out']['res'])}",
                 f"{n}は枠を選ばない 外からの上積み{g}{rc.top(c['out']['grp'])}"]
     if cat == "front":
         return [f"動く{n} 2枠以上の{c['front']['rate']:.0%}で内のコースへ", f"進入から目が離せない{n}"]
     if cat == "rough":
-        return [f"荒れ水面ほど頼れる{n} 波・風がある日は3着内率{rc.pts(c['rough']['res'])}",
+        return [f"荒れ水面ほど頼れる{n} 波・風がある日は3着以内率{rc.pts(c['rough']['res'])}",
                 f"{n}、水面が荒れたら出番"]
     if cat == "kake":
-        return [f"勝負駆けで本領の{n} 予選最終日は3着内率{rc.pts(c['kake']['res'])}",
+        return [f"勝負駆けで本領の{n} 予選最終日は3着以内率{rc.pts(c['kake']['res'])}",
                 f"崖っぷちに強い{n} 予選最終日の{c['kake']['n']}走"]
     if cat == "big":
-        return [f"大一番で崩れない{n} 準優・優勝戦でも3着内率をキープ", f"{n}、ここ一番の{c['big']['n']}走"]
+        return [f"大一番で崩れない{n} 準優・優勝戦でも3着以内率をキープ", f"{n}、ここ一番の{c['big']['n']}走"]
     if cat == "exlate":
-        return [f"展示で判断は禁物 {n}は本番で化ける", f"{n}、展示タイム下位でも3着内率はほぼ普段どおり"]
+        return [f"展示で判断は禁物 {n}は本番で化ける", f"{n}、展示タイム下位でも3着以内率はほぼ普段どおり"]
     if cat == "growth":
         gr = c["growth"]
         word = "急成長" if t["t"] == "急成長中" else "上り調子"
         return [f"{word}の{n} 勝率{gr['prev']:.2f}→{gr['pts90']:.2f}", f"今いちばん勢いがある{n}? 直近90日の勝率{gr['pts90']:.2f}"]
     if cat == "stable":
-        return [f"とにかく舟券に絡む{n} 3着内率{c['top3']:.0%}", f"{n}の安定感はコース平均{rc.pts(c['res3'])}"]
+        return [f"とにかく舟券に絡む{n} 3着以内率{c['top3']:.0%}", f"{n}の安定感はコース平均{rc.pts(c['res3'])}"]
     if cat == "venue":
         v = next((x for x in c["venues"] if x.get("jcd") == t.get("jcd")), c["venues"][0])
-        return [f"{v['name']}は庭? {n}、{v['name']}で3着内率{rc.pts(v['res'])}", f"{n}と{v['name']}の好相性"]
+        return [f"{v['name']}は庭? {n}、{v['name']}で3着以内率{rc.pts(v['res'])}", f"{n}と{v['name']}の好相性"]
     return [f"{n}の{t['t']}"]
 
 
@@ -104,7 +104,7 @@ HINT = {
     "sashi": "2コースに入ったら差しの筋を一考。内の艇が流れる展開を想像してみて",
     "makuri": "3〜4コースに入ったら一撃に注意。内の艇のスタートと合わせて考えたい",
     "mz": "3コースより外ならまくり差しの筋。1マークで内の艇の間が空くかがカギ",
-    "out": "外枠でも3着内に残すことが多い。ヒモに入れるかどうか、悩みどころ",
+    "out": "外枠でも3着以内に残すことが多い。ヒモに入れるかどうか、悩みどころ",
     "front": "進入が動きやすい。展示の進入を見てから組み立てると楽しい",
     "rough": "風や波がある日に出番。当日の水面の情報をチェック",
     "kake": "予選の最終日にボーダー付近なら注目",
@@ -129,7 +129,7 @@ def comment(c: dict, picked: dict, venue: dict | None) -> str:
     else:
         c1 = c["courses"][0]
         if c1["n"]:
-            parts.append(f"1コースでは{c1['n']}走で3着内率{c1['top3']:.0%}。")
+            parts.append(f"1コースでは{c1['n']}走で3着以内率{c1['top3']:.0%}。")
     return "".join(parts)
 
 
@@ -156,7 +156,7 @@ def pick(cards: list[dict], n: int, venue_fit: dict, jcd: int | None = None) -> 
 
 
 def venue_fit(d, ids: list[int], jcd: int | None) -> dict:
-    """今回の場での、選手ごとの3着内の上積み(本人の普段との差、回数が少ないほど普段に寄せる)。"""
+    """今回の場での、選手ごとの3着以内の上積み(本人の普段との差、回数が少ないほど普段に寄せる)。"""
     if not jcd:
         return {}
     s = d[d["racer_id"].isin(ids) & d["finish"].between(1, 6)].copy()
@@ -179,12 +179,12 @@ def lane_tile(i: int) -> str:
 
 
 def course_line(bc: dict | None, c: dict) -> str:
-    """選手ごとの「狙い目のコース」(同じ級別の平均より3着内率が一番上回るコース)。"""
+    """選手ごとの「狙い目のコース」(同じ級別の平均より3着以内率が一番上回るコース)。"""
     if not bc:
         return ""
     g = rc.GROUP_NAME.get(c["grp"], "")
-    return (f"{bc['c']}コースが得意な型:{bc['n']}走で1着率{bc['win']:.0%}・3着内率{bc['top3']:.0%}"
-            f"({g}の{bc['c']}コース平均は1着率{bc['avg_win']:.0%}・3着内率{bc['avg_top3']:.0%}。本人のほかのコースと比べても上)")
+    return (f"{bc['c']}コースが得意な型:{bc['n']}走で1着率{bc['win']:.0%}・3着以内率{bc['top3']:.0%}"
+            f"({g}の{bc['c']}コース平均は1着率{bc['avg_win']:.0%}・3着以内率{bc['avg_top3']:.0%}。本人のほかのコースと比べても上)")
 
 
 def stars(t: dict) -> str:
@@ -210,14 +210,14 @@ def big_stat(c: dict, t: dict) -> tuple[str, str]:
         name = {"sashi": "差し", "makuri": "まくり", "mz": "まくり差し"}[cat]
         return f"{k[cat]['w']}", f"{name}で勝った回数"
     if cat == "out":
-        return f"{c['out']['res'] * 100:+.0f}", "4〜6コースの3着内率(コース平均との差、ポイント)"
+        return f"{c['out']['res'] * 100:+.0f}", "4〜6コースの3着以内率(コース平均との差、ポイント)"
     if cat == "front":
         return f"{c['front']['rate']:.0%}", "枠より内のコースに入った割合"
     if cat == "growth":
         return f"{c['growth']['pts90']:.2f}", f"直近90日の勝率(前の1年 {c['growth']['prev']:.2f})"
     if cat == "exlate":
-        return f"{c['exlate']['res'] * 100:+.0f}", "展示タイム4位以下のときの3着内率(普段との差、ポイント)"
-    return f"{c['top3']:.0%}", "3着内率"
+        return f"{c['exlate']['res'] * 100:+.0f}", "展示タイム4位以下のときの3着以内率(普段との差、ポイント)"
+    return f"{c['top3']:.0%}", "3着以内率"
 
 
 def card_block(c: dict, t: dict, heads: list[str], com: str, idx: int, bc: dict | None = None) -> str:
@@ -243,7 +243,7 @@ def card_block(c: dict, t: dict, heads: list[str], com: str, idx: int, bc: dict 
   </div>
   <div class="pk-data">
     <figure>{radar_svg(c['radar'])}<figcaption>{e(g)}の中での位置(100がトップ)</figcaption></figure>
-    <div><table class="mini"><tr><th>コース</th><th>走</th><th>1着</th><th>3着内</th></tr>{crs}</table>
+    <div><table class="mini"><tr><th>コース</th><th>走</th><th>1着</th><th>3着以内</th></tr>{crs}</table>
       <p class="kim">逃げ {k['nige']['w']}/{k['nige']['n']}・差し {k['sashi']['w']}・まくり {k['makuri']['w']}・まくり差し {k['mz']['w']}</p></div>
   </div>
   <ul class="tags">{tags}</ul>
@@ -382,7 +382,7 @@ figcaption{font-size:11.5px;color:var(--mute)}
 """
 
 
-WAKU_NOTE = "進入したコースごとの成績(過去3年、その出場選手の中で上位3人)。1〜4コースは1着率、5・6コースは3着内率。"\
+WAKU_NOTE = "進入したコースごとの成績(過去3年、その出場選手の中で上位3人)。1〜4コースは1着率、5・6コースは3着以内率。"\
             f"{nerai.MIN_N}走以上の選手から、回数が少ない選手は同じ級別の平均に寄せて順位を付けています"
 
 
@@ -449,7 +449,7 @@ def render(title: str, venue_name: str | None, picks, all_cards, corners: list[t
 <h2 class="secthead">データの囲み</h2>
 <div class="corners">{cor}</div>
 <section class="corner basis"><h3>タグの基準</h3><dl>{basis}</dl>
-<p>「上位X%」は同じ級別(A1・A2・B級)の中での位置。★★★は上位1%、★★は上位5%、★は上位10%。3着内率の「上積み」は、コースごとの全体の3着内率を差し引いた値。回数が少ない数字は全体や本人の普段の値に寄せて計算しています。</p></section>
+<p>「上位X%」は同じ級別(A1・A2・B級)の中での位置。★★★は上位1%、★★は上位5%、★は上位10%。3着以内率の「上積み」は、コースごとの全体の3着以内率を差し引いた値。回数が少ない数字は全体や本人の普段の値に寄せて計算しています。</p></section>
 <p class="foot">この新聞は選手の傾向を楽しむための読み物で、舟券の的中や利益を約束するものではありません。公式の成績データ(番組表・競走成績)を自分たちで集計した数字とグラフだけを使っています。舟券の購入は20歳になってから。</p>
 </div>"""
 
@@ -576,7 +576,7 @@ def note_text(title, venue_name, picks, sel, corners_txt, free_corner: list[str]
             "■この記事のデータについて",
             "・公式の成績データ(番組表・競走成績、2023年10月〜)を自分たちで集計しています。出走表・オッズの表・写真は使っていません",
             "・「上位◯%」は同じ級別(A1・A2・B級)の中での位置です。★★★は上位1%、★★は上位5%、★は上位10%",
-            "・3着内率はコースの有利不利を差し引いた値で比べています。コースは枠番ではなく、実際に進入したコースです",
+            "・3着以内率はコースの有利不利を差し引いた値で比べています。コースは枠番ではなく、実際に進入したコースです",
             "・タグは、時期を変えても同じ選手に出ると確かめた型だけに付けています(基準は全文を下書きに)",
             "・この記事は予想を楽しむための読み物で、舟券の的中や利益を約束するものではありません",
             "・舟券の購入は20歳になってから。無理のない範囲で楽しみましょう", "",
@@ -607,7 +607,7 @@ def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: l
     if trend_head:
         p2 = trend_head + f"\n\nみんなは{venue_name}の1号艇、どこまで信じる?"
     elif venue_names:
-        p2 = fit(lambda ns: f"{venue_name}と相性がいい選手(3着内率が普段より上)\n" + "\n".join(f"・{x}" for x in ns), venue_names)
+        p2 = fit(lambda ns: f"{venue_name}と相性がいい選手(3着以内率が普段より上)\n" + "\n".join(f"・{x}" for x in ns), venue_names)
     else:
         p2 = f"注目選手のカードを1枚だけ先に公開。{picks[0][0]['name']}は「{picks[0][1]['t']}」"
     p3 = (f"注目{len(picks)}人の“型”、コースが決まったら使える狙い目の早見表、全{n_all}人のひと言タグ一覧はnoteにまとめました"
@@ -621,7 +621,7 @@ def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: l
             extra.append(f"「3-2.5.6-2.5.6」は熱いのか、過去のオッズと結果で確かめました。\n\n人気のわりに来た割合は{x['value']:.2f}(1.0が人気どおり)。\n"
                          "熱くも冷たくもない、人気どおりでした。\n\nでも、信じて買うのも競艇の楽しみ。みんなの推し出目は?")
         if x["key"] == "home":
-            extra.append(f"「地元の選手は強い」は本当でした。ただし小さめ。\n\n同じ選手で比べると、地元の3着内率は平均{x['value'] * 100:+.1f}ポイント。\n"
+            extra.append(f"「地元の選手は強い」は本当でした。ただし小さめ。\n\n同じ選手で比べると、地元の3着以内率は平均{x['value'] * 100:+.1f}ポイント。\n"
                          "一方で「誰が○○巧者か」は、時期を変えると顔ぶれが入れ替わる(参考程度)。\n\nみんなは地元選手、買う派?")
     out = []
     for i, p in enumerate((p1, p2, p3, *extra), 1):
@@ -678,7 +678,7 @@ def occult_lines() -> list[str]:
             out.append(f"「最終レースは荒れる」→ {x['verdict']}。人気薄で決まった割合は12Rが{v:.0%}、ほかが{r:.0%}。"
                        f"12Rは強い選手が1号艇に入る番組が多いため({x['note']})")
         elif k == "home":
-            out.append(f"「地元の選手は強い」→ {x['verdict']}。同じ選手で比べて3着内率が平均{v * 100:+.1f}ポイント。{x['note']}")
+            out.append(f"「地元の選手は強い」→ {x['verdict']}。同じ選手で比べて3着以内率が平均{v * 100:+.1f}ポイント。{x['note']}")
         elif k == "3256":
             out.append(f"「3-2.5.6-2.5.6は熱い」→ {x['verdict']}(人気のわりに来た割合{v:.2f}、1.0が人気どおり)。熱くも冷たくもない")
         elif k == "123":

@@ -355,6 +355,16 @@ def upload_media(s, png: bytes) -> str | None:
 
 
 def post(s, text: str, media_id: str | None = None, reply_to: str | None = None, poll: dict | None = None) -> str:
+    # 言葉の決まり(scripts/wording_check.py)。外に出してはいけない言葉(回収率・的中・儲かる など)があれば出さない。言い回しは知らせるだけ
+    try:
+        import wording_check as wc
+        bad = [x for x in wc.check_text(text, public=True) if any(w in x for w in ("回収率", "的中", "儲かる", "必ず", "稼げる", "高配当"))]
+        for x in wc.check_text(text, public=False):
+            print("言い回しの確認:", x)
+        if bad:
+            raise SystemExit("外に出さない言葉があるので投稿しません: " + " / ".join(bad))
+    except ImportError:
+        pass
     body: dict = {"text": text}
     if media_id:
         body["media"] = {"media_ids": media_id if isinstance(media_id, list) else [media_id]}

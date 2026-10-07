@@ -9,6 +9,12 @@ case "$f" in
       echo "$out" >&2
       exit 2
     fi
+    # 言葉の決まり(読者に見せる文字列)。合わない言い回しがあれば知らせる(2026-10-07: 決まりを変えたときの取りこぼし対策)
+    if [ -f scripts/wording_check.py ] && ! out=$(python scripts/wording_check.py "$f" 2>&1); then
+      echo "言葉の決まりに合わない言い回し: $f" >&2
+      echo "$out" >&2
+      exit 2
+    fi
     ;;
 esac
 exit 0
