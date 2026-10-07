@@ -129,6 +129,10 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
             notes = theories.race_theories(rdf, {**th_ctx, "late": stage == "late", "calendar": False})
             out["theories"] = notes
             out["th_sum"] = theories.summarize(notes)
+            from kyotei import factcheck   # 出す前の見張り: 出走表(boats)と合わない札は外す
+            bad = factcheck.clean_notes(out)
+            if bad:
+                print("::warning::出走表と合わない理論の札を外しました:", out["race_id"], " / ".join(bad))
         except Exception as ex:  # noqa: BLE001  理論の失敗で予想を止めない
             print("theories failed:", out["race_id"], ex)
     return out

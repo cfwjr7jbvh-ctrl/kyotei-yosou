@@ -369,6 +369,10 @@ def post(s, text: str, media_id: str | None = None, reply_to: str | None = None,
             raise SystemExit("外に出さない言葉があるので投稿しません: " + " / ".join(bad))
     except ImportError:
         pass
+    from kyotei import factcheck   # 出す前の見張り(艇番は1〜6、確率は100%まで。名前と字の照合は ura_auto がカードを作るときに)
+    fp = factcheck.text_problems(text, {})
+    if fp:
+        raise SystemExit("出す前の見張りで止めました: " + " / ".join(fp))
     body: dict = {"text": text}
     if media_id:
         body["media"] = {"media_ids": media_id if isinstance(media_id, list) else [media_id]}

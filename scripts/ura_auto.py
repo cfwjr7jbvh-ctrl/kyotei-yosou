@@ -83,7 +83,7 @@ async def render_png(pages: list[tuple[str, str]]) -> list[bytes]:
     return out
 
 
-async def render_top(html: str, width: int = 1080, height: int = 1350) -> bytes:
+async def render_top(html: str, width: int = 1080, height: int = 1350, measure: bool = False):
     """紙面の上部だけを X 用の1枚に(4:5。スマホのタイムラインで切れずに出る縦横比)。"""
     from playwright.async_api import async_playwright
     async with async_playwright() as p:
@@ -93,8 +93,13 @@ async def render_top(html: str, width: int = 1080, height: int = 1350) -> bytes:
         await pg.evaluate("document.fonts.ready")
         await pg.wait_for_timeout(500)
         png = await pg.screenshot(clip={"x": 0, "y": 0, "width": width, "height": height})
+        try:   # 出す前の見張り: 文字が下の帯にかかる・横にはみ出す(kyotei.factcheck)
+            from kyotei.factcheck import OVERFLOW_JS
+            over = await pg.evaluate(OVERFLOW_JS)
+        except Exception:  # noqa: BLE001
+            over = None
         await b.close()
-    return png
+    return (png, over) if measure else png
 
 
 async def render_split(html: str, width: int = 1080, height: int = 1350, max_n: int = 4) -> list[bytes]:
@@ -161,14 +166,26 @@ def card_images(out: pathlib.Path, key: str, htmls: list[str], no_images: bool, 
     res = []
     for i, h in enumerate(htmls[:4]):
         try:
-            png = asyncio.run(render_top(h))
+            png, over = asyncio.run(render_top(h, measure=True))
         except Exception as e:  # noqa: BLE001
             print("カードの画像は作れませんでした:", e)
             continue
         f = f"{key}_c{i + 1}.json"
         write_json(out / f, {"name": f"{i + 1}_{label}.png", "png": base64.b64encode(png).decode()})
-        res.append({"file": f, "name": f"{i + 1}_{label}.png"})
+        res.append({"file": f, "name": f"{i + 1}_{label}.png", "over": over})
     return res
+
+
+def overflowed(ims: list[dict]) -> list[str]:
+    """card_images の結果のうち、はみ出したカード(「2枚目: 下に12px」)。測れなかったものもはみ出し扱い(出さない側に倒す)。"""
+    bad = []
+    for i, im in enumerate(ims, 1):
+        o = im.get("over")
+        if not isinstance(o, dict):
+            bad.append(f"{i}枚目: 測れない")
+        elif o.get("v", 0) > 0 or o.get("h", 0) > 0:
+            bad.append(f"{i}枚目: " + "・".join(x for x in (f"下に{o['v']}px" if o.get("v", 0) > 0 else "", f"横に{o['h']}px" if o.get("h", 0) > 0 else "") if x))
+    return bad
 
 
 def x_images(out: pathlib.Path, key: str, html: str, name: str, no_images: bool) -> list[dict]:
@@ -636,16 +653,26 @@ def main():
         live = [x for x in series_in_window(today, 0) if dt.datetime.strptime(x["hd"], "%Y%m%d").date() <= today]
         if dp2.exists():
             races = _rj2(dp2).get("races", [])
+            from kyotei import factcheck
+            n_fix = sum(len(factcheck.clean_notes(r_)) for r_ in races)   # 出走表と合わない札(名前に無い字など)を外す
+            if n_fix:
+                print(f"::warning::出す前の見張り: 出走表と合わない理論の札を {n_fix} 件外しました(予想のファイルは朝の計算のまま)")
             import race_feature
             if not series:
                 d = rc.load_table()
                 cards, meta = rc.build(d)
             for at, lbl, body, dl, sc, rr, x, nm in news_posts(live, races, today, cards=cards):
                 img = None
+                stop = []   # 出す前の見張り(kyotei.factcheck)。1つでも引っかかったら X には出さない
                 try:
                     f_ = race_feature.make(nm, x["grade"] if x else "", rr, cards, sc, today)
                     key_f = f"race_{today:%Y%m%d}_{rr['jcd']:02d}{int(rr['rno']):02d}"
-                    ims = card_images(out, key_f, race_feature.x_cards(nm, x["grade"] if x else "", rr, cards, today), a.no_images)   # X 用の大きな文字のカード2枚
+                    xh = race_feature.x_cards(nm, x["grade"] if x else "", rr, cards, today)
+                    stop += sorted({q for h_ in xh for q in factcheck.card_problems(h_, rr)} | set(factcheck.text_problems(body, rr))
+                                   | set(factcheck.card_problems(f_["html"], rr)))
+                    ims = card_images(out, key_f, xh, a.no_images)   # X 用の大きな文字のカード
+                    if not a.no_images:
+                        stop += ["はみ出し " + q for q in overflowed(ims)]
                     img = ims[0] if ims else None
                     more_imgs[lbl] = ims
                     pages_f = save_pages(out, key_f, f_["html"], a.no_images)
@@ -658,6 +685,10 @@ def main():
                                      "score": sc, "stars": demand.stars(sc), "n": 6, "picks": [], "images": len(ims)})
                 except Exception as ex:  # noqa: BLE001
                     print("race feature failed:", ex)
+                    stop.append("カードが作れない")
+                if stop:   # 間違い・崩れのまま出すより、出さないほうがいい(2026-10-07 ユーザー「信頼を失墜するから絶対しないように」)
+                    print(f"::warning::出す前の見張り: {lbl} は X に出しません({' / '.join(stop)})")
+                    continue
                 xq.append((at, lbl, body, img))
                 event_items.append({"time": at, "deadline": dl, "label": lbl[4:]})
     except Exception as ex:  # noqa: BLE001
@@ -732,8 +763,12 @@ def main():
         if post and by_name:
             kind, lbl, body, nms = post
             ims = [by_name[n] for n in nms if n in by_name]
-            xq.append(("18:00", lbl, body, ims[0] if ims else None))
-            more_imgs[lbl] = ims
+            bad = overflowed(ims)
+            if bad:   # 出す前の見張り: 崩れたカードは出さない
+                print(f"::warning::出す前の見張り: {lbl} は X に出しません(はみ出し {' / '.join(bad)})")
+            else:
+                xq.append(("18:00", lbl, body, ims[0] if ims else None))
+                more_imgs[lbl] = ims
         key_h = "hayami"
         xs = "\n\n".join(f"--- 投稿{i}({xlen_(b)}/280) {lb} ---\n{b}" for i, (lb, b) in enumerate(
             [("24場の比較(4枚)", seo.with_tags(hc.x_text("cmp", d_h), "#競艇 #ボートレース")), ("級別×コース(2枚)", seo.with_tags(hc.x_text("class", d_h), "#競艇 #ボートレース")),

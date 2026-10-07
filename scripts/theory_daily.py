@@ -70,6 +70,12 @@ def _calendar(day: dt.date) -> list[str]:
 
 def build(day: dt.date, data: dict) -> dict | None:
     races = [r for r in data.get("races", []) if r.get("theories") is not None]
+    try:   # 出す前の見張り: 出走表と合わない札(名前に無い字など)は外す(kyotei.factcheck)
+        from kyotei import factcheck
+        for r in races:
+            factcheck.clean_notes(r)
+    except Exception as ex:  # noqa: BLE001
+        print("factcheck failed:", ex)
     if not races:
         return None
     n_notes = sum(len([n for n in r["theories"] if n["kind"] != "occult"]) for r in races)
