@@ -1252,7 +1252,7 @@ async function renderUra() {
     : `<div class="empty">いま対象の節はありません。</div>`;
   box.innerHTML = html;
   bindCopy();
-  $$(".ura-item", box).forEach((b) => b.onclick = () => { URA.open = b.dataset.key; renderUra(); window.scrollTo({ top: 0 }); });
+  $$(".ura-item", box).forEach((b) => b.onclick = () => { URA.open = b.dataset.key; renderUra(); ($("#scroller") || window).scrollTo({ top: 0 }); });
 }
 async function renderUraOne(box, key) {
   if (!URA.cache[key]) {
@@ -1433,7 +1433,7 @@ async function init() {
     $$(".panel").forEach((p) => p.hidden = p.id !== "tab-" + state.tab);
     $("#venues").hidden = state.tab === "track" || state.tab === "ura";
     render();
-    window.scrollTo({ top: 0 });
+    ($("#scroller") || window).scrollTo({ top: 0 });
   });
   $("#venues").onclick = (e) => {
     const v = e.target.closest("button");

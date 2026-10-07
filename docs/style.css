@@ -26,14 +26,21 @@
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--water);color:var(--ink);font:15px/1.55 "BIZ UDPGothic",system-ui,sans-serif;
-  -webkit-font-smoothing:antialiased;padding-bottom:calc(64px + env(safe-area-inset-bottom))}
+  -webkit-font-smoothing:antialiased}
+/* アプリの形(2026-10-07 ユーザー「スクロールするとバーがついてきちゃう」): 上の帯・中身・下のタブを縦に並べ、中身だけをスクロールする。
+   下のタブを position:fixed にしていると、iPhone の Safari でスクロール中に画面の途中に浮いてついてくるため、固定をやめて並びの一番下に置く */
+html,body{height:100%}
+body{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden}
+#app{flex:1;min-height:0;display:flex;flex-direction:column}
+.scroller{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain}
+#login{flex:1;overflow-y:auto}
 button,select,input{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--live);outline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .n{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:.01em}
 
 /* ---- ヘッダー ---- */
-.bar{position:sticky;top:0;z-index:10;background:var(--head);color:var(--head-ink);
+.bar{flex:none;z-index:10;background:var(--head);color:var(--head-ink);
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:calc(8px + env(safe-area-inset-top)) 16px 8px}
 .brand{display:flex;align-items:center;gap:10px;min-width:0}
@@ -244,7 +251,7 @@ details.row[open]>summary{border-bottom:1px solid var(--rule)}
 .note{color:var(--mute);font-size:13px;margin:4px 2px 12px}
 
 /* ---- 下のタブ(親指で押せる位置) ---- */
-.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;display:grid;grid-template-columns:repeat(4,1fr);
+.tabs{flex:none;z-index:10;display:grid;grid-template-columns:repeat(4,1fr);
   background:var(--deck);border-top:1px solid var(--rule);padding-bottom:env(safe-area-inset-bottom)}
 .tabs button{border:0;background:none;padding:14px 0 13px;font-size:15px;font-weight:700;color:var(--mute);cursor:pointer;position:relative}
 .tabs button[aria-selected="true"]{color:var(--ink)}

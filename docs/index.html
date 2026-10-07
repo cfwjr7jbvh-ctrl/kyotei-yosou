@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=20261007b">
 </head>
 <body>
 <header class="bar">
@@ -37,6 +37,7 @@
 </section>
 
 <div id="app">
+  <div class="scroller" id="scroller">
   <div class="venues" id="venues" role="group" aria-label="場で絞り込む"></div>
   <main>
     <section id="tab-now" class="panel"></section>
@@ -44,6 +45,11 @@
     <section id="tab-track" class="panel" hidden></section>
     <section id="tab-ura" class="panel" hidden></section>
   </main>
+  <footer class="foot">
+    <p>予想は過去データからの確率計算で、的中や利益を保証するものではありません。舟券の購入は20歳以上、余裕資金の範囲で。</p>
+    <p>データ出典: BOAT RACE 公式サイト<button id="logout" class="link">この端末のパスワードを消す</button></p>
+  </footer>
+  </div>
   <nav class="tabs" role="tablist" aria-label="表示の切り替え">
     <button role="tab" data-tab="now" aria-selected="true">レース</button>
     <button role="tab" data-tab="bets" aria-selected="false">買い目</button>
@@ -52,12 +58,7 @@
   </nav>
 </div>
 
-<footer class="foot">
-  <p>予想は過去データからの確率計算で、的中や利益を保証するものではありません。舟券の購入は20歳以上、余裕資金の範囲で。</p>
-  <p>データ出典: BOAT RACE 公式サイト<button id="logout" class="link">この端末のパスワードを消す</button></p>
-</footer>
-
 <script src="emblems.js"></script>
-<script src="app.js"></script>
+<script src="app.js?v=20261007b"></script>
 </body>
 </html>
