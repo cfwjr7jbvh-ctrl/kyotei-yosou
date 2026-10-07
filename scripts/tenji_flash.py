@@ -204,6 +204,18 @@ def _chg(a: float | None, b: float | None) -> str:
     return f"{pc(a)}→{pc(b)}に{'上がる' if b > a else '下がる'}"
 
 
+def gen_line(nl: int, rank: dict, dev: dict, r1: int | None) -> str:
+    """ゲンさん(ストップウォッチ片手に展示を見る大先輩)のひと言。画像の中だけ(X の決まり: ゲンさんのセリフは画像の中)。
+    事実(展示順位・ふだんとの差)に合わせた定型で、約束や断定はしない。選手をけなさない。"""
+    if dev.get(nl, 0) >= 2:
+        return "ふだんより展示が来てる。こういう日があるんだよ"
+    if rank.get(nl) == 1:
+        return "展示1位だろ? ストップウォッチは正直なんだよ"
+    if r1 and r1 >= 4 and nl != 1:
+        return "1号艇の展示がもうひとつ。外の出番もあるかもな"
+    return "展示で予想が変わる。それが競艇なんだよ"
+
+
 def build(race: dict, info: dict, day: dt.date, late: dict | None = None, morning: dict | None = None,
           odds: dict[str, float] | None = None, usual: dict | None = None, tags: dict | None = None) -> dict | None:
     """展示速報の本文と画像。late=展示を入れた直前予想(無ければ展示の事実だけ)、morning=朝の予想、odds=締切前の3連単オッズ。"""
@@ -235,7 +247,7 @@ def build(race: dict, info: dict, day: dt.date, late: dict | None = None, mornin
         cands = [(pw[l] / mk[l], l) for l in pw if mk.get(l, 0) > 0.005 and pw[l] >= 0.08 and pw[l] / mk[l] >= 1.3]
         if cands:
             ratio, nl = max(cands)
-            nerai = (f"狙い目かも? {nl}号艇の1着\n人気は{round(mk[nl] * 100)}%、ミカタの見立ては{round(pw[nl] * 100)}%"
+            nerai = (f"展示で見方が変わった。狙い目かも? {nl}号艇の1着\n人気は{round(mk[nl] * 100)}%、ミカタの見立ては{round(pw[nl] * 100)}%"
                      f"(人気の{ratio:.1f}倍)→ 人気の割に来そう")
         else:
             nerai = "狙い目かも? 今回は見立てと人気がほぼ同じ(人気どおり)"
@@ -263,9 +275,10 @@ def build(race: dict, info: dict, day: dt.date, late: dict | None = None, mornin
              "nerai": l == nl} for l in sorted(ts)]
     rt = str(race.get("race_type") or "")
     # 1行目は市場の型(場名+R+締切)に「展示速報」。2行目に、出した理由の「狙い目かも?」(2026-10-07 ユーザー「速報の時は何でタイトル?」)
-    head = f"【展示速報】{race['venue']}{race['rno']}R{(' ' + rt) if rt else ''} 締切{race['deadline']}"
+    # 2026-10-07 ユーザー「ミカタ感がないからタイトル工夫」→ 名前の「ミカタ(見方)」に掛けて【ミカタ速報】+「展示で見方が変わった」。最後にミカタのひと言
+    head = f"【ミカタ速報】{race['venue']}{race['rno']}R{(' ' + rt) if rt else ''} 締切{race['deadline']}"
     f_ = f"{'・'.join(f'{l}号艇' for l in top)}は展示1位。展示1位の艇の3着以内は{fact[1]}→{fact[2]}"
-    tail = f"\n\n展示を見て、予想は変わった?\n{seo.x_tags(race['venue'])}"
+    tail = f"\n\nこういう見方もあるよ📰 あなたの予想は?\n{seo.x_tags(race['venue'])}"
     text = ""
     for parts in ([head, nerai, hook, dev_line], [head, nerai, hook, f_], [head, nerai, dev_line], [head, nerai, hook],
                   [head, nerai], [head, hook]):
@@ -291,7 +304,7 @@ def build(race: dict, info: dict, day: dt.date, late: dict | None = None, mornin
         good = [t for t in ((tags or {}).get(nl) or []) if t]
         if good:
             why.append(f"型: {'・'.join(good[:2])}")
-        cards.insert(0, myomi_card_html(dl_, rc_, race["deadline"], rt, nl, pw[nl], mk[nl], why))
+        cards.insert(0, myomi_card_html(dl_, rc_, race["deadline"], rt, nl, pw[nl], mk[nl], why[:2], gen_line(nl, rank, dev, r1)))
     return {"text": text or (head + tail), "cards": cards, "card": cards[0], "late": bool(pw), "nerai": nl}
 
 

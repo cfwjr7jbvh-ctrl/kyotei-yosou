@@ -31,7 +31,7 @@
 - `scripts/lab.py`(312KB、Read で全部は開けない → Grep で関数を探してから Read offset/limit): 検証ラボ。`measure()` が率・市場比・前半後半、`verdicts()` が3つの物差し、`page()/note_text()/x_text()/neta_text()` が出力。数字の書き方は `_rate/_rate_change/_is_rate`
 - `scripts/ura_auto.py`: 毎朝7:40、記事タブと「今日のX投稿」(ura/xpost_YYYYMMDD.json の queue)を作る。`theory_hits()` が「今日なら◯◯R」
 - `scripts/x_post.py`: 時間ごとに queue を X に投げる(8:20 理論ぶつけ / 12:10 荒れそう / 15:30 1枚1ネタ / 20:00 検証ラボ or 注目選手 / 21:30 投票 / ミカタ新聞は締切前)。`x_due.py` が時間の判定
-- `scripts/tenji_flash.py`: 展示速報(2026-10-07〜)。live.yml の中で直前予想のループと並べて動き、見る人が多そうなレース(ミカタ新聞・SG/G1 の準優・優勝戦・売上の見込み1億円以上)の展示が出たら、展示を入れた見立てと締切前オッズから「狙い目かも?」(見立てが人気の1.3倍以上・8%以上の艇)が出たときだけ X に出す(締切3分前まで、1日8本まで)。main の直しは10分以内に自分で取り込む。出した分は live ブランチの notify/tenji_YYYYMMDD.txt、ログは notify/tenji_log.txt。手元の確認は `python scripts/tenji_flash.py --demo out/tenji`
+- `scripts/tenji_flash.py`: 展示速報(2026-10-07〜)。live.yml の中で直前予想のループと並べて動き、見る人が多そうなレース(ミカタ新聞・SG/G1 の準優・優勝戦・売上の見込み1億円以上)の展示が出たら、展示を入れた見立てと締切前オッズから「狙い目かも?」(見立てが人気の1.3倍以上・8%以上の艇)が出たときだけ X に出す(締切3分前まで、1日8本まで)。main の直しは10分以内に自分で取り込む。タイトルは【ミカタ速報】+「展示で見方が変わった。狙い目かも?」(名前の「見方」に掛ける)、最後は「こういう見方もあるよ」。画像は2枚(1枚目=人気と見立ての2本の棒+理由+ゲンさんのひと言、2枚目=6艇の展示)。出した分は live ブランチの notify/tenji_YYYYMMDD.txt、ログは notify/tenji_log.txt。手元の確認は `python scripts/tenji_flash.py --demo out/tenji`
 - `scripts/theory_daily.py` + `src/kyotei/theories.py`: 毎日の「理論ぶつけ」(レースに検証ラボの理論を札つきで当てる。数字は reports/lab/*.json から)
 - `scripts/predict.py`(予想) / `scripts/train_eval.py`(学習と検証) / `src/kyotei/features*.py`(特徴量) / `scripts/compare.py`(採否の判定)
 - `scripts/market_words.py` → `reports/market/`(毎朝6:05)。`scripts/tipster_track.py`(予想屋の追跡)
