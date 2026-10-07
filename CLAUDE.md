@@ -8,6 +8,8 @@
 2. **Do**: scripts/lab.py に builder `t_<id>` を足し BUILDERS に登録 → `python scripts/lab.py --theory <id> --out /tmp/lab`(2〜3分)→ 文面と数字を確認
 3. **Check**: 3つの物差し ①本当にある(real) ②人気どおりか(edge: 0=人気どおり、1=人気以上、-1=ひかえめ) ③来年も同じか(stable)。①かつ②=1 のときだけ src/kyotei/features.py の特徴量候補にして experiment.yml(train_eval の前後比較、90%区間が0をまたがないこと)で試す。①だけなら記事のネタ
 4. **Act**: 結果を検証ラボ_ストック(候補の行に【本当/ウソ/人気どおり】)と精度向上アイデア(J 系)に書く。記事は火・金 20:00 の X と記事タブに自動で出る
+- **データが足りないときはスキップしない**: reports/data_catalog.md(毎週月曜に作り直す)に無ければ、集める仕組み(scripts/fetch_<名前>.py + ワークフロー。手本は fetch_tide.py / tide.yml)を作り、さかのぼれるなら 2023-10〜 を一括で取る。data_catalog.py の DATASETS と WAITING に1行ずつ足し、候補に【データ収集中】。WAITING が「検証できる」になったら最優先で回す
+- 回す仕組みは3つ: 毎朝の PDCA(.claude/skills/pdca。理論を1本)/毎日のモデルの見直し(.claude/skills/model-review。experiment.yml に1件)/月1のアイデア探し(.claude/skills/idea-hunt。外から案とデータの出どころ)
 - 1周したら次の候補へ。止まらない。判断に迷うことだけユーザーに聞く(取り返しのつかないこと以外は進めて、あとで報告)
 - 検証ラボのネタだけでなく、毎日の予想の外れ方(reports/review/YYYY-MM-DD.md)からも改善候補を作る。採らなかった案も理由つきで精度向上アイデアに残す
 
