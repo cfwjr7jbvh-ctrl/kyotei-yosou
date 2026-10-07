@@ -39,21 +39,28 @@ MAX_KM = 60
 
 
 def get(url: str) -> requests.Response | None:
+    last = ""
     for i in range(3):
         try:
             r = requests.get(url, headers=UA, timeout=60)
+            last = str(r.status_code)
             if r.status_code == 200:
                 return r
             if r.status_code == 404:
-                return None
-        except requests.RequestException:
-            pass
+                break
+        except requests.RequestException as ex:
+            last = type(ex).__name__
         time.sleep(2 + 3 * i)
+    DEBUG.append(f"取れない: {url} ({last})")
     return None
 
 
+DEBUG: list[str] = []   # うまく取れないときの手がかり(data/tide/_debug.txt に残す。Actions のログは手元から読めないため)
+
+
 def _deg(s: str) -> float | None:
-    m = re.match(r"\s*(\d+)\s*[°゜度]\s*(\d+)", s)
+    s = s.replace("&deg;", "°").replace("&#176;", "°").replace("&#xB0;", "°")
+    m = re.match(r"\s*[NE北東]?\s*(\d+)\s*[°゜度º˚]\s*(\d+)", s)
     return int(m.group(1)) + int(m.group(2)) / 60 if m else None
 
 
@@ -65,6 +72,7 @@ def stations(year: int) -> list[dict]:
             continue
         r.encoding = r.apparent_encoding or "utf-8"
         html = r.text
+        DEBUG.append(f"一覧ページ {year}: {len(html)}字。表の行の例: " + " / ".join(re.sub(r"\s+", " ", re.sub(r"<[^>]+>", "|", x))[:200] for x in re.findall(r"<tr[^>]*>(.*?)</tr>", html, flags=re.S)[3:6]))
         out = []
         for row in re.findall(r"<tr[^>]*>(.*?)</tr>", html, flags=re.S):
             cells = [re.sub(r"<[^>]+>", "", c).strip() for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row, flags=re.S)]
@@ -123,6 +131,7 @@ def main(argv=None):
             print("観測点の一覧:", y, len(st), "地点")
             break
     if not st:
+        (OUT / "_debug.txt").write_text("\n".join(DEBUG), encoding="utf-8")
         sys.exit("観測点の一覧が読めませんでした")
     venue_st = {}
     for j, ll in VENUE_LL.items():
@@ -152,6 +161,7 @@ def main(argv=None):
             print(y, len(df), "行", df["code"].nunique(), "地点")
         else:
             print(y, "取れませんでした")
+    (OUT / "_debug.txt").write_text("\n".join(DEBUG[-200:]), encoding="utf-8")
 
 
 if __name__ == "__main__":
