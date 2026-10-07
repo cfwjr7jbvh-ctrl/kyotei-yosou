@@ -76,17 +76,35 @@ def today_races(day: dt.date) -> list[dict]:
     return (d or {}).get("races", [])
 
 
+MIN_DEMAND = 1.0     # 3連単の売上の見込み(億円)。★★以上=見る人・買う人が多そうなレース
+MAX_PER_DAY = 8      # 1日に出す上限(出しすぎない)
+
+
 def targets(day: dt.date, races: list[dict]) -> list[dict]:
-    """ミカタ新聞のレース(今日のX投稿の「新聞:」)と、SG・G1 の準優・優勝戦。"""
+    """見る人が多そうなレース: ミカタ新聞のレース(今日のX投稿の「新聞:」)、SG・G1 の準優・優勝戦、売上の見込みが1億円以上のレース。
+    このうち「狙い目かも?」が出たレースだけを出す(2026-10-07 ユーザー「狙い目が出たかつ、購読者が多そうなレースだけやろう」)。"""
+    from kyotei import demand
+    ws = pathlib.Path(os.environ.get("GITHUB_WORKSPACE") or ROOT) / "reports/demand_model.json"
+    if ws.exists():
+        demand.MODEL = ws
     q = gh_json(f"ura/xpost_{day:%Y%m%d}.json", "cards") or {}
     want = set()
     for it in q.get("queue") or []:
         m = re.match(r"新聞:\s*(\D+?)(\d+)R", str(it.get("label", "")))
         if m:
             want.add((m.group(1), int(m.group(2))))
-    big = {s.get("jcd") for s in q.get("series_today") or [] if s.get("grade") in ("SG", "G1")}
-    return [r for r in races if r.get("deadline") and ((r.get("venue"), r.get("rno")) in want
-                                                       or (r.get("jcd") in big and "優勝戦" in str(r.get("race_type") or "")))]
+    ser = {s_.get("jcd"): s_ for s_ in q.get("series_today") or []}
+    big = {j for j, s_ in ser.items() if s_.get("grade") in ("SG", "G1")}
+    a1s = {j: demand.day_a1(races, j) for j in {r.get("jcd") for r in races}}
+    out = []
+    for r in races:
+        if not r.get("deadline"):
+            continue
+        rt = str(r.get("race_type") or "")
+        sc = demand.score((ser.get(r.get("jcd")) or {}).get("grade"), rt, r.get("rno"), day, r["deadline"], r.get("jcd"), a1s.get(r.get("jcd")))
+        if (r.get("venue"), r.get("rno")) in want or (r.get("jcd") in big and "優勝戦" in rt) or sc >= MIN_DEMAND:
+            out.append({**r, "_demand": sc})
+    return out
 
 
 def lab_fact() -> tuple[str, str, str]:
@@ -257,7 +275,7 @@ def build(race: dict, info: dict, day: dt.date, late: dict | None = None, mornin
     card = tenji_card_html(f"{day.month}/{day.day}({WEEK[day.weekday()]})", f"{race['venue']}{race['rno']}R", race["deadline"], rt, hook_card, rows,
                            "見立て(展示込み)" if pw else "見立て(朝)", cl or "進入は展示の情報なし", fact, dev_line or type_line,
                            (f"狙い目かも? {nl}号艇の1着 見立て{round(pw[nl] * 100)}% / 人気{round(mk[nl] * 100)}%" if nl else nerai))
-    return {"text": text or (head + tail), "card": card, "late": bool(pw)}
+    return {"text": text or (head + tail), "card": card, "late": bool(pw), "nerai": nl}
 
 
 async def _render(html: str) -> bytes:
@@ -296,20 +314,23 @@ def state_file(day: dt.date) -> pathlib.Path:
     return STATE_DIR / f"tenji_{day:%Y%m%d}.txt"
 
 
-def load_state(day: dt.date) -> set[str]:
+def load_state(day: dt.date) -> dict[str, str]:
+    """出した(posted)・見送った(skip)レース。前のジョブの分も live ブランチから(ジョブは約6時間ごとに入れ替わる)。"""
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     f = state_file(day)
-    done = set(f.read_text().split()) if f.exists() else set()
-    prev = gh_raw(f"notify/tenji_{day:%Y%m%d}.txt", "live")   # 前のジョブが出した分(ジョブは約6時間ごとに入れ替わる)
-    if prev:
-        done |= set(prev.split())
-        f.write_text("\n".join(sorted(done)) + "\n")
+    done: dict[str, str] = {}
+    for raw in ((f.read_text() if f.exists() else ""), gh_raw(f"notify/tenji_{day:%Y%m%d}.txt", "live") or ""):
+        for line in raw.splitlines():
+            k, _, v = line.partition(" ")
+            if k:
+                done.setdefault(k, v or "posted")
+    f.write_text("".join(f"{k} {v}\n" for k, v in sorted(done.items())))
     return done
 
 
-def mark(day: dt.date, rid: str, done: set[str]):
-    done.add(rid)
-    state_file(day).write_text("\n".join(sorted(done)) + "\n")
+def mark(day: dt.date, rid: str, done: dict, status: str = "posted"):
+    done[rid] = status
+    state_file(day).write_text("".join(f"{k} {v}\n" for k, v in sorted(done.items())))
 
 
 def deadline_dt(day: dt.date, hhmm: str) -> dt.datetime:
@@ -371,7 +392,7 @@ def self_update(shas: dict) -> bool:
 
 def watch(until: str = "23:30", every: int = 60):
     from kyotei.scrape import fetch, parse_beforeinfo, parse_odds3t
-    day, done, tg, races, t_load, morning, usual = None, set(), [], [], 0.0, {}, {}
+    day, done, tg, races, t_load, morning, usual = None, {}, [], [], 0.0, {}, {}
     shas: dict = {}
     t_upd = 0.0
     while now().strftime("%H:%M") < until:
@@ -397,10 +418,13 @@ def watch(until: str = "23:30", every: int = 60):
                 mday = gh_json(f"docs/data/days/{day.isoformat()}.json", "main") or {}   # 朝の予想(「朝→展示込み」の変化用)
                 morning = {x["race_id"]: x for x in mday.get("races", [])}
                 t_load = time.time()
-                log("対象:", [f"{r['venue']}{r['rno']}R {r['deadline']}" for r in tg], "出した:", len(done))
+                log("対象:", [f"{r['venue']}{r['rno']}R {r['deadline']}" for r in tg],
+                    "出した:", sum(1 for v in done.values() if v == "posted"), "見送り:", sum(1 for v in done.values() if v != "posted"))
             for r in tg:
                 if r["race_id"] in done:
                     continue
+                if sum(1 for v in done.values() if v == "posted") >= MAX_PER_DAY:
+                    break
                 left = (deadline_dt(day, r["deadline"]) - now()).total_seconds() / 60
                 if not (STOP_BEFORE <= left <= WATCH_FROM):
                     continue
@@ -416,6 +440,10 @@ def watch(until: str = "23:30", every: int = 60):
                 tags = {int(b["lane"]): racer_tags(int(b["racer_id"])) for b in r.get("boats") or [] if b.get("racer_id")}
                 out = build(r, info, day, late=late, morning=morning.get(r["race_id"]), odds=odds, usual=usual, tags=tags)
                 if not out:
+                    continue
+                if not out.get("nerai"):   # 狙い目かも?が出なかったレースは出さない(展示を入れた見立てが間に合わなかったときも)
+                    log("見送り(狙い目かも?なし)", f"{r['venue']}{r['rno']}R", "見立て" + ("あり" if out.get("late") else "間に合わず"))
+                    mark(day, r["race_id"], done, "skip")
                     continue
                 png = render(out["card"])
                 try:
