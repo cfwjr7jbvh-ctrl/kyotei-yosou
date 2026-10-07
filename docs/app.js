@@ -252,7 +252,7 @@ function slitHTML(r) {
   const rows = slitRows(r);
   if (rows.length < 4) return "";
   const note = (x) => x.atk ? `<em class="atk${x.adv >= ATK_STRONG ? " strong" : ""}">${x.adv >= ATK_STRONG ? "強攻め" : "攻め"}</em>`
-    : "";
+    : x.dent ? `<em class="dent">凹み</em>` : "";
   return `<div class="slit" aria-label="スリット予想(予想ST)">` + rows.map((x) => {
     const pos = Math.min(1, Math.max(0, (0.30 - x.st) / 0.27)) * 100;
     return `<div class="sl"><span class="sc">${x.c}</span><span class="track"><span class="mk" style="left:calc(${pos}% - 13px)">${tile(x.b.lane)}</span></span>
@@ -348,14 +348,14 @@ function cardHTML(c, race, lane) {
     <h4>決まり手</h4><table class="cd-t">${kimRow("逃げ(1コース)", k.nige, `逃げ率 ${Math.round(k.nige.w / Math.max(1, k.nige.n) * 100)}%`)}
       ${kimRow("差し", k.sashi, "2コース以遠")}${kimRow("まくり", k.makuri, "2コース以遠")}${kimRow("まくり差し", k.mz, "3コース以遠")}</table>
     <h4>コース別</h4><table class="cd-t cd-c"><tr><th>コース</th><th>走数</th><th>1着</th><th>3着以内</th><th>平均ST</th></tr>${crs}</table>
-    <h4>場ごとの成績<small>3着以内率の普段との差。参考程度(時期で入れ替わりやすい)</small></h4><div class="vchips">${ven}</div>
+    <h4>場ごとの成績<small>3着以内率の普段との差。時期で入れ替わるので、最近の成績と合わせて見よう</small></h4><div class="vchips">${ven}</div>
     <h4>こんなとき</h4><table class="cd-t">
       <tr><th>前づけ</th><td>${c.front.rate == null ? "-" : Math.round(c.front.rate * 100) + "%"}</td><td><small>2枠以上で枠より内へ(${c.front.n}走)</small></td></tr>
       <tr><th>荒れ水面</th><td>${pp(c.rough.res)}</td><td><small>波5cm・風5m以上(${c.rough.n}走)</small></td></tr>
       <tr><th>勝負駆け</th><td>${pp(c.kake.res)}</td><td><small>予選最終日(${c.kake.n}走)</small></td></tr>
       <tr><th>大一番</th><td>${pp(c.big.res)}</td><td><small>準優・優勝戦(${c.big.n}走、出場選手の平均 ${pp(c.big.pop)})</small></td></tr>
       <tr><th>展示が下位</th><td>${pp(c.exlate.res)}</td><td><small>展示タイム4位以下(${c.exlate.n}走、全選手の平均 ${pp(c.exlate.pop)})</small></td></tr></table>
-    <p class="cd-note">「こんなとき」の数字は、3着以内率が本人の普段と比べて何ポイント上下するか(回数が少ないほど普段の値に寄せて計算)。前づけ・展示が下位は時期を変えても出やすい数字、荒れ水面・勝負駆け・大一番・場は時期で入れ替わりやすいので参考程度に</p>
+    <p class="cd-note">「こんなとき」の数字は、3着以内率が本人の普段と比べて何ポイント上下するか(回数が少ないほど普段の値に寄せて計算)。前づけ・展示が下位は時期を変えても出やすい数字、荒れ水面・勝負駆け・大一番・場は時期で入れ替わるので、最近の成績と合わせて見よう</p>
     <h4>最近の調子と今節</h4><table class="cd-t">
       <tr><th>勝率</th><td>${gr.prev ?? "-"} → <b>${gr.pts90 ?? "-"}</b></td><td><small>前の1年 → 直近90日(${gr.n90}走)</small></td></tr>
       ${gr.index != null ? `<tr><th>成長指数</th><td><b>${gr.index >= 0 ? "+" : "−"}${Math.abs(gr.index).toFixed(2)}</b></td><td><small>この先3か月の勝率の伸びの見込み(伸びの4割ほどが残る傾向から)</small></td></tr>` : ""}
@@ -520,7 +520,7 @@ function anModel(r, x) {
     "まくり": `${x.lane}号艇がスリットで先手、内の艇の外から一気にまくる`,
     "まくり差し": `${x.lane}号艇が内の艇の間を割って、1マークで差し込む`,
   };
-  const slit = slitRows(r).filter((s) => s.atk).map((s) => `${s.b.lane}号艇が攻め`).join("・");
+  const slit = slitRows(r).filter((s) => s.atk || s.dent).map((s) => `${s.b.lane}号艇${s.atk ? "が攻め" : "が凹み"}`).join("・");
   const first = boats.slice().sort((a, b) => a.tSlit - b.tSlit)[0];
   return { boats, type, fastest: stMin, sim, T: [0, disp(stMin), tSlitMax, T2, T3, tEnd],
     cap: [`スタート: ${first.lane}号艇が最初にラインを切る${slit ? "。" + slit + "の隊形" : ""}`, `1マーク: ${lines[type] || lines["差し"]}`,
@@ -554,7 +554,7 @@ function anDraw(el, m, t) {
     g.querySelector(".an-hull").setAttribute("transform", `rotate(${ang.toFixed(1)})`);
     // スリット: 切った艇から順に予想STと「攻め/凹み」。いちばん速い艇は強調。決着: 着順
     const crossed = t >= b.T[1] - 0.05;
-    const slitTxt = b.s ? `${fmtST(b.s.st)}${b.s.atk ? " 攻め" : ""}` : "";
+    const slitTxt = b.s ? `${fmtST(b.s.st)}${b.s.atk ? " 攻め" : b.s.dent ? " 凹み" : ""}` : "";
     const flag = atSlit && crossed ? slitTxt : t >= T[5] - 0.2 && b.rank < 3 ? `${b.rank + 1}着` : "";
     const fe = g.querySelector(".an-flag");
     if (fe.textContent !== flag) {
@@ -721,7 +721,7 @@ function anaReasons(r) {
   if (t.series != null && t.series <= -0.27) inBad.push("今節の足△");
   else if (t.motor != null && t.motor <= -0.15) inBad.push("モーター△");
   if (t.f != null && t.f >= 1) inBad.push("F持ち");
-  // 1号艇の不利な面は書かない(2026-10-07 ユーザー「ネガティブな表現はやめてね」)。挑む側の強みだけ
+  if (inBad.length) out.push(`${inB.lane}号艇に不安材料(${inBad.slice(0, 2).join("・")})`);
   for (const b of r.boats) {
     const c = courseOf(r, b);
     if (c < 2 || c > 5) continue;
@@ -1025,7 +1025,7 @@ function demeHTML() {
     <p>${esc(d.period[0])} 〜 ${esc(d.period[1])} の公式の結果から、その出目を毎回100円ずつ買い続けた場合の成績。</p>
     ${sel}<div class="dm-q"><input type="text" inputmode="text" value="${esc(DEME.q)}" placeholder="例 3-256-256 / 1-2-全 / BOX135" aria-label="出目・フォーメーション"></div>
     ${body}
-    <p class="note dm-note">注意: 回収率100%超えの出目があっても、たまたまの可能性が高いです。約${(sc.n_tests || 0).toLocaleString()}通り(出目×条件)を総当たりした検証では、前半2年で100〜120%だった買い方の後半1年の平均は${band ? Math.round(band.conf_mean * 100) : "-"}%、ブレの幅の下限まで100%を超えたものは${sc.passed ?? 0}件でした。</p>
+    <p class="note dm-note">本物かどうかは、前半で選んで後半で確かめる。約${(sc.n_tests || 0).toLocaleString()}通り(出目×条件)を総当たりした検証では、前半2年で100〜120%だった買い方の後半1年の平均は${band ? Math.round(band.conf_mean * 100) : "-"}%、ブレの幅の下限まで100%を超えたものは${sc.passed ?? 0}件でした。</p>
     ${wrows ? `<h4 class="tb">出目ウォッチ<small>${esc(w.since)} の検証で前半・後半とも100%超え → その後のレースで追跡</small></h4>
       <div class="scroll"><table class="tbl dm"><thead><tr><th class="l">条件・出目</th><th>検証時(前半→後半)</th><th>その後の回収率</th></tr></thead><tbody>${wrows}</tbody></table></div>` : ""}`;
 }

@@ -37,9 +37,12 @@ def _lab(tid: str) -> dict:
     return load_private(LAB / f"{tid}.json", {}) or {}
 
 
-def _m(tid: str, i: int):
-    """(measure, verdicts) を返す。無ければ (None, None)。"""
+def _m(tid: str, i):
+    """(measure, verdicts) を返す。i は番号か、物差しの名前の一部(並びが変わっても取りちがえない)。無ければ (None, None)。"""
     ms = _lab(tid).get("measures") or []
+    if isinstance(i, str):
+        hit = [x for x in ms if i in str(x[0])]
+        return (hit[0][1], hit[0][2]) if hit else (None, None)
     if i >= len(ms):
         return None, None
     return ms[i][1], ms[i][2]
@@ -83,10 +86,6 @@ def _in1_line(m, subj="1号艇"):
     if b > a:
         return f"{subj}の1着はふだん{_pct(a)}→{_pct(b)}に上がる"
     return f"{subj}以外が勝つのはふだん{_pct(1 - a)}→{_pct(1 - b)}に上がる"
-
-
-# 選手・艇について、下がる方向の話は出さない(連続大敗・F直後・休み明け・事故率・体重増など。2026-10-07 ユーザー「ネガティブな表現はやめてね」)
-RACER_IDS = {"hot", "flying", "rest", "penalty", "weight", "tilt"}
 
 
 def _badge(v, occult=False):
@@ -289,12 +288,12 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
         if l2 == ["1", "1"]:
             m, v = _m("hot", 0)
             notes.append(_note("hot", "今節2連勝中", [lane], f"{who}は今節2連勝中。今節2連勝中の艇は3着以内が{_cnt(m)}", v, +1 if lane == 1 else 0))
-        elif False and len(l2) == 2 and all(c in "56" for c in l2):   # 2走続けて5・6着は出さない(ネガティブな話。2026-10-07 ユーザー)
-            m, v = None, None   # 検証ラボ hot から外した(中だけの数字)
+        elif len(l2) == 2 and all(c in "56" for c in l2):
+            m, v = _m("hot", "5・6着")
             notes.append(_note("hot", "2走続けて5・6着", [lane], f"{wl}は今節2走続けて5・6着。こういうときの次のレースは、3着以内が{_cnt(m)}", v, -1 if lane == 1 else 0,
                                lab_title="今節2連勝中の選手は、次も来る?(2走続けて5・6着のときも数えた)"))
         fs = q.get("f_since")
-        if False and fs == fs and fs is not None and fs <= 10:   # F直後は出さない(ネガティブな話)
+        if fs == fs and fs is not None and fs <= 10:
             m, v = _m("flying", 0)
             notes.append(_note("flying", "フライング直後", [lane], f"{wl}は最後のフライングから{int(fs)}走目。F直後の10走はスタートが控えめ。3着以内は{_cnt(m)}", v, -1 if lane == 1 else 0))
         rd = q.get("rest_days")
@@ -302,17 +301,17 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
             m, v = _m("rest", 1 if rd >= 90 else 0)
             notes.append(_note("rest", "休み明け", [lane], f"{wl}は{int(rd)}日ぶりのレース。休み明けは3着以内が{_cnt(m)}", v, -1 if lane == 1 else 0))
         a = acc.get(int(q.get("racer_id") or 0))
-        if False and a and a[1] <= 42 and a[0] >= 0.5:   # 期末の事故率は出さない(ネガティブな話)
+        if a and a[1] <= 42 and a[0] >= 0.5:
             m, v = _m("penalty", 0)
             notes.append(_note("penalty", "期末の事故率", [lane], f"{wl}は今期の事故率の目安が{a[0]:.2f}(0.70を超えるとB2級)。期末はスタートを控えめにしやすい。3着以内は{_cnt(m)}",
                                v, -1 if lane == 1 else 0))
         ma = q.get("motor_age")
         if lane == 1 and ma == ma and ma is not None and ma <= 14:
             m, v = _m("newmotor", 0)
-            notes.append(_note("newmotor", "新モーター2週間以内", list(r.index), f"この場は新モーターになって{int(ma)}日。2連率はまだ当てにならない(上位と下位の差が小さい)。展示タイムを見よう", None, 0, force=True))
+            notes.append(_note("newmotor", "新モーター2週間以内", list(r.index), f"この場は新モーターになって{int(ma)}日。2連率より、展示タイムがいちばんの手がかり", None, 0, force=True))
         if late:
             wd = q.get("w_dev")
-            if wd == wd and wd is not None and wd <= -1.5:   # 軽いときだけ(重いほうはネガティブな話なので出さない)
+            if wd == wd and wd is not None and abs(wd) >= 1.5:
                 m, v = _m("weight", 1 if wd > 0 else 0)
                 notes.append(_note("weight", "当日の体重", [lane], f"{wl}は当日の体重がふだんより{abs(wd):.1f}kg{'重い' if wd > 0 else '軽い'}。3着以内は{_cnt(m)}", v,
                                    (-1 if wd > 0 else +1) if lane == 1 else 0))
@@ -389,8 +388,7 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
         if abs(age - 14.77) <= 1.2:
             notes.append(_note("moon", "満月の日", [], "満月の日でも1号艇の強さも荒れ方もふだんと同じ。でも満月のナイターは特別な気分", None, 0, occult=True))
     order = {"edge": 0, "trial": 1, "real": 2, "known": 3, "info": 4, "occult": 5}
-    notes = [n for n in notes if n and not (n["id"] in RACER_IDS and "に下がる" in n["text"])]   # 選手の下がる話は出さない
-    notes = _merge_same(notes)
+    notes = _merge_same([n for n in notes if n])
     notes.sort(key=lambda n: (order.get(n["kind"], 9), n["id"]))
     return notes
 

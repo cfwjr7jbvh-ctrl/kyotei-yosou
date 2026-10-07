@@ -622,7 +622,7 @@ def x_text(title, venue_name, picks, sel, trust_names: list[str], venue_names: l
                          "熱くも冷たくもない、人気どおりでした。\n\nでも、信じて買うのも競艇の楽しみ。みんなの推し出目は?")
         if x["key"] == "home":
             extra.append(f"「地元の選手は強い」は本当でした。ただし小さめ。\n\n同じ選手で比べると、地元の3着以内率は平均{x['value'] * 100:+.1f}ポイント。\n"
-                         "一方で「誰が○○巧者か」は、時期を変えると顔ぶれが入れ替わる(参考程度)。\n\nみんなは地元選手、買う派?")
+                         "一方で「誰が○○巧者か」は、時期を変えると顔ぶれが入れ替わるので、最近の成績と合わせて見よう。\n\nみんなは地元選手、買う派?")
     out = []
     for i, p in enumerate((p1, p2, p3, *extra), 1):
         warn = "  ※長すぎます(Xの上限280)" if mag.xlen(p) > 280 else ""
@@ -695,7 +695,7 @@ def jinx_lines() -> list[str]:
     import json as _json
     t = _json.loads(p.read_text(encoding="utf-8"))["traits"]
     # 前半と後半の相関を、数字ではなく言葉で(sim_words)。読者には数字を見せない
-    out = [f"{label}:時期を変えると{sim_words(t[k]['r'])}。過去に強かった選手が次も強いとは限らない"
+    out = [f"{label}:時期を変えると{sim_words(t[k]['r'])}。最近の成績と合わせて見るのがおすすめ"
            for k, label in JINX if k in t and "r" in t[k]]
     real = "、".join(label for k, label in REAL if k in t and "r" in t[k])
     if real:
@@ -734,11 +734,11 @@ def make(title: str, keys: list[str], jcd: int | None, n: int = 8, note: str = "
         if trust:
             body += "<p>展示STを信じていい</p><ul>" + "".join(f"<li>{e(c['name'])}(ずれ平均{c['ex']['mae']:.3f}秒、{c['ex']['n']}走)</li>" for c in trust) + "</ul>"
         if adjust:
-            body += "<p style='margin-top:6px'>展示STは参考程度(本番で合わせてくるタイプ)</p><ul>" + "".join(
+            body += "<p style='margin-top:6px'>本番でスタートを合わせてくるタイプ(展示STより本番が速い)</p><ul>" + "".join(
                 f"<li>{e(c['name'])}(ずれ平均{c['ex']['mae']:.3f}秒、{c['ex']['n']}走)</li>" for c in adjust) + "</ul>"
         corners.append(("展示STを信じていい選手", body))
         txt += ["■展示STを信じていい選手"] + [f"・{c['name']}(ずれ平均{c['ex']['mae']:.3f}秒)" for c in trust] + \
-               (["(展示STは参考程度)"] + [f"・{c['name']}(ずれ平均{c['ex']['mae']:.3f}秒)" for c in adjust] if adjust else [])
+               (["(本番でスタートを合わせてくるタイプ)"] + [f"・{c['name']}(ずれ平均{c['ex']['mae']:.3f}秒)" for c in adjust] if adjust else [])
     vv = []
     gr = sorted([c for c in sel if c["growth"]["n90"] >= 15 and c["growth"]["n_prev"] >= 30 and (c["growth"]["index"] or 0) >= 0.2],
                 key=lambda c: -c["growth"]["index"])
