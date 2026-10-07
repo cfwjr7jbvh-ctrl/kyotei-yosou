@@ -190,7 +190,7 @@ CARD_CSS = f"""html,body{{margin:0}} .c{{width:1080px;height:1350px;background:#
 .gen{{background:#e8eef7;border:3px solid #0b5fb4;padding:12px 18px}} .gw{{display:flex;gap:12px;align-items:center;margin-bottom:6px}}
 .gen span{{font:900 26px {F};color:#fff;background:#0b5fb4;padding:4px 10px;white-space:nowrap}} .gw small{{font:700 24px {F};color:#0b5fb4}}
 .gen p{{margin:0;font:700 30px/1.45 {F}}}
-.h .key{{display:block;margin-top:4px;font:700 22px {F};color:#56636e}} .ths{{list-style:none;margin:0;padding:0;display:grid;gap:12px}} .ths li{{background:#fff;border-left:10px solid #8a949c;padding:12px 18px}}
+.h .key{{display:block;margin-top:4px;font:700 22px {F};color:#56636e}} .ths{{list-style:none;margin:0;padding:0;display:grid;gap:10px}} .ths li{{background:#fff;border-left:10px solid #8a949c;padding:10px 18px}}
 .ths li.p{{border-color:#2e8b57}} .ths li.m{{border-color:#c8141c}} .ths li b{{font:900 32px {F}}}
 .ths .bd{{display:inline-block;margin-left:12px;padding:3px 12px;border-radius:999px;font:700 22px {F};background:#e3dcc6;color:#33404a;vertical-align:4px}}
 .ths .bd.real{{background:#2e8b57;color:#fff}} .ths .bd.edge{{background:#c8141c;color:#fff}} .ths .bd.known{{background:#14212c;color:#fff}}
@@ -435,10 +435,22 @@ def x_cards(series_name: str, grade: str, rr: dict, cards: dict | None, day: dt.
         body2 += gen_html
     out.append(_card(small, h1, sub + " ・ 2/2", body2))
     # 3枚目: 当てはまる理論(札と、何を見てどれくらい違うかの1行)と、ことばの説明
-    th = theory_lines(rr)
+    th = theory_lines(rr, 4)
+    if th and gen_html and any(x["cls"] == "o" for x in th):   # オカルト枠はゲンさんのひと言と同じ話なので、ひと言のほうに任せる
+        th = [x for x in th if x["cls"] != "o"]
+    th = th[:4]
+    # はみ出さないように、見込みの高さ(見出し1行+本文の行数)で数を決める(本文は1行に約36字)
+    budget, used, keep = (560 if gen_html else 760), 0, []
+    for x in th:
+        hgt = 82 + 38 * max(1, -(-len(x["text"]) // 36))
+        if keep and used + hgt > budget:
+            break
+        keep.append(x)
+        used += hgt
+    th = keep
     if th:
         lis = "".join(f'<li class="{x["cls"]}"><b>{e(x["title"])}</b><span class="bd {x["bcls"]}">{e(x["badge"])}</span><p>{e(x["text"])}</p></li>' for x in th)
-        words = glossary(st_, th)
+        words = glossary(st_, th, 2)
         body3 = (f'<div class="sec"><p class="h">このレースに当てはまる理論<span class="key">緑=インに有利 ・ 赤=インに不利</span></p><ul class="ths">{lis}</ul></div>'
                  + (f'<div class="sec"><p class="h">ことば</p><ul class="words">' + "".join(f"<li><b>{e(k)}</b>{e(v)}</li>" for k, v in words) + "</ul></div>" if words else "")
                  + gen_html)
@@ -468,8 +480,8 @@ def theory_lines(rr: dict, k: int = 3) -> list[dict]:
         sents = [x for x in txt.split("。") if x.strip()]
         # 何を見て(1文目)+ どれくらい違うか(数字の入った最初の文)。数字が1文目にあればそれだけ
         first = sents[0] if sents else txt
-        if not re.search(r"\d+(\.\d+)?回", first):
-            num = next((x for x in sents[1:] if re.search(r"\d+(\.\d+)?回", x)), None)
+        if not re.search(r"\d+(\.\d+)?(回|%)", first):   # 数字の書き方は「%」に変わった(2026-10-07)。古い「回」も拾う
+            num = next((x for x in sents[1:] if re.search(r"\d+(\.\d+)?(回|%)", x)), None)
             if num:
                 first = f"{first}。{num}"
         first = first + "。"
