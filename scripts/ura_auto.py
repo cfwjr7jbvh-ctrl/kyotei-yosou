@@ -260,14 +260,33 @@ html,body{{margin:0}} .c{{width:1080px;height:1350px;background:#f4efdf;font-fam
 
 
 def neta_image(out: pathlib.Path, r: dict, no_images: bool) -> dict | None:
+    """15:30 1枚1ネタのカード(2026-10-07〜 伸びている人の型: 問いのタイトル+棒グラフ+大きな数字+数えた数)。
+    静止画と、棒が伸びる5秒の動画(作れなければ静止画だけ)。はみ出したら古いカードに戻す。"""
     if no_images:
         return None
+    key = "neta_" + r["id"].replace(":", "_")
+    try:
+        from kyotei import xanim
+        from kyotei.factcheck import text_problems, visible_text
+        sp = xanim.neta_spec(r, r.get("n"))
+        png, over = xanim.render_png(xanim.chart_html(sp, animate=False))
+        bad = text_problems(visible_text(xanim.chart_html(sp, animate=False)), {}) + (["はみ出し"] if not over or over.get("v", 0) > 0 or over.get("h", 0) > 0 else [])
+        if bad:
+            raise RuntimeError("見張り: " + " / ".join(bad))
+        res = {"file": f"{key}_x.json", "name": "02_1枚1ネタ.png"}
+        write_json(out / res["file"], {"name": res["name"], "png": base64.b64encode(png).decode()})
+        mp4 = xanim.render_mp4(xanim.chart_html(sp, animate=True))
+        if mp4:
+            write_json(out / f"{key}_v.json", {"name": "02_1枚1ネタ.mp4", "mp4": base64.b64encode(mp4).decode()})
+            res["video"] = f"{key}_v.json"
+        return res
+    except Exception as e:  # noqa: BLE001
+        print("1枚1ネタのグラフのカードは作れませんでした(前のカードで出します):", e)
     try:
         png = asyncio.run(render_top(neta_card_html(r), 1080, 1350))
     except Exception as e:  # noqa: BLE001
         print("1枚1ネタの画像は作れませんでした:", e)
         return None
-    key = "neta_" + r["id"].replace(":", "_")
     write_json(out / f"{key}_x.json", {"name": "02_1枚1ネタ.png", "png": base64.b64encode(png).decode()})
     return {"file": f"{key}_x.json", "name": "02_1枚1ネタ.png"}
 
@@ -660,7 +679,7 @@ def main():
             k = (today - NETA_START).days
             if k >= 0:
                 r_ = rows[k % len(rows)]
-                xq.append(("15:30", "1枚1ネタ", seo.with_tags(labmod.neta_text(r_, from_poll=polled_yesterday(today), hits=theory_hits(today, r_["lab"])), day_tags),
+                xq.append(("15:30", "1枚1ネタ", labmod.neta_text(r_, from_poll=polled_yesterday(today), hits=theory_hits(today, r_["lab"])),   # タグなし(人気投稿の分析)
                            neta_image(out, r_, a.no_images)))
             r2 = rows[(k + 1) % len(rows)]
             pq = labmod.neta_poll(r2)
@@ -832,6 +851,7 @@ def main():
                                          "html": html_, "note": "\n\n".join(b for _t, _l, b, _i in xq), "x": xs, "picks": [], "images": imgs,
                                          "queue": [{"time": tm, "label": lbl, "text": (b.split("\n\n選択肢: ")[0] if tm == "21:30" else b),
                                                     "image": im["file"] if im else None,
+                                                    **({"video": im["video"]} if im and im.get("video") else {}),
                                                     **({"images": [x["file"] for x in more_imgs[lbl]]} if more_imgs.get(lbl) else {}),
                                                     **({"poll": poll_today} if tm == "21:30" and poll_today else {}),
                                                     **({"deadline": next(e["deadline"] for e in event_items if e["time"] == tm and e["label"] in lbl)}

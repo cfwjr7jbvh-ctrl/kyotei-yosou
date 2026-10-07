@@ -321,7 +321,11 @@ def queue_item(day: str, slot: str) -> tuple[str, bytes | None, dict | None] | N
                 pngs = [base64.b64decode(x["png"]) for x in pngs if x]
                 return it["text"], (pngs or None), it.get("poll")
             img = load_enc("cards", f"ura/{it['image']}") if it.get("image") else None
-            return it["text"], (base64.b64decode(img["png"]) if img else None), it.get("poll")
+            png = base64.b64decode(img["png"]) if img else None
+            vid = load_enc("cards", f"ura/{it['video']}") if it.get("video") else None
+            if vid and vid.get("mp4"):   # 動画(棒が伸びる)。アップロードできなければ静止画で出す
+                return it["text"], {"mp4": base64.b64decode(vid["mp4"]), "png": png}, it.get("poll")
+            return it["text"], png, it.get("poll")
     return None
 
 
@@ -369,6 +373,62 @@ def upload_media(s, png: bytes) -> str | None:
     if r.ok and r.json().get("media_id_string"):
         return r.json()["media_id_string"]
     print("画像のアップロード(v1.1)にも失敗:", r.status_code, r.text[:300], "→ 文字だけで出します")
+    return None
+
+
+def upload_video(s, mp4: bytes) -> str | None:
+    """動画のアップロード(分けて送る形)。v2 → だめなら v1.1。どちらもだめなら None(静止画で出す)。"""
+    import time as _t
+    CH = 4 * 1024 * 1024
+    try:
+        r = s.post(f"{API}/media/upload/initialize", json={"media_type": "video/mp4", "total_bytes": len(mp4), "media_category": "tweet_video"})
+        mid = (r.json().get("data") or {}).get("id") if r.ok else None
+        if not mid:
+            raise RuntimeError(f"initialize {r.status_code} {r.text[:200]}")
+        for i in range(0, len(mp4), CH):
+            ra = s.post(f"{API}/media/upload/{mid}/append", files={"media": ("v.mp4", mp4[i:i + CH], "video/mp4")}, data={"segment_index": str(i // CH)})
+            if not ra.ok:
+                raise RuntimeError(f"append {ra.status_code} {ra.text[:200]}")
+        rf = s.post(f"{API}/media/upload/{mid}/finalize")
+        if not rf.ok:
+            raise RuntimeError(f"finalize {rf.status_code} {rf.text[:200]}")
+        info = (rf.json().get("data") or {}).get("processing_info")
+        for _ in range(40):
+            if not info or info.get("state") in ("succeeded",):
+                return mid
+            if info.get("state") == "failed":
+                raise RuntimeError(f"processing failed {info}")
+            _t.sleep(min(int(info.get("check_after_secs") or 2), 5))
+            rs = s.get(f"{API}/media/upload", params={"command": "STATUS", "media_id": mid})
+            info = (rs.json().get("data") or {}).get("processing_info") if rs.ok else None
+        return mid
+    except Exception as ex:  # noqa: BLE001
+        print("動画のアップロード(v2)に失敗:", ex)
+    try:
+        U = "https://upload.twitter.com/1.1/media/upload.json"
+        r = s.post(U, data={"command": "INIT", "media_type": "video/mp4", "total_bytes": str(len(mp4)), "media_category": "tweet_video"})
+        mid = r.json().get("media_id_string") if r.ok else None
+        if not mid:
+            raise RuntimeError(f"INIT {r.status_code} {r.text[:200]}")
+        for i in range(0, len(mp4), CH):
+            ra = s.post(U, data={"command": "APPEND", "media_id": mid, "segment_index": str(i // CH)}, files={"media": mp4[i:i + CH]})
+            if ra.status_code >= 300:
+                raise RuntimeError(f"APPEND {ra.status_code} {ra.text[:200]}")
+        rf = s.post(U, data={"command": "FINALIZE", "media_id": mid})
+        info = rf.json().get("processing_info") if rf.ok else None
+        if not rf.ok:
+            raise RuntimeError(f"FINALIZE {rf.status_code} {rf.text[:200]}")
+        for _ in range(40):
+            if not info or info.get("state") == "succeeded":
+                return mid
+            if info.get("state") == "failed":
+                raise RuntimeError(f"processing failed {info}")
+            _t.sleep(min(int(info.get("check_after_secs") or 2), 5))
+            rs = s.get(U, params={"command": "STATUS", "media_id": mid})
+            info = rs.json().get("processing_info") if rs.ok else None
+        return mid
+    except Exception as ex:  # noqa: BLE001
+        print("動画のアップロード(v1.1)にも失敗:", ex, "→ 静止画で出します")
     return None
 
 
@@ -550,7 +610,7 @@ def main():
     if rp:
         print("読み手の目の見張りで止めました:", " / ".join(rp)); return
     # 下書きを残す。本文は公開リポジトリに平文で置かない(2026-10-07 ユーザー「検証データはぱくられない?」)→ 暗号化(鍵が無い手元は out/private)
-    draft = save_private(DRAFTS / f"{day}_{a.what}.json", {"texts": texts, "images": (len(media) if isinstance(media, list) else 1) if media else 0,
+    draft = save_private(DRAFTS / f"{day}_{a.what}.json", {"texts": texts, "images": (len(media) if isinstance(media, list) else 1) if media else 0, "video": isinstance(media, dict),
                                                            "poll": poll["options"] if poll and not media else None})
     in_ci = bool(os.environ.get("GITHUB_ACTIONS"))   # 公開リポジトリの Actions のログはだれでも読めるので、本文は出さない
     for i, t in enumerate(texts, 1):
@@ -558,7 +618,13 @@ def main():
     if not live:
         print("下書き:", draft); return
     s = session()
-    mids = [m for m in (upload_media(s, x) for x in (media if isinstance(media, list) else [media])) if m] if media else []
+    if isinstance(media, dict):   # 動画(だめなら静止画)
+        vid = upload_video(s, media["mp4"]) if media.get("mp4") else None
+        media = None if vid else media.get("png")
+        mids = [vid] if vid else []
+    else:
+        mids = []
+    mids = mids or ([m for m in (upload_media(s, x) for x in (media if isinstance(media, list) else [media])) if m] if media else [])
     mid = mids or None
     last = None
     ids = []

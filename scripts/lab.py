@@ -3520,7 +3520,7 @@ def neta_items(labs: list[dict]) -> list[dict]:
             ans = "ほぼ同じ" if abs(d) < 0.5 or not v.get("real") else ("多い" if d > 0 else "少ない")
             rows.append({"id": f"{t['id']}:{i}", "lab": t["id"], "title": t["title"], "name": name, "real": bool(v.get("real")),
                          "line": measure_line(t, m, name), "answer": ans, "occult": t["id"] in HOOKS,
-                         "a": round(m["in1"] * per, 1), "b": round(m["in1_ref"] * per, 1),
+                         "a": round(m["in1"] * per, 1), "b": round(m["in1_ref"] * per, 1), "n": m.get("n"),
                          "refl": m.get("ref_label") or t.get("ref_label") or ("ふだん" if t.get("no_market") else "全レース"),
                          "q": f"{name}。" + measure_line(t, m, name).split("のは")[0] + "のは、ふだんより?"})
     # 本物の差を先に。同じ説が続かないよう、説ごとの何番目かで並べる
@@ -3568,6 +3568,32 @@ def neta_today(r: dict, hits: list[dict] | None, after: str = "15:30") -> str:
 
 
 def neta_text(r: dict, from_poll: bool = False, hits: list[dict] | None = None) -> str:
+    """15:30 1枚1ネタ(2026-10-07〜 伸びている人の型: 「〜か、データで調べてみました」+ 感想ひと言 + グラフ1枚。
+    AI っぽい決まり文句(→予想では:・📰・掛け合い)は入れない。タグは付けない(人気投稿の分析で、タグなしのほうが伸びやすかった)。言い回しは投稿ごとに少し変える)"""
+    import hashlib
+    import re as _re
+    from kyotei.xanim import _fmt
+    name = _re.sub(r"[((][^))]*[))]", "", r["name"]).strip().replace("今節、", "今節")
+    metric = r.get("line", "").split("のは")[0]
+    m_short = ("3着以内に入る割合" if "3着以内" in metric else "1号艇が勝つ割合" if "1号艇が勝つ" in metric
+               else "1着になる割合" if metric.endswith("勝つ") else metric + "割合")
+    a, b = _fmt(r["a"], "%"), _fmt(r["b"], "%")
+    k = int(hashlib.md5(r["id"].encode()).hexdigest(), 16)
+    opens = [f"{name}だと、{m_short}はどれくらい変わるのか、約3年分のデータで調べてみました。",
+             f"{name}のとき、{m_short}って本当に変わるのか。約3年分のレースで数えてみました。",
+             f"よく聞く「{name}」。{m_short}はどれくらい変わるのか、データで確かめてみました。"]
+    feel = {"多い": [f"ふだん{b}→{a}。思ったよりはっきり出るなぁ", f"ふだん{b}→{a}。ちゃんと差が出ました", f"ふだん{b}→{a}。これは覚えておきたい"],
+            "少ない": [f"ふだん{b}→{a}。けっこう変わるんだなぁ", f"ふだん{b}→{a}。ここまで変わるとは", f"ふだん{b}→{a}。予想のときに思い出したい"],
+            "ほぼ同じ": [f"ふだん{b}→{a}で、ほとんど変わらず。ここは気にしなくてよさそう", f"ふだん{b}→{a}。意外と変わらないんだなぁ",
+                     f"ふだん{b}→{a}。言われているほどの差はありませんでした"]}[r["answer"]]
+    head = "昨日の投票の答えです。\n" if from_poll else ""
+    today = neta_today(r, hits)
+    today = today.replace("今日なら ", "今日だと ").replace("がこのタイプ", "があてはまります") if today else ""
+    body = f"{head}{opens[k % 3]}\n{feel[(k // 3) % 3]}" + (f"\n\n{today}" if today else "")
+    return body
+
+
+def neta_text_old(r: dict, from_poll: bool = False, hits: list[dict] | None = None) -> str:   # 2026-10-07 までの書き方(比べる用)
     head = "昨日の投票の答え👇\n\n" if from_poll else ""
     v = {"多い": "ふだんより多い", "少ない": "ふだんより少ない", "ほぼ同じ": "ふだんとほぼ同じ"}[r["answer"]]
     tail = "\n(この差は、たまたまでも出るくらいの幅)" if r["answer"] == "ほぼ同じ" and r.get("a") is not None and abs(r["a"] - r["b"]) >= 0.5 else ""
