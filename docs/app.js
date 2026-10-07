@@ -1139,17 +1139,19 @@ function uraMeta(it) {
   if (it.grade === "LAB") return `毎週の検証 ・ ${hd}` + (pub || " ・ まだ出していない");
   if (it.grade === "毎日") return `毎日の理論ぶつけ ・ ${hd}の分(その日に出す)` + pub;
   if (it.grade === "X") return `今日の X 投稿 ・ ${hd}の分` + pub;
+  if (it.grade === "早見") return `保存版の早見表(場を選べるページ・note の本文・カード${it.images ? it.images + "枚" : ""}) ・ ${hd}に数え直し` + pub;
   if (it.grade === "新聞" || it.grade === "大一番") return (it.stars ? `<b class="ura-stars">注目度${esc(it.stars)}</b> ` : "") + `ミカタ新聞(1レース特集) ・ ${esc(it.venue)} ${hd}(その日に出す)` + pub;
   return (it.stars ? `<b class="ura-stars" title="注目度(買う人・見る人が多そうか)">注目度${esc(it.stars)}</b> ` : "") +
     `${esc(it.venue)} ${hd}〜 ・ 出場${it.n}人 ・ 注目${(it.picks || []).length}人` + pub;
 }
-// フォロワーの目標(2026-10-07 ユーザー「目標数決めていきたい」「最適は?」→ ふつう案。表示100回あたりプロフィールへ約1.3人(実績)・
-// そのうち15%がフォロー(仮。1週間で実績に置きかえる)から逆算。1日の表示は自分たちで動かせる先行の数字)
+// フォロワーの目標(2026-10-07 ユーザー「現実的には何人?」「1番いい方法で進めて」→ 年内は最低100人・目標300人)。
+// 逆算: 表示100回あたりプロフィールへ約1.3人(実績)・そのうち15%がフォロー(仮。10/13 に実績で見直す)。1日の表示は自分たちで動かせる先行の数字
 const X_GOALS = [
   { by: "2026-10-13", followers: 10, imp_day: 500, label: "平和島G1の前" },
-  { by: "2026-10-26", followers: 80, imp_day: 3000, label: "ダービーの前" },
-  { by: "2026-10-31", followers: 150, imp_day: 6000, label: "ダービーのあと" },
-  { by: "2026-12-31", followers: 1000, imp_day: 7500, label: "年末" },
+  { by: "2026-10-26", followers: 50, imp_day: 1500, label: "ダービーの前" },
+  { by: "2026-10-31", followers: 80, imp_day: 2500, label: "ダービーのあと" },
+  { by: "2026-11-30", followers: 180, imp_day: 3500, label: "11月末" },
+  { by: "2026-12-31", followers: 300, imp_day: 4000, label: "年末(最低100人)" },
 ];
 function xGoalHTML(st) {
   const today = jst().date;
@@ -1169,7 +1171,7 @@ function xGoalHTML(st) {
     <div class="gbar"><span style="width:${pct}%"></span></div>
     <p>いま <b>${st.followers}人</b>。あと${left}人(${days}日で、1日${(left / days).toFixed(1)}人)</p>
     <p>1日の表示 直近${recent.length}日の平均 <b>${imp.toLocaleString()}回</b> → 目標 ${g.imp_day.toLocaleString()}回${imp >= g.imp_day ? "(達成)" : `(いまの${imp ? (g.imp_day / imp).toFixed(0) : "-"}倍)`}</p>
-    <p class="ura-note">その先: ${X_GOALS.filter((x) => x.by > g.by).map((x) => `${+x.by.slice(5, 7)}/${+x.by.slice(8)} ${x.followers}人`).join(" ・ ")}。有料を続けるかの判断は1月上旬(300人未満なら無料で続ける)</p></div>`;
+    <p class="ura-note">その先: ${X_GOALS.filter((x) => x.by > g.by).map((x) => `${+x.by.slice(5, 7)}/${+x.by.slice(8)} ${x.followers}人`).join(" ・ ")}。年内は最低100人・目標300人。有料を続けるかは1月上旬に判断</p></div>`;
 }
 async function xStatsHTML() {
   let st = null, rep = null;

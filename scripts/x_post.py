@@ -281,7 +281,7 @@ def flash_due(day: str, now: dt.datetime, posted: dict, races: list[dict]) -> li
 
 
 # ---------------------------------------------------------------- X API
-SLOTS = {"theory": "8:20", "morning": "12:10", "neta": "15:30", "evening": "20:00", "poll": "21:30"}
+SLOTS = {"theory": "8:20", "morning": "12:10", "neta": "15:30", "hayami": "18:00", "evening": "20:00", "poll": "21:30"}   # hayami: 早見表(決まった日だけ)
 
 
 _XP: dict = {}
@@ -302,6 +302,10 @@ def queue_item(day: str, slot: str) -> tuple[str, bytes | None, dict | None] | N
     want = SLOTS[slot]
     for it in queue(day):
         if it.get("time") == want and not str(it.get("label", "")).startswith(("大会:", "新聞:")):
+            if it.get("images"):   # 画像が何枚もある投稿(早見表など。X は4枚まで)
+                pngs = [load_enc("cards", f"ura/{f}") for f in it["images"][:4]]
+                pngs = [base64.b64decode(x["png"]) for x in pngs if x]
+                return it["text"], (pngs or None), it.get("poll")
             img = load_enc("cards", f"ura/{it['image']}") if it.get("image") else None
             return it["text"], (base64.b64decode(img["png"]) if img else None), it.get("poll")
     return None
@@ -381,7 +385,7 @@ def post(s, text: str, media_id: str | None = None, reply_to: str | None = None,
 # ---------------------------------------------------------------- 本体
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["theory", "morning", "neta", "evening", "poll", "event", "thread", "test", "queue"])
+    ap.add_argument("what", choices=["theory", "morning", "neta", "hayami", "evening", "poll", "event", "thread", "test", "queue"])
     ap.add_argument("--key", default=None)
     ap.add_argument("--note-url", default=os.environ.get("NOTE_URL") or None)
     ap.add_argument("--dry", action="store_true")
@@ -423,7 +427,7 @@ def main():
     qi = queue_item(day, a.what) if a.what in SLOTS else None
     if qi:
         texts, media, poll = [qi[0]], qi[1], qi[2]
-    elif a.what in ("neta", "poll"):
+    elif a.what in ("neta", "poll", "hayami"):
         print("今日のこの時間の投稿がありません(記事タブの更新待ち)"); return
     elif a.what == "event":
         pass

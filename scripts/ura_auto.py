@@ -154,7 +154,7 @@ async def render_split(html: str, width: int = 1080, height: int = 1350, max_n: 
     return out
 
 
-def card_images(out: pathlib.Path, key: str, htmls: list[str], no_images: bool) -> list[dict]:
+def card_images(out: pathlib.Path, key: str, htmls: list[str], no_images: bool, label: str = "ミカタ新聞") -> list[dict]:
     """X 用のカード(1080×1350 で作った紙面)をそのまま画像に。"""
     if no_images:
         return []
@@ -166,8 +166,8 @@ def card_images(out: pathlib.Path, key: str, htmls: list[str], no_images: bool) 
             print("カードの画像は作れませんでした:", e)
             continue
         f = f"{key}_c{i + 1}.json"
-        write_json(out / f, {"name": f"{i + 1}_ミカタ新聞.png", "png": base64.b64encode(png).decode()})
-        res.append({"file": f, "name": f"{i + 1}_ミカタ新聞.png"})
+        write_json(out / f, {"name": f"{i + 1}_{label}.png", "png": base64.b64encode(png).decode()})
+        res.append({"file": f, "name": f"{i + 1}_{label}.png"})
     return res
 
 
@@ -189,6 +189,9 @@ def x_images(out: pathlib.Path, key: str, html: str, name: str, no_images: bool)
     return res
 
 
+# 早見表を X に出す日(18:00)。SG・G1 の前の日は、その場の特化版が自動で出る(こちらより優先)
+HAYAMI_PLAN = {"2026-10-08": "cmp", "2026-10-09": "class", "2026-10-10": "deme"}
+HAYAMI_LABEL = {"cmp": "24場の性格", "class": "級別×コース", "deme": "出目"}
 NETA_START = dt.date(2026, 10, 6)   # 「1枚1ネタ」の1日目(前の日の21:30に投票で出題 → 次の日の15:30に答え)
 
 
@@ -327,7 +330,7 @@ def series_name_tag(x: dict) -> tuple[str, str]:
     return nm, re.sub(r"[\s・･!！?？\-]", "", unicodedata.normalize("NFKC", nm))
 
 
-FIXED_SLOTS = ["8:20", "12:10", "15:30", "18:30", "20:00", "21:30"]
+FIXED_SLOTS = ["8:20", "12:10", "15:30", "18:00", "18:30", "20:00", "21:30"]
 
 
 # 締切の時間帯ごとの、出す時間の候補(先にあるほど優先)。予想する人がスマホを見る時間帯(朝の通勤・昼休み・夕方・帰り道)
@@ -695,6 +698,56 @@ def main():
                 xq.append(("18:30", f"明日から: {nm}", body, img))
     except Exception as ex:  # noqa: BLE001
         print("x series failed:", ex)
+    # 早見表(2026-10-07 ユーザー「みんなが欲しがる情報まとめシート」「めちゃくちゃいいの作り込んで」「1番いい方法で進めて」)
+    # 記事タブにいつも「早見表」(場を選べるページ・note の本文・カード)を置き、X には 18:00 に決まった日だけ出す。
+    # SG・G1 の前の日は、その場の特化版(3枚)を自動で。数字は scripts/hayami.py(毎日数え直す。1分ほど)
+    try:
+        import hayami as hy
+        from kyotei import hayami_cards as hc
+        hj = out.parent / "hayami_tmp.json"
+        hy.main(["--out", str(hj)])
+        d_h = json.loads(hj.read_text(encoding="utf-8"))
+        hj.unlink(missing_ok=True)
+        plan = HAYAMI_PLAN.get(today.isoformat())
+        ven = None   # 明日から始まる SG・G1 の場
+        for x in series_in_window(today, 1):
+            if x.get("grade") in ("SG", "G1") and x["hd"] == (today + dt.timedelta(days=1)).strftime("%Y%m%d"):
+                ven = x
+                break
+        vj = ven["jcd"] if ven else None
+        vname, vtag = series_name_tag(ven) if ven else ("", "")
+        cards_h = hc.all_cards(d_h, vj, f"{vname} {int(ven['hd'][4:6])}/{int(ven['hd'][6:])}〜" if ven else "")
+        names = {"cmp": ["cmp1_in", "cmp2_kimarite", "cmp3_are", "cmp4_wind"], "class": ["class_win", "class_top3"], "deme": ["deme1_top", "deme2_cond"]}
+        all_names = names["cmp"] + names["class"] + names["deme"] + ([f"v{vj:02d}_1", f"v{vj:02d}_2", f"v{vj:02d}_3"] if vj else [])
+        ims_all = []
+        for grp in [all_names[i:i + 4] for i in range(0, len(all_names), 4)]:
+            ims_all += card_images(out, f"hayami_{today:%Y%m%d}_{len(ims_all)}", [cards_h[n] for n in grp], a.no_images, "早見表")
+        by_name = dict(zip(all_names, ims_all)) if len(ims_all) == len(all_names) else {}
+        post = None
+        if ven:   # 大会の前の日は、その場の特化版を優先
+            post = ("venue", f"早見表: {rc.VENUES.get(vj, '')}", seo.with_tags(hc.x_text("venue", d_h, vj, vname), seo.x_tags(rc.VENUES.get(vj, ""), vname)),
+                    [f"v{vj:02d}_1", f"v{vj:02d}_2", f"v{vj:02d}_3"])
+        elif plan:
+            post = (plan, f"早見表: {HAYAMI_LABEL[plan]}", seo.with_tags(hc.x_text(plan, d_h), day_tags), names[plan])
+        if post and by_name:
+            kind, lbl, body, nms = post
+            ims = [by_name[n] for n in nms if n in by_name]
+            xq.append(("18:00", lbl, body, ims[0] if ims else None))
+            more_imgs[lbl] = ims
+        key_h = "hayami"
+        xs = "\n\n".join(f"--- 投稿{i}({xlen_(b)}/280) {lb} ---\n{b}" for i, (lb, b) in enumerate(
+            [("24場の比較(4枚)", seo.with_tags(hc.x_text("cmp", d_h), "#競艇 #ボートレース")), ("級別×コース(2枚)", seo.with_tags(hc.x_text("class", d_h), "#競艇 #ボートレース")),
+             ("出目(2枚)", seo.with_tags(hc.x_text("deme", d_h), "#競艇 #ボートレース"))]
+            + ([(f"{rc.VENUES.get(vj, '')}(3枚)", seo.with_tags(hc.x_text("venue", d_h, vj, vname), seo.x_tags(rc.VENUES.get(vj, ""), vname)))] if vj else []), 1))
+        write_json(out / f"{key_h}.json", {"key": key_h, "title": "早見表(24場・級別×コース・出目)", "grade": "早見", "venue": "", "jcd": 0,
+                                           "hd": today.strftime("%Y%m%d"), "html": hc.page_html(d_h), "note": hc.note_text(d_h, vj, vname),
+                                           "x": xs + "\n\n出し方: 決まった日の18:00に自動で出ます(10/8 24場・10/9 級別×コース・10/10 出目・SG/G1の前の日はその場)",
+                                           "picks": [], "images": ims_all, "n": 0, "missing": [], "pages": [], "pdf": None, "asof": today.isoformat()})
+        items.insert(0, {"key": key_h, "title": "早見表(24場・級別×コース・出目)", "grade": "早見", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"),
+                         "n": 0, "picks": [], "images": len(ims_all)})
+        print("hayami:", len(ims_all), "images", "post:", post[1] if post else None)
+    except Exception as ex:  # noqa: BLE001  早見表の失敗で、ほかの記事を止めない
+        print("hayami failed:", ex)
     xq.sort(key=lambda q: tuple(int(v) for v in q[0].split(":")))
     # 「今日のX投稿」: その日の投稿文と画像を1か所に(コピーと画像の保存だけで出せる)
     if xq:
