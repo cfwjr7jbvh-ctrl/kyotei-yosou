@@ -229,6 +229,9 @@ def diagram(cat: str) -> str:
     """決まり手の型の図(上から見た1マーク)。どの選手にも共通の模式図で、実際の航跡ではない。"""
     if cat not in ("start", "nige", "sashi", "makuri", "mz"):
         return ""
+    if cat != "start":   # 2026-10-07〜 艇の速さとSTの差から組み立てた再現図(src/kyotei/track.py)
+        from .track import scene
+        return scene(cat)
     W, H = 300, 170
     # 1マーク(70,40)。艇の線はマークから半径17以上はなして回る(2026-10-07 ユーザー「ターンマークに近くない?」)
     mark = '<circle cx="70" cy="40" r="7" fill="#ffe100" stroke="#111" stroke-width="2.5"/><path d="M63 40h14" stroke="#e60012" stroke-width="3"/>'
