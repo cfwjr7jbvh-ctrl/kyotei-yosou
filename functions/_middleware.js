@@ -28,7 +28,7 @@ async function validCookie(request, secret) {
 function loginPage() {
   return new Response(`<!doctype html><html lang="ja"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex"><title>競艇AI予想</title>
+<meta name="robots" content="noindex"><title>競艇ミカタ</title>
 <style>
 :root{--bg:#e8edf1;--card:#fff;--ink:#102230;--muted:#5c6f80;--line:#d2dbe2;--accent:#102230;--accent-ink:#fff;--bad:#d3141c}
 @media (prefers-color-scheme:dark){:root{--bg:#0b141d;--card:#121e2a;--ink:#e6edf3;--muted:#8fa1b2;--line:#233343;--accent:#e6edf3;--accent-ink:#102230;--bad:#ff4a4f}}
@@ -40,7 +40,7 @@ input{font:inherit;font-size:16px;padding:12px;border-radius:10px;border:1px sol
 button{font:inherit;font-weight:700;font-size:16px;border:0;border-radius:8px;padding:12px;background:var(--accent);color:var(--accent-ink)}
 .msg{min-height:1.2em;color:var(--bad)}
 </style></head><body>
-<form id="f"><span class="flags" aria-hidden="true"><i style="background:#fff;box-shadow:inset 0 0 0 1px #102230"></i><i style="background:#3a3f45"></i><i style="background:#e3141b"></i><i style="background:#0b5fb4"></i><i style="background:#f5d00a"></i><i style="background:#12904a"></i></span><h1>競艇AI予想</h1><p>自分専用のページです。パスワードを入力してください。</p>
+<form id="f"><span class="flags" aria-hidden="true"><i style="background:#fff;box-shadow:inset 0 0 0 1px #102230"></i><i style="background:#3a3f45"></i><i style="background:#e3141b"></i><i style="background:#0b5fb4"></i><i style="background:#f5d00a"></i><i style="background:#12904a"></i></span><h1>競艇ミカタ</h1><p>自分専用のページです。パスワードを入力してください。</p>
 <input type="text" name="username" value="kyotei" autocomplete="username" hidden>
 <input id="pw" type="password" autocomplete="current-password" placeholder="パスワード" required autofocus>
 <button>ひらく</button><p class="msg" id="m"></p></form>

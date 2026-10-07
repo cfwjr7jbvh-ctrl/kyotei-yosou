@@ -25,7 +25,7 @@ jobs:
           t, u = os.environ.get("LINE_CHANNEL_TOKEN"), os.environ.get("LINE_USER_ID")
           if not t or not u:
               sys.exit("Secrets の LINE_CHANNEL_TOKEN と LINE_USER_ID を入れてください")
-          ok, info = push("競艇AI予想: LINE通知のテストです。期待値100%超えの買い目が出たら、ここに届きます。\n" + SITE_URL, t, u)
+          ok, info = push("競艇ミカタ: LINE通知のテストです。期待値100%超えの買い目が出たら、ここに届きます。\n" + SITE_URL, t, u)
           print("送信" if ok else "失敗", info)
           sys.exit(0 if ok else 1)
           PY
