@@ -76,11 +76,12 @@ def stations(year: int) -> list[dict]:
         out = []
         for row in re.findall(r"<tr[^>]*>(.*?)</tr>", html, flags=re.S):
             cells = [re.sub(r"<[^>]+>", "", c).strip() for c in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", row, flags=re.S)]
-            code = next((c for c in cells if re.fullmatch(r"[A-Z0-9]{2}", c)), None)
+            # 地点記号は英字を含む2文字(「Q8」「ZG」)。数字だけの列は通し番号なので記号ではない
+            code = next((c for c in cells if re.fullmatch(r"[A-Z0-9]{2}", c) and re.search(r"[A-Z]", c)), None)
             lats = [x for x in (_deg(c) for c in cells) if x is not None]
             if code and len(lats) >= 2:
                 i = cells.index(code)
-                name = next((c for c in cells[i + 1:] if c and not re.search(r"\d", c)), "")
+                name = next((c for c in cells[i + 1:] if c and not re.search(r"[\dA-Za-z]", c)), "")
                 out.append({"code": code, "name": name, "lat": lats[0], "lon": lats[1]})
         if out:
             return out
@@ -112,7 +113,7 @@ def parse_txt(text: str) -> list[dict]:
             for k in range(4):
                 seg = ln[off + k * 7: off + (k + 1) * 7]
                 t, h = seg[:4].strip(), seg[4:7].strip()
-                ok = t and t != "9999" and h and h != "999"
+                ok = t.isdigit() and t != "9999" and h.lstrip("-").isdigit() and h != "999"
                 rec[f"{kind}{k + 1}_t"] = f"{int(t) // 100:02d}:{int(t) % 100:02d}" if ok else None
                 rec[f"{kind}{k + 1}_cm"] = int(h) if ok else None
         rows.append(rec)
@@ -120,6 +121,20 @@ def parse_txt(text: str) -> list[dict]:
 
 
 def main(argv=None):
+    try:
+        _main(argv)
+    except Exception:
+        import traceback
+        DEBUG.append(traceback.format_exc())
+        raise
+    finally:
+        OUT.mkdir(parents=True, exist_ok=True)
+        (OUT / "_debug.txt").write_text("\n".join(DEBUG[-200:]), encoding="utf-8")
+        for ln in DEBUG[-8:]:   # Actions の注釈に出す(手元からはログが読めないが、注釈は読める)
+            print("::warning::" + ln.replace("\n", " | ")[:900])
+
+
+def _main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--years", nargs="+", type=int, default=[2023, 2024, 2025, 2026, 2027])
     a = ap.parse_args(argv)
@@ -132,7 +147,7 @@ def main(argv=None):
             break
     if not st:
         (OUT / "_debug.txt").write_text("\n".join(DEBUG), encoding="utf-8")
-        sys.exit("観測点の一覧が読めませんでした")
+        raise SystemExit("観測点の一覧が読めませんでした")
     venue_st = {}
     for j, ll in VENUE_LL.items():
         best = min(st, key=lambda s: km(ll, (s["lat"], s["lon"])))
@@ -152,7 +167,14 @@ def main(argv=None):
             if not r:
                 print("  無し:", y, c)
                 continue
-            rr = parse_txt(r.content.decode("ascii", "ignore"))
+            txt = r.content.decode("ascii", "ignore")
+            try:
+                rr = parse_txt(txt)
+            except Exception as ex:  # noqa: BLE001
+                DEBUG.append(f"読めない: {y} {c} {type(ex).__name__} {ex} 先頭: {txt[:160]!r}")
+                continue
+            if not rr:
+                DEBUG.append(f"行が無い: {y} {c} 先頭: {txt[:160]!r}")
             rows += rr
             time.sleep(1.0)   # 相手のサーバーにやさしく
         if rows:
@@ -161,7 +183,7 @@ def main(argv=None):
             print(y, len(df), "行", df["code"].nunique(), "地点")
         else:
             print(y, "取れませんでした")
-    (OUT / "_debug.txt").write_text("\n".join(DEBUG[-200:]), encoding="utf-8")
+    DEBUG.append("場と観測点: " + ", ".join(f"{j}:{v.get('code')}{v.get('name', '')}({v['km']}km)" for j, v in venue_st.items()))
 
 
 if __name__ == "__main__":
