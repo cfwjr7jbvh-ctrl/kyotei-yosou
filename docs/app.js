@@ -831,11 +831,13 @@ function stat(k, v, cls = "") { return `<div class="stat"><div class="k">${k}</d
 
 // ---- 成績の区分(本命・AIの狙い目・期待値のある買い目)----
 // それぞれ「1点100円で買ったとしたら」。見込み(確率の合計・期待値の平均)と実際(的中・回収率)を並べて、AIが強気すぎないかを見る
-const CAT_KEYS = ["top", "pick", "ev"];
+const CAT_KEYS = ["top", "pick", "ev", "ev13", "ev15"];
 const CAT_INFO = {
   top: ["本命(3連単1点)", "AIがいちばん来やすいとみた3連単の組を、1点だけ買ったとしたら。"],
   pick: ["AIの狙い目(参考)", "AIの確率×締切前のオッズ(期待値)が100%以上の組を、高い順に3点まで買ったとしたら。AIの確率だけで計算した参考の組で、勝てる根拠はまだありません。"],
   ev: ["期待値のある買い目", "AIの確率に人気(オッズ)をまぜた、ひかえめな確率で計算し直しても、期待値が100%以上になった組(5点まで)。本番の買い方で、めったに出ません。"],
+  ev13: ["期待値のある買い目(130%以上だけ)", "上の「期待値のある買い目」のうち、期待値が130%以上の組だけ。過去の検証で、線を上げると前半・後半とも100%を超えた(点数は少ない)。締切前のオッズで本当にそうなるかを確かめ中。"],
+  ev15: ["期待値のある買い目(150%以上だけ)", "期待値が150%以上の組だけ。過去の検証ではいちばん良かった線(前半363%・後半231%)だが、1日1〜2点と少なく、大きな配当1本で大きく動く。確かめ中。"],
 };
 const GLOSSARY = `<details class="gloss"><summary>言葉の意味</summary><dl>
   <dt>今日の成績</dt><dd>表示している日の、結果が出たレースだけの途中経過。結果は直前予想の更新のたびに付きます。</dd>
@@ -869,7 +871,9 @@ function whyThree(evc) {
 }
 const catAcc = () => ({ races: 0, bets: 0, hits: 0, ret: 0, prob_sum: 0, ev_sum: 0, odds_n: 0, list: [] });
 const plYen = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toLocaleString();
-const catBets = (r, k) => k === "top" ? (r.top && r.top[0] ? [r.top[0]] : []) : ((k === "ev" ? r.bets : r.pick) || []);
+const EV_LINES = { ev13: 1.3, ev15: 1.5 };
+const catBets = (r, k) => k === "top" ? (r.top && r.top[0] ? [r.top[0]] : [])
+  : EV_LINES[k] ? (r.bets || []).filter((b) => (b.ev || 0) >= EV_LINES[k]) : ((k === "ev" ? r.bets : r.pick) || []);
 function catBlock(k, a, open) {
   const [title, desc] = CAT_INFO[k];
   let h = `<h4 class="tb">${title}</h4><p class="def">${desc}</p>`;
@@ -893,7 +897,7 @@ function catBlock(k, a, open) {
 function todayBox() {
   const races = (state.data && state.data.races || []).filter((r) => r.result);
   if (!races.length) return "";
-  const acc = { top: catAcc(), pick: catAcc(), ev: catAcc() };
+  const acc = Object.fromEntries(CAT_KEYS.map((k) => [k, catAcc()]));
   for (const r of races) {
     for (const k of CAT_KEYS) {
       const list = catBets(r, k);
@@ -1067,7 +1071,7 @@ async function renderTrack() {
   try { evc = await getJSON("api/data/ev_check.json"); } catch (e) { /* まだ無い(全期間の検証が終わると出る) */ }
   // 実際の成績: 毎朝の答え合わせ(scripts/predict.py score_day)が日ごとに残した区分別の集計と、当たった組
   const days = track.days || [];
-  const tot = { top: catAcc(), pick: catAcc(), ev: catAcc() };
+  const tot = Object.fromEntries(CAT_KEYS.map((k) => [k, catAcc()]));
   let nRaces = 0, nOld = 0;
   for (const d of days) {
     nRaces += d.races || 0;

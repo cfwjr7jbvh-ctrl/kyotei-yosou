@@ -142,12 +142,17 @@ def update_index():
 
 # 成績タブの区分: 本命(3連単1点)・AIの狙い目(参考)・期待値のある買い目。
 # 点数・的中・払戻に加えて、見込み(確率の合計=見込める的中の本数、確率×オッズの合計=期待値)と、当たった組の中身を残す
-CATS = {"top": "本命", "pick": "AIの狙い目", "ev": "期待値のある買い目"}
+CATS = {"top": "本命", "pick": "AIの狙い目", "ev": "期待値のある買い目", "ev13": "期待値のある買い目(130%以上)", "ev15": "期待値のある買い目(150%以上)"}
+# ev13/ev15: 「期待値のある買い目」のうち期待値が130%/150%以上の組だけ(中だけで追う。2026-10-07 全期間の検証 blend_sweep で、
+# いまの割合のまま線を上げると前半・後半とも100%超え(150%以上: 363%・231%)。ただし点数が少なく確定オッズでの計算なので、締切前のオッズで確かめる)
+EV_LINES = {"ev13": 1.3, "ev15": 1.5}
 
 
 def _cat_bets(race: dict, key: str) -> list:
     if key == "top":
         return race["top"][:1] if race.get("top") else []
+    if key in EV_LINES:
+        return [b for b in race.get("bets") or [] if (b.get("ev") or 0) >= EV_LINES[key]]
     return race.get("bets" if key == "ev" else key) or []
 
 
