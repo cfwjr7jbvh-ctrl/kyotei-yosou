@@ -6,7 +6,7 @@ python scripts/fetch_weather_hist.py [--start 2023-10-01] [--end 昨日]
 
 取得元: Open-Meteo の過去データ(ERA5 などの再解析。地点はレース場のおおよその位置、scripts/fetch_weather.py と同じ座標)。
 注意: Open-Meteo の無料の API は非商用向け。記事を有料で売る段階になったら、気象庁の過去データ(出典を書けば商用も可)に
-切り替えるか、Open-Meteo の有料プランにする(reports/ideas.md A12)。いまは分析用。
+切り替えるか、Open-Meteo の有料プランにする(改良案の一覧 A12)。いまは分析用。
 """
 from __future__ import annotations
 

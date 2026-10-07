@@ -1,0 +1,24 @@
+name: 改良案のブランチの片づけ
+
+# 改良案のコード(exp/ ブランチ)は、検証が終わったら公開リポジトリから消す(写しは非公開の mikata-lab)。
+# ふだんは experiment.yml の最後で消える。これは取り残した分をまとめて消すとき用。
+on:
+  workflow_dispatch:
+    inputs:
+      branches:
+        description: "消すブランチ(空白区切り、exp/ で始まるものだけ)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: 消す
+        run: |
+          for b in ${{ inputs.branches }}; do
+            case "$b" in exp/*) git push -q origin --delete "$b" && echo "消した: $b" || echo "無い: $b";; *) echo "exp/ 以外は消さない: $b";; esac
+          done

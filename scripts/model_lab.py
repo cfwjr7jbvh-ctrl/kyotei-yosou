@@ -8,7 +8,7 @@
 直前予想(late)の GBDT 1本(乱数1回)を「今の特徴量」と「案の特徴量」で学び、
 テストの各レースの1着の対数損失の差と、その90%区間を出す(区間が0をまたがなければ偶然ではなさそう)。
 本番の train_eval.py(アンサンブル・3連単)より荒いが、数分で答えが出る。見込みのある案だけ exp/ ブランチに。
-結果は reports/model_lab/<実験名>.json に残す。
+結果は非公開の mikata-lab の model_lab/<実験名>.json に残す(無ければ out/model_lab)。
 """
 from __future__ import annotations
 
@@ -27,7 +27,9 @@ from kyotei import features  # noqa: E402
 
 CACHE = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 and sys.argv[1] == "build" else None
 CACHE_DIR = pathlib.Path(__import__("os").environ.get("MODEL_LAB_CACHE", "/tmp/model_lab"))
-OUT = ROOT / "reports/model_lab"
+# 結果はノウハウなので公開リポジトリに置かない(2026-10-07)。非公開の mikata-lab があればそこへ、無ければ out/(commit されない)
+_LAB = pathlib.Path(__import__("os").environ.get("MIKATA_LAB", "/home/claude/mikata-lab"))
+OUT = pathlib.Path(__import__("os").environ.get("MODEL_LAB_OUT") or (_LAB / "model_lab" if _LAB.exists() else ROOT / "out/model_lab"))
 
 
 def log(*a):

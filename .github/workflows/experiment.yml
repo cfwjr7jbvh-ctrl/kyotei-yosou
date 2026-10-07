@@ -77,3 +77,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh workflow run train.yml --ref main
+      - name: 改良案のブランチを消す(コードの写しは非公開の mikata-lab にある)
+        if: startsWith(github.event.inputs.branch, 'exp/')
+        run: git push -q origin --delete "${{ github.event.inputs.branch }}" || true

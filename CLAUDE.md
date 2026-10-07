@@ -3,15 +3,11 @@
 競艇(ボートレース)を「いろんな角度から」見る材料を作るプロジェクト。予想モデル・毎日の記事・X の自動投稿・検証ラボ(ネットの「◯◯理論」をデータで確かめる)・note の特集号。
 ゴールは、予想モデルを毎日よくして、いずれ**自信を持って買い目を出す**こと(2026-10-07 ユーザー)。それまで(reports/edge_status.json の edge が false の間)は、外に出すのは買い目ではなく「予想が楽しくなる材料」。合格ライン・出し方は下の「買い目を出す条件」。くわしい方針は claude.ai のプロジェクト「ミカタ」の文書(発信方針・検証ラボ_ストック・精度向上アイデア・市場分析_毎日)。セッションの最初に、関係する文書を読む。
 
-## 回し方(PDCA。ユーザー: 「ネットの舟券理論を片っ端から検証してモデル改善に」「毎日分析」)
-1. **Plan**: `reports/review/candidates.md`(プロジェクト文書「検証ラボ_ストック」の候補と同じ)の上から未着手を1本。市場の言葉(reports/market/latest.json)で急に増えた言葉も候補に
-2. **Do**: scripts/lab.py に builder `t_<id>` を足し BUILDERS に登録 → `python scripts/lab.py --theory <id> --out /tmp/lab`(2〜3分)→ 文面と数字を確認
-3. **Check**: 3つの物差し ①本当にある(real) ②人気どおりか(edge: 0=人気どおり、1=人気以上、-1=ひかえめ) ③来年も同じか(stable)。①かつ②=1 のときだけ src/kyotei/features.py の特徴量候補にして experiment.yml(train_eval の前後比較、90%区間が0をまたがないこと)で試す。①だけなら記事のネタ
-4. **Act**: 結果を検証ラボ_ストック(候補の行に【本当/ウソ/人気どおり】)と精度向上アイデア(J 系)に書く。記事は火・金 20:00 の X と記事タブに自動で出る
-- **データが足りないときはスキップしない**: reports/data_catalog.md(毎週月曜に作り直す)に無ければ、集める仕組み(scripts/fetch_<名前>.py + ワークフロー。手本は fetch_tide.py / tide.yml)を作り、さかのぼれるなら 2023-10〜 を一括で取る。data_catalog.py の DATASETS と WAITING に1行ずつ足し、候補に【データ収集中】。WAITING が「検証できる」になったら最優先で回す
-- 回す仕組みは3つ: 毎朝の PDCA(.claude/skills/pdca。理論を1本)/毎日のモデルの見直し(.claude/skills/model-review。experiment.yml に1件)/月1のアイデア探し(.claude/skills/idea-hunt。外から案とデータの出どころ)
-- 1周したら次の候補へ。止まらない。判断に迷うことだけユーザーに聞く(取り返しのつかないこと以外は進めて、あとで報告)
-- 検証ラボのネタだけでなく、毎日の予想の外れ方(reports/review/YYYY-MM-DD.md)からも改善候補を作る。採らなかった案も理由つきで精度向上アイデアに残す
+## 最初に: ノウハウは非公開の mikata-lab(2026-10-07〜)
+- 改良案と結果・改善の回し方(PDCA・モデルの見直し・アイデア探し)・試し部屋の結果は、非公開リポジトリ cfwjr7jbvh-ctrl/mikata-lab に置く。**このリポジトリ(公開)には書かない**
+- セッションの最初に: add_repo(cfwjr7jbvh-ctrl/mikata-lab, access push)→ `git clone --depth 1 https://github.com/cfwjr7jbvh-ctrl/mikata-lab /home/claude/mikata-lab` → register_repo_root。そこの CLAUDE.md と skills に回し方がある
+- つなげないときは公開側の作業だけ進め、ノウハウ(案の中身・なぜ効いたか)は公開側に書かずに報告に残す
+- 公開側のコミットメッセージ・コメント・ブランチ名にも案の中身を書かない(実験のブランチは `exp/YYYYMMDD-a`)
 
 ## 買い目を出す条件(ゴール。2026-10-07 ユーザー「ゆくゆくは自信を持って買い目も出したい」)
 - 合格ライン: `scripts/edge_check.py` → `reports/edge_status.json` の edge が true(学習に使っていない期間で、本番の買い方の回収率の90%区間の下限が100%超え、300点以上。荒れ狙いは追試合格+同じ条件)
@@ -27,7 +23,7 @@
 - 構文確認: `python -m py_compile scripts/lab.py`(.py を編集したらフックが自動で走る)
 - モデルの前後比較: Actions の experiment.yml(手元は8GB・2コアなので重い実験は1本ずつ)
 - 新しい/直した理論を本番(暗号化された reports/lab)に出す: builder を push してから `gh api -X POST repos/cfwjr7jbvh-ctrl/kyotei-yosou/actions/workflows/lab.yml/dispatches -f ref=main -f 'inputs[theory]=<id>'`(`gh workflow run` は GraphQL が使えず失敗する。REST で)。ワークフローの起動・確認は `gh api` / `gh run list --workflow <file>`
-- PDCA の待ち行列: `reports/review/candidates.md`(回したら [x] と結果)。毎朝の振り返り: `reports/review/YYYY-MM-DD.md`
+- PDCA の待ち行列と毎朝の振り返りは mikata-lab(candidates.md・review/)
 
 ## 場所
 - `scripts/lab.py`(312KB、Read で全部は開けない → Grep で関数を探してから Read offset/limit): 検証ラボ。`measure()` が率・市場比・前半後半、`verdicts()` が3つの物差し、`page()/note_text()/x_text()/neta_text()` が出力。数字の書き方は `_rate/_rate_change/_is_rate`
