@@ -112,8 +112,13 @@ def render_png(html: str) -> tuple[bytes, dict | None]:
 
 def render_mp4(html: str, seconds: float = 5.0) -> bytes | None:
     """アニメーションを録って mp4(H.264・yuv420p・30fps)に。ffmpeg が無い・失敗したら None(静止画で出す)。"""
-    if not shutil.which("ffmpeg"):
-        return None
+    ff = shutil.which("ffmpeg")
+    if not ff:
+        try:
+            import imageio_ffmpeg
+            ff = imageio_ffmpeg.get_ffmpeg_exe()
+        except Exception:  # noqa: BLE001
+            return None
     from playwright.sync_api import sync_playwright
     with tempfile.TemporaryDirectory() as td:
         tdp = pathlib.Path(td)
@@ -134,7 +139,7 @@ def render_mp4(html: str, seconds: float = 5.0) -> bytes | None:
             return None
         mp4 = tdp / "out.mp4"
         # 頭の読み込み分(白・空)を少し切る。最後の形で止まった時間を含めて seconds 秒ぶん
-        cmd = ["ffmpeg", "-y", "-loglevel", "error", "-ss", "0.45", "-i", str(webm), "-t", f"{seconds:.1f}",
+        cmd = [ff, "-y", "-loglevel", "error", "-ss", "0.45", "-i", str(webm), "-t", f"{seconds:.1f}",
                "-vf", "fps=30,format=yuv420p", "-c:v", "libx264", "-profile:v", "high", "-preset", "medium", "-crf", "20",
                "-movflags", "+faststart", "-an", str(mp4)]
         r = subprocess.run(cmd, capture_output=True, text=True)

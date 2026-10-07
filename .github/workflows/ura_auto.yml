@@ -31,8 +31,8 @@ jobs:
           model: "false"
       - name: 日本語フォントと描画用のブラウザ
         run: |
-          sudo apt-get install -y -q fonts-noto-cjk fonts-dejavu-core ffmpeg >/dev/null   # ffmpeg: 1枚1ネタの動画(棒が伸びる)
-          pip install -q playwright pillow
+          sudo apt-get install -y -q fonts-noto-cjk fonts-dejavu-core >/dev/null
+          pip install -q playwright pillow imageio-ffmpeg   # imageio-ffmpeg: 1枚1ネタの動画用の ffmpeg(apt より速い)
           python -m playwright install --with-deps chromium >/dev/null
       - name: 下書きと画像を作る
         run: python scripts/ura_auto.py --out "$RUNNER_TEMP/out" ${{ inputs.args }}
