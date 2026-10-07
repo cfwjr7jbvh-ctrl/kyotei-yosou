@@ -492,7 +492,7 @@ def title_ideas(title: str, venue: str | None, n_all: int, picks, trend: dict | 
             out.append(f"イン天国{venue}で、それでも崩す人は誰?|{short} 全{n_all}人の“型”")
         else:
             k = max(trend["kim_non1"].items(), key=lambda x: x[1])[0]
-            out.append(f"{venue}でインが負けるときは{k}が{trend['kim_non1'][k]:.0%}|{short} 出場{n_all}人をデータで読む")
+            out.append(f"{venue}で1号艇以外が勝つときは{k}が{trend['kim_non1'][k]:.0%}|{short} 出場{n_all}人をデータで読む")
     out.append(f"{heads[0].split(' ')[0]}|{short} 全{n_all}人の“型”")
     out.append(f"「勝負駆けに強い」は本物か|{short} 全{n_all}人をデータで読む")
     out.append(f"【保存版】{short} 全{n_all}人のひと言タグとコース別の早見表")

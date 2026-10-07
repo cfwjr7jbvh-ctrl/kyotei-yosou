@@ -186,7 +186,7 @@ function arashiHTML(r) {
   if (!lv) return "";
   const dots = [1, 2, 3, 4, 5].map((i) => `<i${i <= lv ? ' class="on"' : ""}></i>`).join("");
   return `<div class="arashi lv${lv}"><span class="k">荒れ度</span><span class="dots" role="img" aria-label="5段階中${lv}">${dots}</span>
-    <b class="w">${ARASHI_WORD[lv]}</b><span class="nums"><span>1号艇が負ける<b>${Math.round(a.in_lose * 100)}%</b></span>
+    <b class="w">${ARASHI_WORD[lv]}</b><span class="nums"><span>1号艇以外が勝つ<b>${Math.round(a.in_lose * 100)}%</b></span>
     <span>万舟<b>${Math.round(a.manshu * 100)}%</b></span></span></div>`;
 }
 
@@ -200,7 +200,7 @@ function aiLine(r) {
   const parts = [];
   if (k["逃げ"] >= 0.6) parts.push(`${inBoat.lane}号艇の逃げが本線`);
   else if (k["逃げ"] >= 0.45) parts.push(`${inBoat.lane}号艇の逃げが優勢${arashiLevel(r) >= 4 ? "、ただし波乱含み" : ""}`);
-  else parts.push(`インが不安で混戦模様`);
+  else parts.push(`混戦模様。外の艇にも出番`);
   const atk = (tk.paths || []).find((p) => p.type !== "逃げ" && p.p >= 0.07);
   const sa = slitAlert(r);
   if (atk && sa && sa.short && atk.lane === sa.lane) parts.push(`${atk.lane}号艇の${atk.type}に注意(${sa.short})`);
@@ -245,20 +245,20 @@ function slitAlert(r) {
   const a = rows.filter((x) => x.atk && x.adv >= ATK_STRONG).sort((p, q) => q.adv - p.adv)[0];
   if (a) return { lane: a.b.lane, text: `スリットで${a.b.lane}号艇が内より${fmtST(a.adv)}速い予想、まくり注意`, short: `スリットで内より${fmtST(a.adv)}速い予想` };
   const d = rows.find((x) => x.dent && x.outer);
-  if (d) return { lane: d.outer.lane, text: `${d.b.lane}号艇のスリットが凹みそう、外の${d.outer.lane}号艇に展開` };
+  if (d) return { lane: d.outer.lane, text: `外の${d.outer.lane}号艇にスリットから攻めるチャンス` };
   return null;
 }
 function slitHTML(r) {
   const rows = slitRows(r);
   if (rows.length < 4) return "";
   const note = (x) => x.atk ? `<em class="atk${x.adv >= ATK_STRONG ? " strong" : ""}">${x.adv >= ATK_STRONG ? "強攻め" : "攻め"}</em>`
-    : x.dent ? `<em class="dent">凹み</em>` : "";
+    : "";
   return `<div class="slit" aria-label="スリット予想(予想ST)">` + rows.map((x) => {
     const pos = Math.min(1, Math.max(0, (0.30 - x.st) / 0.27)) * 100;
     return `<div class="sl"><span class="sc">${x.c}</span><span class="track"><span class="mk" style="left:calc(${pos}% - 13px)">${tile(x.b.lane)}</span></span>
       <span class="sv">${fmtST(x.st)}${note(x)}</span></div>`;
   }).join("") + `</div>` + (rows.some((x) => x.atk || x.dent)
-    ? `<p class="slitnote">攻め: 内の艇より0.03以上速い予想。過去約15万レースで1着率が1.6〜2.5倍(まくりが中心)。凹み: 両隣より0.04以上遅い予想。その艇の3着以内率は13〜16ポイント下がり、外の艇の1着が増える。どちらもミカタの確率に入れて計算ずみ。</p>` : "");
+    ? `<p class="slitnote">攻め: 内の艇より0.03以上速い予想。過去約15万レースで1着率が1.6〜2.5倍(まくりが中心)。内の艇のスタートが遅れそうなときは、その外の艇の1着が増える。どちらもミカタの確率に入れて計算ずみ。</p>` : "");
 }
 
 function tenkaiHTML(r) {
@@ -520,7 +520,7 @@ function anModel(r, x) {
     "まくり": `${x.lane}号艇がスリットで先手、内の艇の外から一気にまくる`,
     "まくり差し": `${x.lane}号艇が内の艇の間を割って、1マークで差し込む`,
   };
-  const slit = slitRows(r).filter((s) => s.atk || s.dent).map((s) => `${s.b.lane}号艇${s.atk ? "が攻め" : "が凹み"}`).join("・");
+  const slit = slitRows(r).filter((s) => s.atk).map((s) => `${s.b.lane}号艇が攻め`).join("・");
   const first = boats.slice().sort((a, b) => a.tSlit - b.tSlit)[0];
   return { boats, type, fastest: stMin, sim, T: [0, disp(stMin), tSlitMax, T2, T3, tEnd],
     cap: [`スタート: ${first.lane}号艇が最初にラインを切る${slit ? "。" + slit + "の隊形" : ""}`, `1マーク: ${lines[type] || lines["差し"]}`,
@@ -554,7 +554,7 @@ function anDraw(el, m, t) {
     g.querySelector(".an-hull").setAttribute("transform", `rotate(${ang.toFixed(1)})`);
     // スリット: 切った艇から順に予想STと「攻め/凹み」。いちばん速い艇は強調。決着: 着順
     const crossed = t >= b.T[1] - 0.05;
-    const slitTxt = b.s ? `${fmtST(b.s.st)}${b.s.atk ? " 攻め" : b.s.dent ? " 凹み" : ""}` : "";
+    const slitTxt = b.s ? `${fmtST(b.s.st)}${b.s.atk ? " 攻め" : ""}` : "";
     const flag = atSlit && crossed ? slitTxt : t >= T[5] - 0.2 && b.rank < 3 ? `${b.rank + 1}着` : "";
     const fe = g.querySelector(".an-flag");
     if (fe.textContent !== flag) {
@@ -721,7 +721,7 @@ function anaReasons(r) {
   if (t.series != null && t.series <= -0.27) inBad.push("今節の足△");
   else if (t.motor != null && t.motor <= -0.15) inBad.push("モーター△");
   if (t.f != null && t.f >= 1) inBad.push("F持ち");
-  if (inBad.length) out.push(`${inB.lane}号艇に不安材料(${inBad.slice(0, 2).join("・")})`);
+  // 1号艇の不利な面は書かない(2026-10-07 ユーザー「ネガティブな表現はやめてね」)。挑む側の強みだけ
   for (const b of r.boats) {
     const c = courseOf(r, b);
     if (c < 2 || c > 5) continue;
@@ -742,7 +742,7 @@ function anaRaces() {
 const xlen = (s) => [...s].reduce((n, ch) => n + ((ch.codePointAt(0) < 0x1100 || (ch.codePointAt(0) >= 0xff61 && ch.codePointAt(0) <= 0xff9f)) ? 1 : 2), 0);
 function anaText(list) {
   const d = jst().date;
-  const lines = list.map((r, i) => `${"①②③"[i]} ${r.venue}${r.rno}R(${r.deadline}) 1号艇が負ける${Math.round(r.arashi.in_lose * 100)}%`);
+  const lines = list.map((r, i) => `${"①②③"[i]} ${r.venue}${r.rno}R(${r.deadline}) 1号艇以外が勝つ${Math.round(r.arashi.in_lose * 100)}%`);
   const why = list[0] ? anaReasons(list[0]) : [];
   const head = `今日の荒れそうなレース🌊 ${+d.slice(5, 7)}/${+d.slice(8)}\n\n${lines.join("\n")}`;
   for (let k = why.length; k >= 0; k--) {
@@ -762,7 +762,7 @@ function anaHTML() {
       ${why.length ? `<p class="ana-why">${esc(why.join("。"))}</p>` : ""}</li>`;
   }).join("");
   return `<section class="box ana"><h3>今日の荒れそうなレース<small>締切前・AIの確率順</small></h3><ol>${items}</ol>
-    <p>荒れ度5(5段階のいちばん上)のレースは、これまで1号艇以外が勝ったのが74%。ただ、荒れそうなことは人気にも出ている(人気どおり)ので、配当は思ったより安めになりやすい。</p>
+    <p>荒れ度5(5段階のいちばん上)のレースは、これまで1号艇以外が勝ったのが74%。荒れそうなことは人気にも出ている(人気どおり)。どの艇を相手に選ぶかが、腕の見せどころ。</p>
     <button type="button" class="ana-copy">Xの投稿文をコピー</button></section>`;
 }
 function setupAna(box) {

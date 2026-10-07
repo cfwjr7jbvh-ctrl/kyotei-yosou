@@ -298,19 +298,20 @@ def breakers(rr: dict, cards: dict | None, k: int = 2) -> dict:
         if ln in th_minus:
             why.append(th_minus[ln])
         out.append({"lane": ln, "name": b.get("name") or "", "type": typ, "p": b["p_win"], "why": why[:2]})
+    # 崩す材料は、挑む側の強みとして書く(1号艇の弱いところ、とは書かない。2026-10-07 ユーザー「ネガティブな表現はやめてね」)
     weak = []
     if st.get(1) is not None and all(st.get(i) is not None for i in range(1, 7)):
-        rank = 1 + sum(1 for i in range(2, 7) if st[i] < st[1])
-        if rank >= 4:
-            weak.append(f"1号艇のスタートは6人中{rank}番目の速さ({_stm(st[1])})")
+        faster = [i for i in range(2, 7) if st[i] < st[1]]
+        if len(faster) >= 3:
+            weak.append(f"スタートが速い外の艇が{len(faster)}艇({'・'.join(str(i) for i in faster[:3])}号艇)")
     nige = (one.get("traits") or {}).get("nige")
     if nige is not None and nige < 0.45:
-        weak.append(f"1号艇の逃げ率は{_pct(nige)}%(ふだんの1号艇は55%)")
+        weak.append(f"外の艇にも出番がある組み合わせ(逃げの見込み{_pct(nige)}%、ふだんの1号艇は55%)")
     cls = {"A1": 4, "A2": 3, "B1": 2, "B2": 1}
     c1 = cls.get(str(one.get("class") or ""), 0)
-    higher = sum(1 for b in boats[1:] if cls.get(str(b.get("class") or ""), 0) > c1)
-    if higher >= 3:
-        weak.append(f"1号艇より級別が上の選手が{higher}人")
+    higher = [b for b in boats[1:] if cls.get(str(b.get("class") or ""), 0) > c1]
+    if len(higher) >= 3:
+        weak.append(f"外に格上の実力者が{len(higher)}人")
     kim = tk.get("kimarite") or {}
     return {"list": out, "weak": weak[:2], "in_lose": (rr.get("arashi") or {}).get("in_lose"), "kim": kim}
 

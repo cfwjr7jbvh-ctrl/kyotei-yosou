@@ -56,7 +56,7 @@ def confirm(rids, W, PM, O, y, pay, n_boot=4000, seed=0) -> dict:
     day = np.array([r[:8] for r in rids])
     ok = (np.isfinite(O).sum(1) >= 100) & ~np.isin(day, list(DISCOVERY_DAYS))
     hi = (1 - W[:, 0]) >= IN_LOSE_MIN
-    out = {"rule": f"1号艇が負ける確率 ≥ {IN_LOSE_MIN} のレースだけ、モデルの期待値100%以上を買う",
+    out = {"rule": f"1号艇が負ける確率 ≥ {IN_LOSE_MIN} のレースだけ、モデルの期待値100%以上を買う",   # wording: ok(中の検証)
            "races": int(ok.sum()), "hi_races": int((ok & hi).sum()), "passed": False}
     if ok.sum() == 0:
         return out

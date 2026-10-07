@@ -97,8 +97,7 @@ def reasons(r: dict) -> list[str]:
         bad.append("モーター△")
     if (t.get("f") or 0) >= 1:
         bad.append("F持ち")
-    if bad:
-        out.append(f"{inb['lane']}号艇に不安材料({'・'.join(bad[:2])})")
+    # 1号艇の不利な面は書かない(2026-10-07 ユーザー「ネガティブな表現はやめてね」)。挑む側の強みだけ
     for b in boats:
         c = course(b)
         if c is None or c < 2 or c > 5:
@@ -128,7 +127,7 @@ def morning_text(races: list[dict], now: dt.datetime) -> str | None:
     if not top:
         return None
     lines = [f"{'①②③'[i]} {r['venue']}{r['rno']}R({r['deadline']}) 1号艇以外が勝つ見込み{round(r['arashi']['in_lose'] * 100)}%" for i, r in enumerate(top)]
-    why = [w for w in reasons(top[0]) if "不安材料" not in w]   # 不利な面を強調しない(発信方針)。挑む側の強みだけ
+    why = reasons(top[0])   # 挑む側の強みだけ(不利な面は reasons が作らない)
     head = f"今日の荒れそうなレース🌊 {now:%-m/%-d}\n\n" + "\n".join(lines)
     for k in (3, 2, 1, 0):
         w = f"\n\n{top[0]['venue']}{top[0]['rno']}R:{'、'.join(why[:k])}" if why[:k] else ""

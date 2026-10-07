@@ -448,7 +448,7 @@ def cover_hook(trend: dict | None, venue: str | None) -> str | None:
     if d >= 0.04:
         return f"{e(venue)}のインは<br><em>{tp['c1']:.0%}</em>で逃げる"
     k = max(trend["kim_non1"].items(), key=lambda x: x[1])
-    return f"{e(venue)}でインが負けるとき<br><em>{e(k[0])}</em>が{k[1]:.0%}"
+    return f"{e(venue)}で1号艇以外が勝つとき<br><em>{e(k[0])}</em>が{k[1]:.0%}"
 
 
 def stars(t: dict) -> str:
