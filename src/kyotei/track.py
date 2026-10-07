@@ -32,18 +32,18 @@ def B(st, r, gap, cy=0.0, lead=40.0, vt=None):
 
 
 SCENES = {
-    "nige": {"label": "1号艇が先にターンして、そのまま逃げる", "win": 1,
+    "nige": {"label": "1号艇が先にターンして、そのまま逃げる", "win": 1, "key": [1, 2],
              "boats": {1: B(0.11, 8, 1.5), 2: B(0.15, 11, 4.5, 1), 3: B(0.15, 14, 7.5, 2), 4: B(0.15, 17, 10, 3),
                        5: B(0.17, 20, 12.5, 4), 6: B(0.18, 23, 15, 5)}},
-    "sashi": {"label": "1号艇がふくらんだ内側を、2号艇が差す", "win": 2,
+    "sashi": {"label": "1号艇がふくらんだ内側を、2号艇が差す", "win": 2, "key": [1, 2],
               "boats": {1: B(0.15, 12, 9, 3), 2: B(0.13, 7, 1.5, -2, 55), 3: B(0.15, 15, 12, 5), 4: B(0.16, 18, 14, 6),
                         5: B(0.17, 21, 16, 7), 6: B(0.18, 24, 18, 8)}},
     # まくり: 4号艇はスタートで前に出て全速のまま外を回る。被せられた1〜3号艇は引き波で失速
-    "makuri": {"label": "4号艇がスタートで前に出て、内の3艇の上をまとめて回る", "win": 4,
+    "makuri": {"label": "4号艇がスタートで前に出て、内の3艇の上をまとめて回る", "win": 4, "key": [1, 4],
                "boats": {1: B(0.17, 8, 1.5, 0, 40, 10.0), 2: B(0.17, 10, 4.5, 1, 40, 10.5), 3: B(0.18, 12, 7, 2, 40, 11.0),
                          4: B(0.06, 15, 11, 0, 80, 22.0), 5: B(0.14, 19, 15, 2, 45, 18.0), 6: B(0.17, 23, 18, 4)}},
     # まくり差し: 2号艇がまくりに行って外へ流れる。3号艇は1号艇と2号艇の間を、速さを保ったまま抜ける
-    "mz": {"label": "2号艇がまくりに行き、1号艇との間のすき間を3号艇が突く", "win": 3,
+    "mz": {"label": "2号艇がまくりに行き、1号艇との間のすき間を3号艇が突く", "win": 3, "key": [1, 2, 3],
            "boats": {1: B(0.15, 8, 1.5, 0, 40, 11.0), 2: B(0.12, 15, 12, 2, 55, 14.0), 3: B(0.11, 10, 5, 0, 55, 19.0),
                      4: B(0.15, 18, 15, 3), 5: B(0.17, 21, 17, 4), 6: B(0.18, 24, 19, 5)}},
 }
@@ -138,12 +138,17 @@ def scene(cat: str) -> str:
     out.append(f'<path d="M{sb:.1f} {py(Y0) - 4:.1f}h{10 * s:.1f}" stroke="#46606e" stroke-width="1.4"/>'
                f'<text x="{sb + 10 * s + 3:.1f}" y="{py(Y0) - 2:.1f}" font-size="6.5" fill="#46606e">10m</text>')
     order = [l for l in sorted(paths) if l != win] + [win]
+    key = set(sc.get("key", [win]))
     for lane in order:
         d = "M" + " L".join(f"{px(x):.1f} {py(y):.1f}" for x, y in paths[lane])
-        bold = lane == win
-        op = "1" if bold else ".5"
-        out.append(f'<path d="{d}" fill="none" stroke="#111" stroke-opacity="{op}" stroke-width="{6.2 if bold else 3.2}" stroke-linejoin="round" stroke-linecap="round"/>')
-        out.append(f'<path d="{d}" fill="none" stroke="{LANE_BG[lane - 1]}" stroke-opacity="{op}" stroke-width="{3.8 if bold else 1.7}" stroke-linejoin="round" stroke-linecap="round"/>')
+        if lane == win:      # 主役: 太く
+            out.append(f'<path d="{d}" fill="none" stroke="#111" stroke-width="6.4" stroke-linejoin="round" stroke-linecap="round"/>')
+            out.append(f'<path d="{d}" fill="none" stroke="{LANE_BG[lane - 1]}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>')
+        elif lane in key:    # 相手: ふつう
+            out.append(f'<path d="{d}" fill="none" stroke="#111" stroke-opacity=".75" stroke-width="3.6" stroke-linejoin="round" stroke-linecap="round"/>')
+            out.append(f'<path d="{d}" fill="none" stroke="{LANE_BG[lane - 1]}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="5 3"/>')
+        else:                # ほか: 細く薄く
+            out.append(f'<path d="{d}" fill="none" stroke="{LANE_BG[lane - 1] if lane != 1 else "#888"}" stroke-opacity=".3" stroke-width="1.1" stroke-linejoin="round"/>')
     mx, my = px(MARK_X), py(0)
     out.append(f'<circle cx="{mx:.1f}" cy="{my:.1f}" r="3.4" fill="#ffe100" stroke="#111" stroke-width="1.5"/><path d="M{mx - 3:.1f} {my:.1f}h6" stroke="#e60012" stroke-width="1.5"/>')
     out.append(f'<text x="{mx - 6:.1f}" y="{my + 2.8:.1f}" font-size="7.5" font-weight="700" fill="#111" text-anchor="end" stroke="#d9e9f2" stroke-width="2.6" paint-order="stroke">1マーク</text>')
@@ -151,7 +156,7 @@ def scene(cat: str) -> str:
     def boat(lane, t, op=1.0, wake=False, num=True):
         (x, y), h = at_time(paths[lane], clocks[lane], t)
         cxp, cyp = px(x), py(y)
-        L, Wd = BOAT_L * s * 1.9, BOAT_W * s * 2.2
+        L, Wd = BOAT_L * s * 2.3, BOAT_W * s * 2.6
         deg = -math.degrees(h)
         g = ""
         if wake:   # 引き波: 艇の後ろに開くV字
@@ -162,18 +167,16 @@ def scene(cat: str) -> str:
         poly = f"{-L / 2:.1f},{-Wd / 2:.1f} {L / 4:.1f},{-Wd / 2:.1f} {L / 2:.1f},0 {L / 4:.1f},{Wd / 2:.1f} {-L / 2:.1f},{Wd / 2:.1f}"
         g += f'<g transform="translate({cxp:.1f} {cyp:.1f}) rotate({deg:.1f})" opacity="{op}"><polygon points="{poly}" fill="{LANE_BG[lane - 1]}" stroke="#111" stroke-width="1"/></g>'
         if num:
-            g += f'<text x="{cxp:.1f}" y="{cyp + 2.5:.1f}" font-size="6.3" font-weight="700" fill="{LANE_FG[lane - 1]}" text-anchor="middle" opacity="{op}">{lane}</text>'
+            g += f'<text x="{cxp:.1f}" y="{cyp + 2.7:.1f}" font-size="7.2" font-weight="700" fill="{LANE_FG[lane - 1]}" text-anchor="middle" opacity="{op}">{lane}</text>'
         return g
     for lane in order:      # スタートの瞬間(0秒): STの差がそのまま並びの凹凸になる
         out.append(boat(lane, 0.0, .45, num=False))
-    for lane in order:      # マークの手前
-        out.append(boat(lane, ta, .45, num=False))
-    for lane in order:      # ターンを終えるころ(引き波つき)
-        out.append(boat(lane, tb, 1.0, wake=True))
+    for lane in order:      # ターンを終えるころ(主役には引き波)。主役と相手は濃く、ほかは少し薄く
+        out.append(boat(lane, tb, 1.0 if lane in key or lane == win else .6, wake=(lane == win)))
     out.append(f'<rect x="0" y="{H - 12:.1f}" width="{W:.0f}" height="12" fill="#111"/>'
                f'<text x="{W / 2:.0f}" y="{H - 3.2:.1f}" font-size="8.5" font-weight="700" fill="#fff" text-anchor="middle">スタンド(観客席)</text>')
     label = sc["label"]
     sts = "・".join(f"{l}号艇 .{round(sc['boats'][l]['st'] * 100):02d}" for l in sorted(sc["boats"]))
     return (f'<figure class="dg"><svg viewBox="0 0 {W:.0f} {H:.1f}" role="img" aria-label="{html.escape(label)}">{"".join(out)}</svg>'
-            f'<figcaption>{html.escape(label)}。薄い艇はスタートの瞬間とマークの手前、濃い艇はターンを終えるころ(白いV字は引き波)。どれも同じ瞬間の6艇。'
-            f'<small>艇の速さ(約80km/h)とスタートの差(この図のST: {sts})から組み立てた再現図</small></figcaption></figure>')
+            f'<figcaption>{html.escape(label)}。<small>薄い艇=スタートの瞬間、濃い艇=ターンを終えるころ(白いV字は引き波)。'
+            f'艇の速さ(約80km/h)とST({sts})から組み立てた再現図</small></figcaption></figure>')
