@@ -31,6 +31,7 @@
 - `scripts/lab.py`(312KB、Read で全部は開けない → Grep で関数を探してから Read offset/limit): 検証ラボ。`measure()` が率・市場比・前半後半、`verdicts()` が3つの物差し、`page()/note_text()/x_text()/neta_text()` が出力。数字の書き方は `_rate/_rate_change/_is_rate`
 - `scripts/ura_auto.py`: 毎朝7:40、記事タブと「今日のX投稿」(ura/xpost_YYYYMMDD.json の queue)を作る。`theory_hits()` が「今日なら◯◯R」
 - `scripts/x_post.py`: 時間ごとに queue を X に投げる(8:20 理論ぶつけ / 12:10 荒れそう / 15:30 1枚1ネタ / 20:00 検証ラボ or 注目選手 / 21:30 投票 / ミカタ新聞は締切前)。`x_due.py` が時間の判定
+- `scripts/tenji_flash.py`: 展示速報(2026-10-07〜)。live.yml の中で直前予想のループと並べて動き、ミカタ新聞のレースと SG・G1 の準優・優勝戦の展示が出たら1〜2分で X に出す(締切3分前まで)。出した分は live ブランチの notify/tenji_YYYYMMDD.txt、ログは notify/tenji_log.txt。手元の確認は `python scripts/tenji_flash.py --demo out/tenji`
 - `scripts/theory_daily.py` + `src/kyotei/theories.py`: 毎日の「理論ぶつけ」(レースに検証ラボの理論を札つきで当てる。数字は reports/lab/*.json から)
 - `scripts/predict.py`(予想) / `scripts/train_eval.py`(学習と検証) / `src/kyotei/features*.py`(特徴量) / `scripts/compare.py`(採否の判定)
 - `scripts/market_words.py` → `reports/market/`(毎朝6:05)。`scripts/tipster_track.py`(予想屋の追跡)

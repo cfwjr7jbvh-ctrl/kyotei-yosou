@@ -123,3 +123,30 @@ def lab_card_html(title: str, verdict: str, real: bool, cond: str, sv: str,
             f'<div class="top"><small>ミカタ検証ラボ ・ 17万レースで数えた</small><h1>{e(title)}</h1>{_lanes_bar()}</div>'
             f'{stamp}{body}{mk}{gn}'
             f'{_foot("公式の成績データ(2023年10月〜)を独自に集計")}</div></body></html>')
+
+
+def tenji_card_html(day_label: str, race: str, deadline: str, race_type: str, rows: list[dict],
+                    fact: tuple[str, str, str] | None, course_line: str, view_line: str = "") -> str:
+    """展示速報(展示が出たらすぐ)。rows: 展示タイムの速い順 [{"rank", "lane", "time", "course"}]。
+    fact: (ラベル, ふだん, 展示1位) 例 ("展示1位の艇が3着以内に入る", "51%", "63%")。course_line: 「進入は枠なり」など。"""
+    sub = " ・ ".join(x for x in (f"締切 {deadline}" if deadline else "", race_type or "") if x)
+    trs = ""
+    for r in rows:
+        top = r["rank"] == 1
+        trs += (f'<div class="tr{" top" if top else ""}"><b class="rk">{r["rank"]}位</b>{lane_box(r["lane"])}'
+                f'<span class="tm">{r["time"]:.2f}</span><span class="cs">{e(r.get("course") or "")}</span></div>')
+    fh = (f'<div class="fact"><span>{e(fact[0])}(ふだん → 展示1位)</span><b>{e(fact[1])} → <em>{e(fact[2])}</em></b></div>' if fact else "")
+    css = BASE_CSS + f"""
+.rc{{font:900 104px/1.05 {F};margin:10px 0 0}} .rs{{font:700 38px {F};color:#d9dde0;margin-top:8px}}
+.lst{{margin:40px 60px 0}} .tr{{display:flex;align-items:center;gap:6px;height:84px;border-bottom:3px solid #e3dcc6}}
+.tr .rk{{width:110px;font:900 40px {F};color:{MUTE}}} .tr .ln{{margin:0 22px 0 0}}
+.tr .tm{{font:900 56px {F};width:200px}} .tr .cs{{font:700 34px {F};color:{MUTE}}}
+.tr.top{{background:#fff3c4}} .tr.top .rk{{color:#c8141c}} .tr.top .tm{{color:#c8141c}}
+.cl{{margin:22px 60px 0;font:900 40px/1.35 {F}}}
+.fact{{margin:18px 60px 0}} .fact span{{display:block;font:700 34px/1.4 {F};color:{MUTE}}} .fact b{{font:900 64px/1.15 {F}}} .fact em{{font-style:normal;color:#c8141c}}
+.vw{{margin:12px 60px 0;font:700 36px/1.4 {F}}}"""
+    return (f'<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>{css}</style></head><body><div class="c">'
+            f'<div class="top"><small>展示が出た ・ {e(day_label)}</small><div class="rc">{e(race)}</div><div class="rs">{e(sub)}</div>{_lanes_bar()}</div>'
+            f'<div class="lst">{trs}</div><div class="cl">{e(course_line)}</div>{fh}'
+            + (f'<div class="vw">{e(view_line)}</div>' if view_line else "")
+            + f'{_foot("展示タイムの順位は、公式の直前情報から")}</div></body></html>')

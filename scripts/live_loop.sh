@@ -67,6 +67,16 @@ publish_live() {  # 当日(と前日)の予想ファイルだけの1コミット
   if [ -f "$sent" ]; then
     GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w "$sent"),notify/$(basename "$sent")"
   fi
+  # 展示速報(scripts/tenji_flash.py)が出したレースと見張りのログ(次のジョブが二重に出さないよう、live ブランチに置く)
+  local td="${TENJI_DIR:-}" tl
+  if [ -n "$td" ] && [ -f "$td/tenji_$(jst +%Y%m%d).txt" ]; then
+    GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w "$td/tenji_$(jst +%Y%m%d).txt"),notify/tenji_$(jst +%Y%m%d).txt"
+  fi
+  if [ -n "$td" ] && [ -f "$td/tenji_log.txt" ]; then
+    tl=$(mktemp); tail -n 300 "$td/tenji_log.txt" > "$tl"
+    GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w "$tl"),notify/tenji_log.txt"
+    rm -f "$tl"
+  fi
   if [ -f data/cache/live_perf.json ]; then  # 1周の内訳(数字だけ。速さの見直し用)
     GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w data/cache/live_perf.json),perf/live_perf.json"
   fi
