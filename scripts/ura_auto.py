@@ -654,9 +654,11 @@ def main():
         if dp2.exists():
             races = _rj2(dp2).get("races", [])
             from kyotei import factcheck
-            n_fix = sum(len(factcheck.clean_notes(r_)) for r_ in races)   # 出走表と合わない札(名前に無い字など)を外す
-            if n_fix:
-                print(f"::warning::出す前の見張り: 出走表と合わない理論の札を {n_fix} 件外しました(予想のファイルは朝の計算のまま)")
+            from collections import Counter
+            fixed = Counter(q.split(":")[0] for r_ in races for q in factcheck.clean_notes(r_))   # 出走表と合わない札(名前に無い字など)を外す
+            if fixed:
+                print("::warning::出す前の見張り: 出走表と合わない理論の札を外しました(予想のファイルは朝の計算のまま): "
+                      + " / ".join(f"{k} {v}件" for k, v in fixed.items()))
             import race_feature
             if not series:
                 d = rc.load_table()
@@ -684,7 +686,8 @@ def main():
                     items.insert(0, {"key": key_f, "title": f_["title"], "grade": "新聞", "venue": rr["venue"], "jcd": rr["jcd"], "hd": f"{today:%Y%m%d}",
                                      "score": sc, "stars": demand.stars(sc), "n": 6, "picks": [], "images": len(ims)})
                 except Exception as ex:  # noqa: BLE001
-                    print("race feature failed:", ex)
+                    import traceback
+                    print("::warning::ミカタ新聞のカードが作れませんでした:", type(ex).__name__, " | ".join(traceback.format_exc().strip().splitlines()[-3:]))
                     stop.append("カードが作れない")
                 if stop:   # 間違い・崩れのまま出すより、出さないほうがいい(2026-10-07 ユーザー「信頼を失墜するから絶対しないように」)
                     print(f"::warning::出す前の見張り: {lbl} は X に出しません({' / '.join(stop)})")
@@ -692,7 +695,8 @@ def main():
                 xq.append((at, lbl, body, img))
                 event_items.append({"time": at, "deadline": dl, "label": lbl[4:]})
     except Exception as ex:  # noqa: BLE001
-        print("x news failed:", ex)
+        import traceback
+        print("::warning::ミカタ新聞が作れませんでした:", type(ex).__name__, " | ".join(traceback.format_exc().strip().splitlines()[-3:]))
     # 大会の速報(x_post.py の event が、レース結果を見て出す): 今日開催中のグレードレースの名前・タグ・この場の1号艇のふだん
     # 前の日: 18:30 に「明日から◯◯」+ 出場選手のコース別ベスト3(早見表の画像)
     series_today: list = []
