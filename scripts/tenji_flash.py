@@ -281,11 +281,43 @@ def wait_late(day: dt.date, race: dict, left_min: float, max_sec: int = 240) -> 
         time.sleep(20)
 
 
+SELF_FILES = ("scripts/tenji_flash.py", "src/kyotei/xcard.py", "src/kyotei/scrape.py", "src/kyotei/seo.py")
+
+
+def self_update(shas: dict) -> bool:
+    """main で見張りのコードが直されたら、写しのフォルダに取り込んで自分を起動し直す(ジョブの入れ替わりを待たずに直しを入れる)。
+    初回は今の sha を覚えるだけ。変わったら True(呼び出し側で execv)。"""
+    changed = False
+    for f in SELF_FILES:
+        try:
+            r = subprocess.run(["gh", "api", f"repos/{REPO}/contents/{f}?ref=main", "--jq", ".sha"], capture_output=True, text=True, timeout=30)
+            sha = r.stdout.strip()
+        except Exception:  # noqa: BLE001
+            continue
+        if not sha:
+            continue
+        if f in shas and shas[f] != sha:
+            raw = gh_raw(f, "main")
+            if raw:
+                (ROOT / f).write_text(raw, encoding="utf-8")
+                changed = True
+                log("コードを取り込みました:", f)
+        shas[f] = sha
+    return changed
+
+
 def watch(until: str = "23:30", every: int = 60):
     from kyotei.scrape import fetch, parse_beforeinfo, parse_odds3t
     day, done, tg, races, t_load, morning = None, set(), [], [], 0.0, {}
+    shas: dict = {}
+    t_upd = 0.0
     while now().strftime("%H:%M") < until:
         t0 = time.time()
+        if time.time() - t_upd > 600:   # 10分ごとにコードの直しを確かめる
+            t_upd = time.time()
+            if self_update(shas) and shas:
+                log("新しいコードで起動し直します")
+                os.execv(sys.executable, [sys.executable] + sys.argv)
         try:
             if day != now().date():
                 day = now().date()
