@@ -480,6 +480,7 @@ details.gloss dd{margin:0;color:var(--mute);line-height:1.6}
 details.hits{margin-top:6px}
 .box.intro p{color:var(--ink)}
 details.hits .tbl th,details.hits .tbl td{padding:6px 4px}
+details.hits .tbl td small.fin{color:var(--muted, #888);font-size:11px;white-space:nowrap}
 details.hits .tbl td{font-size:14px}
 details.hits .tbl th small{font-weight:400}
 .box.intro .ex{background:var(--soft);border-radius:8px;padding:10px 12px;margin:0 0 8px;font-size:13px;line-height:1.7}

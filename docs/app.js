@@ -844,7 +844,7 @@ const GLOSSARY = `<details class="gloss"><summary>言葉の意味</summary><dl>
   <dt>実際の成績</dt><dd>予想を始めた日からの合計。毎朝、前の日の分を確定した結果で付け直して足します。</dd>
   <dt>レース数・点数</dt><dd>その区分の組が出たレースの数と、組の数(1点=1組)。</dd>
   <dt>確率</dt><dd>AIが見込む、その組が1着-2着-3着の順で来る確率(組を出した時点)。</dd>
-  <dt>オッズ</dt><dd>組を出した時点(締切前)のオッズ。確定オッズとは少しずれます。払戻は確定した配当。</dd>
+  <dt>オッズ</dt><dd>上の数字は組を出した時点(締切前の最後の更新)のオッズで、確率・期待値はこれで計算。下の「確定」はレース後に決まったオッズ(100円の払戻は確定×100円)。締切まぎわに買われると確定は下がることが多い。</dd>
   <dt>期待値</dt><dd>確率×オッズ。100%が損得なしの線で、120%なら100円買うと平均120円戻る見込み、80%なら80円。</dd>
   <dt>見込める的中</dt><dd>確率を全部足した本数。AIの確率が正しければ、このくらい当たるはず。実際の的中より多ければ、AIが強気すぎ。</dd>
   <dt>回収率・収支</dt><dd>1点100円で買ったとしたときの、払戻÷買った額と、払戻−買った額。</dd>
@@ -886,9 +886,9 @@ function catBlock(k, a, open) {
     <p class="tbn">見込める的中 ${a.prob_sum.toFixed(1)}本 → 実際 ${a.hits}本${evAvg == null ? "" : `。見込みの回収率(期待値の平均)${Math.round(evAvg * 100)}% → 実際 ${Math.round(roi * 100)}%`}${a.odds_n < a.bets ? `(期待値はオッズのある${a.odds_n}点で計算)` : ""}・払戻 ${a.ret.toLocaleString()}円</p>`;
   if (a.list.length) {
     const rows = a.list.map((x) => `<tr><td>${x.date ? `<small>${+x.date.slice(5, 7)}/${+x.date.slice(8)}</small><br>` : ""}${esc(x.venue || "")}${x.rno}R</td><td class="l">${tri(x.combo)}</td>
-      <td>${pct1(x.prob)}%</td><td>${x.odds ? x.odds : "-"}</td><td>${x.ev != null ? Math.round(x.ev * 100) + "%" : "-"}</td><td>${(+x.pay).toLocaleString()}</td></tr>`).join("");
+      <td>${pct1(x.prob)}%</td><td>${x.odds ? x.odds : "-"}<br><small class="fin">確定 ${(+x.pay / 100).toFixed(1)}</small></td><td>${x.ev != null ? Math.round(x.ev * 100) + "%" : "-"}</td></tr>`).join("");
     h += `<details class="hits"${open ? " open" : ""}><summary>当たった組 ${a.list.length}本(確率・オッズ・期待値)</summary><div class="scroll"><table class="tbl dm">
-      <thead><tr><th>レース</th><th class="l">組</th><th>確率</th><th>オッズ<br><small>倍</small></th><th>期待値</th><th>払戻<br><small>円</small></th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+      <thead><tr><th>レース</th><th class="l">組</th><th>確率</th><th>オッズ<br><small>出した時<br>確定</small></th><th>期待値</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
   }
   return h;
 }
