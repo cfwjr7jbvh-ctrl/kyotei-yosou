@@ -25,10 +25,22 @@ sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "scripts"))
 
 
+def _tri_probs(T, te, p_ens, s23, stack, extra, rids):
+    """3連単120通りの確率(本番の predict.py と同じ: 2着・3着の強さ、枠のボーナス、RaceCond の追加項まで)。"""
+    from kyotei.betting import model_tri_probs
+    from kyotei.ensemble import align_extra
+    W = T.win_matrix(te, p_ens, rids)
+    S2, S3 = T.win_matrix(te, s23[0], rids), T.win_matrix(te, s23[1], rids)
+    EX = align_extra(extra, rids)
+    PM = np.array([model_tri_probs(w, stack.lam2, stack.lam3, a, b, stack.bonus, None if EX is None else (EX[0][i], EX[1][i]))
+                   for i, (w, a, b) in enumerate(zip(W, S2, S3))])
+    return PM, W
+
+
 def predictions(log):
     import train_eval as T
     from kyotei import features
-    from kyotei.betting import COMBOS, model_tri_probs, odds_matrix
+    from kyotei.betting import COMBOS, odds_matrix
     from kyotei.data import load_history
     ent, races, odds = load_history()
     df = features.build(ent, races)
@@ -38,11 +50,9 @@ def predictions(log):
     d1, d2 = days[int(len(days) * 0.6)], days[int(len(days) * 0.8)]
     tr, va, te = df[df.date < d1], df[(df.date >= d1) & (df.date < d2)], df[df.date >= d2]
     log(f"test {te.date.min()}〜{te.date.max()} races={te.race_id.nunique()}")
-    _, _, stack, p_ens, s23 = T.run_stage("late", df, races, tr, va, te, {"stages": {}}, log)
+    _, _, stack, p_ens, s23, _, extra = T.run_stage("late", df, races, tr, va, te, {"stages": {}}, log)
     rids = np.sort(te["race_id"].unique())
-    W = T.win_matrix(te, p_ens, rids)
-    S2, S3 = T.win_matrix(te, s23[0], rids), T.win_matrix(te, s23[1], rids)
-    PM = np.array([model_tri_probs(w, stack.lam2, stack.lam3, a, b, stack.bonus) for w, a, b in zip(W, S2, S3)])
+    PM, W = _tri_probs(T, te, p_ens, s23, stack, extra, rids)
     rc = races.set_index("race_id").reindex(rids)
     good = rc["tri_combo"].isin(COMBOS).values & rc["tri_pay"].notna().values
     O = odds_matrix(odds, rids) if odds is not None else np.full((len(rids), 120), np.nan)
@@ -56,7 +66,7 @@ def predictions_walk_forward(log, min_train_days: int = 270, max_train_days: int
     import pandas as pd
     import train_eval as T
     from kyotei import features
-    from kyotei.betting import COMBOS, model_tri_probs, odds_matrix
+    from kyotei.betting import COMBOS, odds_matrix
     from kyotei.data import load_history
     ent, races, odds = load_history()
     if odds is None or odds.empty:
@@ -86,12 +96,11 @@ def predictions_walk_forward(log, min_train_days: int = 270, max_train_days: int
         d1 = days[max(int(len(days) * 0.8), len(days) - 90)]
         tr, va = past[past["date"] < d1], past[past["date"] >= d1]
         log(f"{half}: 学習 〜{tr.date.max()} / 重み {d1}〜{va.date.max()} / 予想 {te.race_id.nunique()}レース")
-        _, _, stack, p_ens, s23 = T.run_stage("late", df.drop(columns="_half"), races, tr.drop(columns="_half"),
-                                              va.drop(columns="_half"), te.drop(columns="_half"), {"stages": {}}, log)
+        # run_stage は (feats, models, stack, p_ens, s23, cond, extra) を返す(2026-10-05 の RaceCond から7つ。5つで受けていて全期間の検証が止まっていた)
+        _, _, stack, p_ens, s23, _, extra = T.run_stage("late", df.drop(columns="_half"), races, tr.drop(columns="_half"),
+                                                        va.drop(columns="_half"), te.drop(columns="_half"), {"stages": {}}, log)
         rids = np.sort(te["race_id"].unique())
-        W = T.win_matrix(te, p_ens, rids)
-        S2, S3 = T.win_matrix(te, s23[0], rids), T.win_matrix(te, s23[1], rids)
-        PM = np.array([model_tri_probs(w, stack.lam2, stack.lam3, a, b, stack.bonus) for w, a, b in zip(W, S2, S3)])
+        PM, W = _tri_probs(T, te, p_ens, s23, stack, extra, rids)
         rc = races.set_index("race_id").reindex(rids)
         good = rc["tri_combo"].isin(COMBOS).values & rc["tri_pay"].notna().values
         out["rids"].append(rids[good]); out["W"].append(W[good]); out["PM"].append(PM[good])

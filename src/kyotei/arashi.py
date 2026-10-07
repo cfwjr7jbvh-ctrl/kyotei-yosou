@@ -212,6 +212,64 @@ def ev_detail(P, O, y, pay, rids, PB=None, n_boot=2000, seed=1) -> dict:
     return {"all": summarize(slice(0, n)), "first_half": summarize(slice(0, h)), "second_half": summarize(slice(h, n))}
 
 
+SWEEP_SHARES = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, "fit", "ai")
+SWEEP_TH = (1.0, 1.1, 1.2, 1.3, 1.5, 2.0)
+
+
+def blend_sweep(Pm, PK, O, y, pay, rids, seed=2, max_bets=5, min_bets=300) -> dict:
+    """「期待値のある買い目」の、AIと人気をまぜる割合と期待値のしきい値を振ったらどうなるか
+    (2026-10-07 ユーザー「いろいろ割合変えてもだめ?」)。
+    - share: AIの割合(0.1=ほぼ人気だけ … 0.9=ほぼAIだけ)。まぜる強さ(a+b)は、もう半分の期間で当てはめた値のまま割合だけ変える。
+      "fit" は当てはめたままの割合(いまの本番)、"ai" はAIの確率そのまま(=AIの狙い目と同じ考え方、5点まで)
+    - th: 期待値のしきい値(1.0=100%以上 … 2.0=200%以上)。1レース5点まで(本番と同じ)
+    前半・後半で別々に出し、「片方でいちばん良かった組み合わせが、もう片方でも100%を超えるか」を chosen に入れる
+    (たくさん試すとたまたま良い組み合わせが出るので、選んだ期間とは別の期間で確かめる)。"""
+    rng = np.random.default_rng(seed)
+    days = np.array([r[:8] for r in rids])
+    n = len(y)
+    h = n // 2
+    halves = {"first": (slice(h, None), slice(0, h)), "second": (slice(0, h), slice(h, None))}
+    fits = {k: fit_blend(Pm[f], PK[f], y[f]) for k, (f, _) in halves.items()}
+    On = np.nan_to_num(O, nan=0.0)
+    rows = []
+    for sh in SWEEP_SHARES:
+        P_by = {}
+        for k, (_, app) in halves.items():
+            a, b = fits[k]
+            if sh == "ai":
+                P_by[k] = Pm[app]
+            elif sh == "fit":
+                P_by[k] = blend(Pm[app], PK[app], a, b)
+            else:
+                P_by[k] = blend(Pm[app], PK[app], sh * (a + b), (1 - sh) * (a + b))
+        for th in SWEEP_TH:
+            row = {"share": sh, "th": th}
+            for k, (_, app) in halves.items():
+                P = P_by[k]
+                EV = P * On[app]
+                m = (P >= 0.01) & (EV >= th)
+                idx = np.argsort(-np.where(m, EV, -1.0), axis=1)[:, :max_bets]
+                sel = np.zeros_like(m)
+                np.put_along_axis(sel, idx, True, axis=1)
+                sel &= m
+                yy = y[app]
+                cost = 100.0 * sel.sum(1)
+                ret = np.where(sel[np.arange(len(yy)), yy], pay[app], 0.0)
+                row[k] = _ev_row(cost, ret, days[app], rng)
+            rows.append(row)
+
+    def pick(src, dst):
+        ok = [r for r in rows if r[src]["bets"] >= min_bets and r[src]["roi"] is not None]
+        if not ok:
+            return None
+        best = max(ok, key=lambda r: r[src]["roi"])
+        return {"chosen_on": src, "share": best["share"], "th": best["th"], "roi_chosen": best[src]["roi"],
+                "check_on": dst, "check": best[dst]}
+    return {"fits": {k: {"a": round(float(a), 3), "b": round(float(b), 3), "share": round(float(a / (a + b)), 3)} for k, (a, b) in fits.items()},
+            "periods": {k: [str(days[app][0]), str(days[app][-1])] for k, (_, app) in halves.items()},
+            "rows": rows, "chosen": [pick("first", "second"), pick("second", "first")]}
+
+
 def study(rids, W, PM, O, y, pay, log=print, n_boot=2000, seed=0) -> dict:
     rng = np.random.default_rng(seed)
     n = len(y)
@@ -268,6 +326,11 @@ def study(rids, W, PM, O, y, pay, log=print, n_boot=2000, seed=0) -> dict:
                             **{k: _compare(c, r, Ao[k][sl], cuts_o[k], ii) for k in ("in_lose", "manshu_odds")}}
         res["ev_model_by_half"] = halves
         res["ev_detail"] = ev_detail(Pm, Oo, yy, pp, np.asarray(rids)[has], PB)
+        try:
+            res["blend_sweep"] = blend_sweep(Pm, PK, Oo, yy, pp, np.asarray(rids)[has])
+            log("blend_sweep", json.dumps(res["blend_sweep"]["chosen"], ensure_ascii=False))
+        except Exception as ex:  # noqa: BLE001  ふり幅の検証が失敗しても本体の検証は残す
+            log("blend_sweep failed", ex)
         log("ev_detail", json.dumps({k: res["ev_detail"]["all"][k] for k in ("all_ev100", "pick_rule", "pick_mid")}, ensure_ascii=False))
     res["confirm"] = confirm(rids, W, PM, O, y, pay)
     return res

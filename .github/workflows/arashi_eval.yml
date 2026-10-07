@@ -8,6 +8,11 @@ on:
     workflows: ["過去オッズ取得(検証用)"]
     types: [completed]
   workflow_dispatch:
+    inputs:
+      reuse:
+        description: "前回の全期間の予想を使い、学習せずに検証だけやり直す(割合やしきい値を変えたとき。数分)"
+        required: false
+        default: "false"
   schedule:
     - cron: "37 19 * * 3"   # 毎週木曜 4:37 JST(保険)
 
@@ -31,8 +36,21 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           model: "false"
+      - name: 前回の全期間の予想を戻す(reuse のときだけ)
+        if: ${{ inputs.reuse == 'true' }}
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/wf.pkl
+          key: wf-${{ github.run_id }}
+          restore-keys: wf-
       - name: 全期間で検証
-        run: python scripts/upset_eval.py --walk-forward --cache "$RUNNER_TEMP/wf.pkl"
+        run: python scripts/upset_eval.py --walk-forward --cache "$RUNNER_TEMP/wf.pkl" ${{ inputs.reuse == 'true' && '--reuse' || '' }}
+      - name: 全期間の予想を保存(次に割合やしきい値だけ変えて確かめるとき用)
+        if: ${{ inputs.reuse != 'true' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ runner.temp }}/wf.pkl
+          key: wf-${{ github.run_id }}
       - name: 勝てる根拠が出たか判定(変わったら LINE で知らせる。本番の買い方は最新の学習レポートから)
         run: python scripts/edge_check.py || true
       - name: 結果をコミット
