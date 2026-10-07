@@ -358,7 +358,8 @@ def story(rr: dict, cards: dict | None) -> dict:
     if not n:
         checks.append("1号艇の展示タイムが4位以下なら、本命を疑う(展示の順位が下がるほど、勝つ見込みも下がる)")
     occ = [x for x in rr.get("theories") or [] if x.get("kind") == "occult"]
-    gen = (f"{occ[0]['title']}か。関係ねえのは分かってる。でもワンチャン、あるだろ?" if occ else "理論もいいが、最後は展示だ。ピットを出ていく顔つきを見とけよ")
+    gen = ((occ[0].get("gen") or f"{occ[0]['title']}か。関係ねえのは分かってる。でもワンチャン、あるだろ?") if occ
+           else "理論もいいが、最後は展示だ。ピットを出ていく顔つきを見とけよ")   # その理論のひと言(実際の字・艇番に合わせたもの)を使う
     who = n or h
     short = [f"展示タイムで{who['lane']}号艇がいちばん速いか"]
     if any(c.startswith("4号艇のスタートが内の3人より速い") for c in checks):
