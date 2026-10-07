@@ -55,10 +55,20 @@ def gh_raw(path: str, ref: str) -> str | None:
         return None
 
 
+def use_workspace_salt():
+    """暗号のソルトは本体の作業フォルダ(GITHUB_WORKSPACE)のものを使う。見張りは写しのフォルダで動くので、
+    そのままだと写しに無いソルトを新しく作ってしまい、鍵が合わない(InvalidTag)。2026-10-07 初日に起きた"""
+    from kyotei import publish
+    s_ = pathlib.Path(os.environ.get("GITHUB_WORKSPACE") or ROOT) / "docs/data/salt.txt"
+    if s_.exists():
+        publish.SALT_PATH = s_
+
+
 def gh_json(path: str, ref: str):
     raw = gh_raw(path, ref)
     if not raw:
         return None
+    use_workspace_salt()
     from kyotei.publish import read_json
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
         f.write(raw)
@@ -112,6 +122,7 @@ def lab_fact() -> tuple[str, str, str]:
     a, b = 0.507, 0.626
     try:
         from kyotei.publish import load_private
+        use_workspace_salt()
         t = load_private(ROOT / "reports/lab/tenji.json") or {}
         m = next(m for n, m, _ in t.get("measures") or [] if n == "展示タイム1位")
         a, b = float(m["in1_ref"]), float(m["in1"])
@@ -167,6 +178,7 @@ def lab_dev() -> tuple[str, str, str]:
     a, up, dn = 0.512, 0.603, 0.399
     try:
         from kyotei.publish import load_private
+        use_workspace_salt()
         t = load_private(ROOT / "reports/lab/tenji.json") or {}
         ms = {n: m for n, m, _ in t.get("measures") or []}
         up = float(ms["展示の順位が、本人のふだんより2つ以上上"]["in1"])
