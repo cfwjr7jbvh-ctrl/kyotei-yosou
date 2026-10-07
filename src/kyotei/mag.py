@@ -230,31 +230,34 @@ def diagram(cat: str) -> str:
     if cat not in ("start", "nige", "sashi", "makuri", "mz"):
         return ""
     W, H = 300, 170
-    mark = '<circle cx="62" cy="40" r="9" fill="#ffe100" stroke="#111" stroke-width="2.5"/><path d="M53 40h18" stroke="#e60012" stroke-width="3"/>'
-    lanes = "".join(f'<path d="M300 {52 + 18 * i}H120" stroke="#111" stroke-opacity=".12" stroke-width="1" stroke-dasharray="4 4"/>' for i in range(6))
+    # 1マーク(70,40)。艇の線はマークから半径17以上はなして回る(2026-10-07 ユーザー「ターンマークに近くない?」)
+    mark = '<circle cx="70" cy="40" r="7" fill="#ffe100" stroke="#111" stroke-width="2.5"/><path d="M63 40h14" stroke="#e60012" stroke-width="3"/>'
+    lanes = "".join(f'<path d="M300 {58 + 18 * i}H120" stroke="#111" stroke-opacity=".12" stroke-width="1" stroke-dasharray="4 4"/>' for i in range(6))
+    wide1 = "M290 58 C200 58 120 60 80 66 C44 72 30 52 34 36 C38 14 70 8 120 8 C180 8 230 10 260 12"     # 1号艇がふくらむ
+    tight1 = "M290 58 C200 58 110 58 70 58 A18 18 0 0 1 70 22 C120 22 160 24 200 26"                    # 1号艇が小回り
     arrow = lambda d, col, w=5, dash="": (f'<path d="{d}" fill="none" stroke="#111" stroke-width="{w + 3}" stroke-linecap="round" {dash}/>'  # noqa: E731
                                          f'<path d="{d}" fill="none" stroke="{col}" stroke-width="{w}" stroke-linecap="round" {dash} marker-end="url(#ah)"/>')
     defs = '<defs><marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#111"/></marker></defs>'
     paths = ""
     label = ""
     if cat == "nige":
-        paths = arrow("M290 52 C200 52 110 50 80 46 C58 44 52 30 66 26 C90 20 140 24 200 28", "#ffffff")
+        paths = arrow("M290 58 C200 58 110 58 70 58 A18 18 0 0 1 70 22 C120 22 170 22 210 24", "#ffffff")
         label = "1号艇が先にターンして、そのまま逃げる"
     elif cat == "sashi":
-        paths = arrow("M290 52 C200 52 120 54 86 52 C50 50 46 18 80 16 C140 12 200 16 260 18", "#bdbdbd", 4, 'stroke-dasharray="6 5"') + \
-            arrow("M290 70 C220 70 150 66 96 52 C76 46 72 34 92 30 C140 26 200 30 250 34", "#17191c")
+        paths = arrow(wide1, "#bdbdbd", 4, 'stroke-dasharray="6 5"') + \
+            arrow("M290 76 C210 76 140 70 100 62 C80 58 58 60 53 46 C49 34 58 23 72 22 C120 20 190 24 250 28", "#17191c")
         label = "1号艇がふくらんだ内側を、2号艇が差す"
     elif cat == "makuri":
-        paths = arrow("M290 52 C220 52 150 52 100 50 C70 48 60 40 70 32 C100 30 150 34 200 38", "#bdbdbd", 4, 'stroke-dasharray="6 5"') + \
-            arrow("M290 106 C230 104 160 90 110 64 C86 52 70 30 96 20 C150 10 210 12 260 12", "#0b5fb4")
+        paths = arrow(tight1, "#bdbdbd", 4, 'stroke-dasharray="6 5"') + \
+            arrow("M290 112 C230 110 170 94 120 72 C80 58 36 54 36 30 C36 6 100 4 160 4 C200 4 240 6 260 6", "#0b5fb4")
         label = "外の艇が、1マークの手前で内をまとめて絞る"
     elif cat == "mz":
-        paths = arrow("M290 52 C200 52 120 54 86 52 C50 50 46 18 80 16 C140 12 200 16 260 18", "#bdbdbd", 4, 'stroke-dasharray="6 5"') + \
-            arrow("M290 88 C230 86 170 76 122 62 C96 54 84 40 100 34 C140 28 200 34 250 40", "#e3141b")
+        paths = arrow(wide1, "#bdbdbd", 4, 'stroke-dasharray="6 5"') + \
+            arrow("M290 94 C230 92 170 80 124 68 C96 61 64 64 55 50 C48 38 54 26 68 22 C110 14 180 18 250 22", "#e3141b")
         label = "1号艇と外の艇の間の、すき間を突く"
     elif cat == "start":
         slit = '<path d="M150 44V160" stroke="#e60012" stroke-width="2.5" stroke-dasharray="5 4"/>'
-        boats = "".join(f'<rect x="{124 if i == 2 else 100}" y="{48 + 18 * i}" width="28" height="12" rx="6" fill="{LANE_BG[i]}" stroke="#111" stroke-width="2"/>'
+        boats = "".join(f'<rect x="{124 if i == 2 else 100}" y="{54 + 18 * i}" width="28" height="12" rx="6" fill="{LANE_BG[i]}" stroke="#111" stroke-width="2"/>'
                         for i in range(6))
         stand = '<rect x="0" y="158" width="300" height="12" fill="#111"/><text x="150" y="167.5" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">スタンド(観客席)</text>'
         return (f'<figure class="dg"><svg viewBox="0 0 {W} {H}" role="img" aria-label="スタートで一艇だけ前に出る図"><g transform="translate({W} 0) scale(-1 1)">{lanes}{slit}{boats}</g>'
@@ -262,7 +265,7 @@ def diagram(cat: str) -> str:
                 f'<figcaption>スリットで一艇だけ前に出る。ここから主導権が生まれる(模式図)</figcaption></figure>')
     stand = '<rect x="0" y="158" width="300" height="12" fill="#111"/><text x="150" y="167.5" font-size="9" font-weight="700" fill="#fff" text-anchor="middle">スタンド(観客席)</text>'
     return (f'<figure class="dg"><svg viewBox="0 0 {W} {H}" role="img" aria-label="{e(label)}">{defs}<g transform="translate({W} 0) scale(-1 1)">{lanes}{mark}{paths}</g>'
-            f'<text x="{W - 44}" y="68" font-size="11" font-weight="700" fill="#111" text-anchor="middle">1マーク</text>{stand}</svg>'
+            f'<text x="{W - 70}" y="44" font-size="10" font-weight="700" fill="#111" text-anchor="end" dx="-14">1マーク</text>{stand}</svg>'
             f'<figcaption>{e(label)}(スタンドから見た模式図。艇は左から右へ走り、1マークを左に回る)</figcaption></figure>')
 
 
