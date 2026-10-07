@@ -9,10 +9,10 @@ on:
   workflow_dispatch:
     inputs:
       what:
-        description: "theory / morning / neta / evening / poll / event / thread / test / stats / queue(今日の予定)"
+        description: "theory / morning / neta / evening / poll / event / thread / test / stats / queue(今日の予定) / delete"
         default: "test"
       key:
-        description: "thread のとき: 場コード_初日(例 04_20261013)"
+        description: "thread: 場コード_初日(例 04_20261013) / delete: 投稿の番号,番号;出し直すラベル|ラベル"
         default: ""
       note_url:
         description: "thread のとき: note の URL(最後の投稿に入れる)"

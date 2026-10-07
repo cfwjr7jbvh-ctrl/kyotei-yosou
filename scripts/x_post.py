@@ -382,10 +382,48 @@ def post(s, text: str, media_id: str | None = None, reply_to: str | None = None,
     return r.json()["data"]["id"]
 
 
+def delete_posts(key: str, day: str, posted: dict, live: bool, now: dt.datetime):
+    """投稿を消す。出し直すラベル(「新聞: 桐生12R 桐生ドリーム」など)は今日の「出した」印を外す → 締切の15分前までなら次の見回りで出し直す。
+    reports/published.json の行は消さずに deleted をつける(出したことは残す)。"""
+    ids_s, _, labels_s = key.partition(";")
+    ids = [x.strip() for x in ids_s.split(",") if x.strip().isdigit()]
+    labels = [x.strip() for x in labels_s.split("|") if x.strip()]
+    if not ids:
+        raise SystemExit("--key に消す投稿の番号を「id1,id2;出し直すラベル」の形で")
+    done = []
+    if live:
+        s = session()
+        for i in ids:
+            r = s.delete(f"{API}/tweets/{i}")
+            ok = r.ok and (r.json().get("data") or {}).get("deleted")
+            print("削除:", i, "済" if ok else f"失敗 {r.status_code} {r.text[:200]}")
+            if ok:
+                done.append(i)
+    else:
+        print("自動投稿が OFF なので消しません(試し):", ids)
+    for lb in labels:
+        if posted.get(f"event:{lb}") == day and (live or not done):
+            posted.pop(f"event:{lb}", None)
+            print("出し直しの待ちに戻す:", lb)
+    if live:
+        POSTED.write_text(json.dumps(posted, ensure_ascii=False, indent=1), encoding="utf-8")
+    try:
+        import publish_log
+        rows = publish_log.load()
+        stamp = now.strftime("%Y-%m-%d %H:%M")
+        for r in rows:
+            if any((r.get("url") or "").endswith(f"/{i}") for i in done):
+                r["deleted"] = stamp
+        if done:
+            publish_log.save(rows)
+    except Exception as ex:  # noqa: BLE001
+        print("台帳に削除の印をつけられませんでした:", ex)
+
+
 # ---------------------------------------------------------------- 本体
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["theory", "morning", "neta", "hayami", "evening", "poll", "event", "thread", "test", "queue"])
+    ap.add_argument("what", choices=["theory", "morning", "neta", "hayami", "evening", "poll", "event", "thread", "test", "queue", "delete"])
     ap.add_argument("--key", default=None)
     ap.add_argument("--note-url", default=os.environ.get("NOTE_URL") or None)
     ap.add_argument("--dry", action="store_true")
@@ -401,6 +439,9 @@ def main():
             print("鍵の確認:", r.status_code, (r.json().get("data") or {}).get("username") if r.ok else r.text[:300])
         return
     day = now.strftime("%Y-%m-%d")
+    if a.what == "delete":   # 出した投稿を消す(--key "id1,id2;出し直すラベル1|ラベル2")。台帳は消さずに「削除」の印をつける
+        delete_posts(a.key or "", day, posted, live, now)
+        return
     if a.what == "queue":   # 今日の予定の一覧(投稿しない)
         for it in sorted(queue(day), key=lambda q: hm(q["time"])):
             done = posted.get(f"event:{it['label']}") == day or posted.get({v: k for k, v in SLOTS.items()}.get(it["time"], "-")) == day

@@ -95,7 +95,7 @@ def check(rows, key, channel, date, asof, update, slot=None):
     m = re.match(r"^(theory|xpost|race)_(\d{8})(?:_\d+)?$", key)
     if m and m.group(2) != date.strftime("%Y%m%d"):
         errs.append(f"{key} は {m.group(2)[4:6]}/{m.group(2)[6:]} の分です。公開日 {date} と合いません(その日の分はその日に出す)")
-    dup = [r for r in rows if r["key"] == key and r["channel"] == channel and r.get("slot") == slot]
+    dup = [r for r in rows if r["key"] == key and r["channel"] == channel and r.get("slot") == slot and not r.get("deleted")]   # 消した投稿の出し直しは別の行
     if dup and not update:
         errs.append(f"{key} は {channel} で {dup[0]['date']} に記録ずみです(直すときは --update)")
     return errs
@@ -112,7 +112,7 @@ def add(key: str, channel: str, url: str | None, date: dt.date | None, slot: str
     errs = check(rows, key, channel, date, asof, update, slot)
     if errs:
         raise SystemExit("記録しませんでした: " + " / ".join(errs))
-    old = next((r for r in rows if r["key"] == key and r["channel"] == channel and r.get("slot") == slot), None) if update else None
+    old = next((r for r in rows if r["key"] == key and r["channel"] == channel and r.get("slot") == slot and not r.get("deleted")), None) if update else None
     if old:
         old.update({k: v for k, v in {"url": url, "date": str(date)}.items() if v})
         save(rows)
@@ -122,7 +122,9 @@ def add(key: str, channel: str, url: str | None, date: dt.date | None, slot: str
     if info.get("x"):
         m = re.search(r"--- 投稿1[^\n]*---\n([\s\S]*?)(?=\n--- 投稿|\n(?:画像|出し方):|\Z)", info["x"])
         x_first = m.group(1).strip() if m else None
-    row = {"id": f"{date:%Y%m%d}-{channel}-{key}" + (f"-{slot}" if slot else ""), "key": key, "kind": kind_of(key), "channel": channel,
+    rid = f"{date:%Y%m%d}-{channel}-{key}" + (f"-{slot}" if slot else "")
+    n = sum(1 for r in rows if r["id"] == rid or r["id"].startswith(rid + "-出し直し"))
+    row = {"id": rid + (f"-出し直し{n}" if n else ""), "key": key, "kind": kind_of(key), "channel": channel,
            "title": title, "date": str(date), "slot": slot, "url": url, "asof": asof, "no": no,
            "snapshot": {k: v for k, v in {"conclusion": snap.get("conclusion"), "key_line": snap.get("key_line"),
                                           "x": text or (x_first if channel == "X" else None)}.items() if v},
