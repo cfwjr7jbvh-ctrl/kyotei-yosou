@@ -10,6 +10,7 @@ import argparse
 import datetime as dt
 import html
 import pathlib
+import re
 import sys
 from collections import defaultdict
 
@@ -25,6 +26,32 @@ INDEX = [("slowdash", "カドの一撃の形"), ("hot", "今節の勢い(2連勝
          ("formation", "前づけの常連"), ("a1in", "隠れA2の1号艇"), ("fixed", "進入固定"), ("final", "準優・優勝戦"), ("bangumi", "番組の癖"), ("flying", "フライング直後"),
          ("rest", "長い休み明け"), ("newmotor", "新モーター")]
 WEEK = "月火水木金土日"
+
+
+_NUM2 = re.compile(r"(\d+(?:\.\d)?%)[((]([^))%\d]*)(\d+(?:\.\d)?%)[))]")   # 「69%(予選は55%)」
+_NUM1 = re.compile(r"1着が(\d+(?:\.\d)?%)の枠")                                  # 番組の癖「1号艇の1着が72%の枠」
+
+
+def clash_num(r: dict, title: str) -> str:
+    """悩ましいレースの理論1つぶんの数字(「1号艇の1着 予選55%→69%」)。数字は理論のノートの文(検証ラボの JSON から入る)を読む。
+    名前だけだと、どちらの理論が重いか読み手が比べられない(X の1行目・2行目は数字、が市場の型)。読めないときは空。"""
+    n = next((x for x in r.get("theories") or [] if x.get("title") == title and x.get("kind") != "occult"), None)
+    text = (n or {}).get("text") or ""
+    m = _NUM2.search(text)
+    if m:
+        seg = re.split(r"[。、]", text[:m.start()])[-1]   # 数字のすぐ前の句で、何の率かを決める
+        what = "3着以内" if "3着以内" in seg else "カドの1着" if "カド" in seg else "1コースの1着" if "1コース" in seg else "1号艇の1着"
+        ref = m.group(2).strip().removesuffix("は")
+        return f"{what} {ref}{m.group(3)}→{m.group(1)}"
+    m = _NUM1.search(text)
+    return f"1号艇の1着{m.group(1)}" if m else ""
+
+
+def clash_side(r: dict, titles: list[str], k: int | None = None) -> str:
+    """「準優勝戦(1号艇の1着 予選55%→69%)・進入固定(…)」。k を指定すると先頭の k 個だけ数字つきで、残りは「ほか◯つ」。"""
+    k = len(titles) if k is None else k
+    out = "・".join(t + (f"({c})" if (c := clash_num(r, t)) else "") for t in titles[:k])
+    return out + (f" ほか{len(titles) - k}つ" if len(titles) > k else "")
 
 
 def _calendar(day: dt.date) -> list[str]:
@@ -72,7 +99,8 @@ def build(day: dt.date, data: dict) -> dict | None:
         top = conf[0]; sm0 = top["th_sum"]
         title = f"{base_title}|悩ましいのは{race_short(top)}"
         headline = f"悩ましいのは、{race_short(top)}"
-        lead = (f"いちばん悩ましいのは{race_name(top)}。インに有利な『{sm0['plus'][0]}』と、不利な『{sm0['minus'][0]}』がぶつかる。"
+        np_, nm_ = clash_num(top, sm0["plus"][0]), clash_num(top, sm0["minus"][0])
+        lead = (f"いちばん悩ましいのは{race_name(top)}。インに有利な『{sm0['plus'][0]}』{f'({np_})' if np_ else ''}と、不利な『{sm0['minus'][0]}』{f'({nm_})' if nm_ else ''}がぶつかる。"
                 f"今日の出走表{len(races)}レースに検証ラボの理論をぶつけて、当てはまったのは{n_notes}。悩ましいレースは{len(conf)}つ。どの理論に乗るかは、あなた次第")
     else:
         top = rich[0] if rich else None
@@ -145,8 +173,16 @@ def build(day: dt.date, data: dict) -> dict | None:
         r = conf[0]; sm = r["th_sum"]
         # 市場の作りに合わせる(2026-10-06): 1行目は 場名+R+締切、1行1情報、ゲンさんのセリフは画像の中
         dl = f" 締切{r['deadline']}" if r.get("deadline") else ""
-        body = (f"今日の悩ましいレース|{race_short(r)}{dl}\n\nインに有利: {'・'.join(sm['plus'])}\nインに不利: {'・'.join(sm['minus'])}\n\n"
-                f"あなたはどっちに乗る?\n#今日の理論ぶつけ #ボートレース{r['venue']} #競艇")
+        # 2026-10-07: 理論の名前だけでなく数字も(「準優勝戦(1号艇の1着 予選55%→69%)」)。入る長さで、数字の多い形から選ぶ
+        tail_ = f"\n\nあなたはどっちに乗る?\n#今日の理論ぶつけ #ボートレース{r['venue']} #競艇"
+        body = ""
+        for k in (None, 2, 1):
+            b = f"今日の悩ましいレース|{race_short(r)}{dl}\n\nインに有利: {clash_side(r, sm['plus'], k)}\nインに不利: {clash_side(r, sm['minus'], k)}{tail_}"
+            if xlen(b) <= 280:
+                body = b
+                break
+        if not body:
+            body = f"今日の悩ましいレース|{race_short(r)}{dl}\n\nインに有利: {'・'.join(sm['plus'])}\nインに不利: {'・'.join(sm['minus'])}{tail_}"
     else:
         body = f"【今日の理論ぶつけ】{day.month}/{day.day}\n\n今日の出走表{len(races)}レースに、検証ラボの理論をぶつけました。当てはまった理論は{n_notes}。\n\nゲンさん「理論にすがりたい日もあるさ」"
     if xlen(body) > 280 and conf:

@@ -2463,6 +2463,155 @@ def t_night(ent, r):
     }
 
 
+def _same_pop(x, mask, col="c1", qcol="q1", nb=10, n=300):
+    """人気の高さをそろえたくらべ: mask のレースで実際に来た数 ÷『同じくらい人気を集めた、ほかのレースの艇』から見込む数。(比, 下, 上) を返す。
+    人気を集めた艇ほど人気どおりに来やすい(人気薄は買われすぎる)。条件で分けると人気の高さも変わるので、全レースの比とそのままくらべると取りちがえる
+    (night の教訓の、人気版)。ブレの幅は日ごとに引き直して出す。"""
+    if qcol not in x:
+        return None
+    d = x.dropna(subset=[qcol]).copy()
+    d["_m"] = mask.reindex(d.index).fillna(False).astype(bool)
+    if d["_m"].sum() < 500 or (~d["_m"]).sum() < 500:
+        return None
+    cut = [-1.0] + list(np.quantile(d.loc[d["_m"], qcol], np.linspace(0, 1, nb + 1))[1:-1]) + [2.0]
+    d["_b"] = pd.cut(d[qcol], sorted(set(cut)), labels=False)
+    d["_d"] = d["date"].astype(str).str[:10]
+    t = d.groupby(["_d", "_b", "_m"]).agg(a=(col, "sum"), q=(qcol, "sum")).reset_index()
+    days = {k: i for i, k in enumerate(t["_d"].unique())}
+    A = np.zeros((len(days), int(t["_b"].max()) + 1, 2)); Q = np.zeros_like(A)
+    for dd, b, mm, a, q in t.itertuples(index=False):
+        A[days[dd], int(b), int(mm)] = a; Q[days[dd], int(b), int(mm)] = q
+
+    def _ratio(a, q):
+        ok = q[:, 0] > 0
+        return float(a[ok, 1].sum() / (a[ok, 0] / q[ok, 0] * q[ok, 1]).sum())
+    rng = np.random.default_rng(2)
+    bt = [_ratio(A[s].sum(0), Q[s].sum(0)) for s in (rng.integers(0, len(days), len(days)) for _ in range(n))]
+    return _ratio(A.sum(0), Q.sum(0)), float(np.quantile(bt, 0.05)), float(np.quantile(bt, 0.95))
+
+
+def t_power(ent, r):
+    """力の逆転(2026-10-07 ネットの理論から): 1号艇より勝率の高い選手が2・3号艇にいると荒れる?
+    出走表の全国勝率で分ける。1号艇の勝率が低いだけの話と混ざらないよう、1号艇の勝率が同じ(5点台)レースどうしでもくらべる。
+    人気とのくらべは、同じくらい人気を集めた艇どうしで(_same_pop)。"""
+    w = ent.pivot_table(index="race_id", columns="lane", values="nat_win_rate", aggfunc="first").reindex(columns=range(1, 7))
+    w = w[w.notna().all(axis=1)]
+    x = r[r["race_id"].isin(w.index)].copy()
+    W = w.loc[x["race_id"]].values
+    x["w1"] = W[:, 0]
+    up2, up3 = W[:, 1] > W[:, 0], W[:, 2] > W[:, 0]
+    upout = (W[:, 3:] > W[:, [0]]).any(axis=1)
+    x["both"], x["none"] = up2 & up3, ~up2 & ~up3
+    x["rank1"] = (W > W[:, [0]]).sum(axis=1) + 1
+    x["gmin"] = np.minimum(W[:, 1], W[:, 2]) - W[:, 0]
+    x["w23"] = x["win_lane"].isin([2, 3]).astype(float)
+    x["q_23"] = x[["q_l2", "q_l3"]].sum(axis=1, min_count=2) if "q_l2" in x else np.nan
+    band = (x["w1"] >= 5.0) & (x["w1"] < 6.0)          # 1号艇の勝率が5点台。同じ強さの1号艇どうしでくらべる
+
+    def _pop(m, mask, col, qcol):
+        """人気とのくらべを『同じくらい人気を集めた艇』に直す。前後に分けてどちらもはっきりしなければ、追試中にとどめる。"""
+        sp = _same_pop(x, mask, col, qcol)
+        if not sp or not m.get("market_ratio"):
+            return verdicts(m), None
+        m["market_ref"] = m["market_ratio"] / sp[0]
+        m["market_ci"] = [m["market_ref"] * sp[1], m["market_ref"] * sp[2]]
+        v = verdicts(m)
+        if v.get("edge") in (1, -1):
+            xo = x[mask & x[qcol].notna()]
+            mid = xo["date"].astype(str).sort_values().iloc[len(xo) // 2]
+            hs = [_same_pop(x[(x["date"].astype(str) < mid) == first], mask, col, qcol) for first in (True, False)]
+            if not all(h and (h[1] > 1 if v["edge"] == 1 else h[2] < 1) for h in hs):
+                v["known"] = ("人気以上に来ている気配。" if v["edge"] == 1 else "人気のわりにひかえめの気配。") + "ただ差は小さく、期間を前後に分けるとブレの幅に入る(追試中)"
+                v["edge"] = 0
+        return v, sp
+
+    m_both = measure(x, x["both"])
+    v_both, sp1 = _pop(m_both, x["both"], "c1", "q1")
+    m_band = measure(x, band & x["both"], ref=band & x["none"])
+    m_band["ref_label"] = "同じ5点台で、2・3号艇がどちらも下"
+    v_band = verdicts(m_band)
+    m23 = measure(x, x["both"], col="w23", qcol="q_23")
+    m23.update({"subject": "2・3号艇のどちらか", "verb": "勝つ", "ref_label": "全レースの2・3号艇"})
+    v23, sp23 = _pop(m23, x["both"], "w23", "q_23")
+    m_top = measure(x, x["rank1"] == 1)
+    v_top = verdicts(m_top)
+    # 強い選手が「どこにいるか」(全レースと、1号艇が5点台のレース)
+    cats = [("1号艇より上がいない(1号艇がトップ)", ~up2 & ~up3 & ~upout), ("上は4〜6号艇にだけ", ~up2 & ~up3 & upout), ("上は2号艇だけ", up2 & ~up3),
+            ("上は3号艇だけ", ~up2 & up3), ("2・3号艇がどちらも上", up2 & up3)]
+    c5, t1 = {}, []
+    for nm, mk in cats:
+        g, g5 = x[mk], x[mk & band]
+        c5[nm] = float(g5["c1"].mean())
+        t1.append([nm, _rate(len(g) / len(x)), _rate(g["c1"].mean()), _rate(g5["c1"].mean()), _rate(g["upset"].mean())])
+    t2 = [[f"{k}位", f"{int((x['rank1'] == k).sum()):,}", _rate(x.loc[x["rank1"] == k, "c1"].mean())] for k in range(1, 7)]
+    t3 = []
+    for lo, hi, nm in ((0, 0.5, "0.5未満"), (0.5, 1.0, "0.5〜1.0"), (1.0, 1.5, "1.0〜1.5"), (1.5, 99, "1.5以上")):
+        g = x[x["both"] & (x["gmin"] >= lo) & (x["gmin"] < hi)]
+        if len(g) >= 300:
+            t3.append([nm, f"{len(g):,}", _rate(g["c1"].mean()), _rate(g["w23"].mean())])
+    # 場とレース番号までそろえた差(5点台の1号艇。逆転のレースは10〜12Rに多いので、番組の差を混ぜない)
+    cg = x[band & (x["both"] | x["none"])].groupby(["jcd", "rno", "both"])["c1"].agg(["mean", "size"]).unstack().dropna()
+    wt = np.minimum(cg[("size", True)], cg[("size", False)])
+    d_cell = float(((cg[("mean", True)] - cg[("mean", False)]) * wt).sum() / wt.sum()) if len(cg) else float("nan")
+    share = float(x["both"].mean())
+    exp1 = m_both["in1"] / sp1[0] if sp1 else None
+    real = v_both["real"]
+    if not real:
+        head = "ふだんと同じ"
+    elif v_both.get("edge") == 1:
+        head = "本当。しかも1号艇は人気以上に残る"
+    elif v_both.get("edge") == -1:
+        head = "本当。人気が思うより1号艇は苦しい"
+    else:
+        head = "本当。ただし人気どおり"
+    trial = "追試中" in (v_both.get("known") or "")
+    pop1 = (f"1号艇は、同じくらい人気を集めたほかのレースの1号艇から考えると{_rate(exp1, True)}のところ、実際は{_rate(m_both['in1'], True)}。"
+            + ("少し多く残っている気配はあるが、差は小さく、期間を前後に分けるとブレの幅に入る。いまは『人気どおり』としておいて、追いかける。" if trial
+               else ("人気より多く残っている。" if v_both.get("edge") == 1 else ("人気より少ない。" if v_both.get("edge") == -1 else "人気どおり。")))) if exp1 else ""
+    pop23 = (f"2・3号艇のどちらかが勝つのは{_rate(m23['in1'])}(全レースは{_rate(m23['in1_ref'])})まで上がるが、"
+             + {1: "人気より多く来ている", -1: "人気のわりにひかえめ"}.get(v23.get("edge"), "人気もそのぶん集まっていて、人気どおり") + "。")
+    n_top, n_out, n_2, n_3, n_both = (c[0] for c in cats)
+    return {
+        "id": "power", "title": "1号艇より強い選手が2・3号艇にいると、荒れる?", "belief": "1号艇より勝率の高い選手が2・3号艇にいるレースは荒れる。力の逆転ってやつだ",
+        "subject": "1号艇", "unit": "レース",
+        "x1": f"2・3号艇の勝率がどちらも1号艇より上なら、1号艇が勝つのは{_rate(m_both['in1'])}。全レースは{_rate(m_both['in1_ref'])}。",
+        "lead": f"出走表の『全国勝率』で、1号艇より上の選手が2号艇にも3号艇にもいる。そんな『力の逆転』のレースは、全体の{_rate(share)}。"
+                f"1号艇が勝つのは{_rate(m_both['in1'])}で、全レースの{_rate(m_both['in1_ref'])}から大きく下がる。万舟(30番人気以下の決着)は{_rate(m_both['upset'])}(全レースは{_rate(m_both['upset_ref'])})。"
+                f"\n\nただ、これだけだと『1号艇の勝率がもともと低いレース』を数えているだけかもしれない。そこで1号艇の強さをそろえた。"
+                f"1号艇の勝率が5点台のレースだけで見ると、2・3号艇がどちらも下なら{_rate(m_band['in1_ref'])}、どちらも上なら{_rate(m_band['in1'])}。"
+                f"同じ強さの1号艇でも、すぐ外に強い選手が並ぶと勝ちにくくなる。"
+                + (f"場とレース番号までそろえても、{abs(d_cell) * 100:.0f}ポイントの差が残る。" if d_cell == d_cell else "")
+                + f"\n\n強い選手が『どこにいるか』でも変わる。同じ5点台の1号艇で、自分より上が1人もいなければ{_rate(c5[n_top])}。上の選手が4〜6号艇にだけいると{_rate(c5[n_out])}、"
+                f"2号艇だけが上なら{_rate(c5[n_2])}、3号艇だけが上なら{_rate(c5[n_3])}、2・3号艇がどちらも上なら{_rate(c5[n_both])}。"
+                f"外に格上がいるだけでも下がるが、隣(2・3号艇)にいると、もう一段下がる。"
+                f"\n\n人気とのくらべ。{pop1}{pop23}",
+        "conclusion": [head, f"2・3号艇の勝率がどちらも1号艇より上のレースは、1号艇が勝つのは{_rate(m_both['in1'])}(全レースは{_rate(m_both['in1_ref'])})。"
+                             f"1号艇の強さが同じ(勝率5点台)でも{_rate_change(m_band['in1'], m_band['in1_ref'])}。"
+                             f"格上が4〜6号艇にだけいるなら{_rate(c5[n_out])}、隣の2・3号艇にいると、もう一段下がる。"
+                             + ("出走表でみんな見ているので、人気もそのとおりに動く" if v_both.get("edge") == 0 else "")],
+        "tables": [("1号艇より勝率の高い選手が、どこにいるか", t1, ["強い選手の場所", "全レースのうち", "1号艇の1着", "1号艇の1着(1号艇が5点台)", "万舟(30番人気以下)"]),
+                   ("1号艇の勝率の順位(6人中)と、1号艇の1着", t2, ["1号艇の順位", "レース数", "1号艇の1着"]),
+                   ("2・3号艇がどちらも上のレース: 低いほうとの勝率の差で分ける", t3, ["2・3号艇の低いほう − 1号艇", "レース数", "1号艇の1着", "2・3号艇のどちらかが1着"])],
+        # 物差しの名前は、1号艇が主語になる形に(measure_line は名前に主語があると「勝つのは◯%」と書く。だれが勝つのか分かるように)
+        "measures": [("1号艇の勝率が、2・3号艇のどちらよりも下", m_both, v_both), ("勝率5点台の1号艇で、2・3号艇がどちらも上", m_band, v_band),
+                     ("2・3号艇がどちらも1号艇より上のとき", m23, v23), ("1号艇の勝率が6人中いちばん上", m_top, v_top)],
+        "rules": ["全国勝率は出走表にのっている数字(着順ごとの点数の平均。1着10点・2着8点…)。レースの前に分かる",
+                  "『力の逆転』= 2号艇と3号艇の勝率が、どちらも1号艇より高いレース。6人とも勝率が出ているレースだけで数えた",
+                  "人気とのくらべは、『同じくらい人気を集めた、ほかのレースの艇』と。人気を集めた艇ほど人気どおりに来やすいので、人気の高さがちがう相手とくらべると取りちがえるため"],
+        "faq": [("1号艇の勝率が低いだけでは?", f"それも大きい。だから1号艇の勝率が同じ5点台のレースだけでもくらべた。それでも{_rate_change(m_band['in1'], m_band['in1_ref'])}"),
+                ("2号艇と3号艇、どっちが上だと効く?", f"ほぼ同じ。1号艇が5点台のとき、2号艇だけが上なら{_rate(c5[n_2])}、3号艇だけが上なら{_rate(c5[n_3])}"),
+                ("2・3号艇は人気以上に来る?", pop23.rstrip("。"))],
+        "use": [f"1号艇は、勝率そのものより『2・3号艇とくらべて上か下か』で見る。どちらも上なら、同じ5点台の1号艇でも1着は{_rate(m_band['in1'])}まで下げて考える",
+                f"格上が『どこにいるか』で1号艇の見込みを一段ずつ動かす。5点台の1号艇なら、上がいない{_rate(c5[n_top])}→4〜6号艇にだけ{_rate(c5[n_out])}→2・3号艇がどちらも上{_rate(c5[n_both])}",
+                "人気もそのとおりに動くので、これだけで人気の裏はかけない。2・3号艇のどちらが先に攻めるかを、展示で見て決める"],
+        "mikata": "強い人が『どこにいるか』で、同じ1号艇でも景色が変わる。こういう見方もあるよ",
+        "gen": "格上が2・3号艇にいたらインは苦しい。昔からそうだ。……外にいるのと隣にいるのとで、もう一段違うのか。そこまでは数えてなかったな",
+        "challenge": "今日の出走表で、2号艇と3号艇の全国勝率がどちらも1号艇より上のレースを1つ探す。1号艇が残るか、2・3号艇のどちらが先に攻めるか、展示を見て決めてみて",
+        "numbers": {"share": share, "d_cell": d_cell, "same_pop_1": list(sp1) if sp1 else None, "same_pop_23": list(sp23) if sp23 else None,
+                    "c5": c5, "upset": m_both["upset"], "upset_ref": m_both["upset_ref"]},
+    }
+
+
 def t_season(ent, r):
     """夏はインが弱い? 季節で決まり手は変わる? 展示タイムは?"""
     x = r.copy()
@@ -3046,7 +3195,7 @@ BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in"
             "birthday": t_birthday, "blood": t_blood, "height": t_height, "furusato": t_furusato,
             "pressure": t_pressure, "humid": t_humid, "heat": t_heat,
             "lane6": t_lane6, "motor": t_motor, "entry": t_entry,
-            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season, "penalty": t_penalty, "slowdash": t_slowdash, "formation": t_formation, "samefin": t_samefin, "series": t_series, "fixed": t_fixed, "final": t_final, "saying": t_saying, "suji": t_suji, "night": t_night}
+            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season, "penalty": t_penalty, "slowdash": t_slowdash, "formation": t_formation, "samefin": t_samefin, "series": t_series, "fixed": t_fixed, "final": t_final, "saying": t_saying, "suji": t_suji, "night": t_night, "power": t_power}
 
 
 # ---------------------------------------------------------------- 記事
