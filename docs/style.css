@@ -491,3 +491,7 @@ details.hits .tbl th small{font-weight:400}
 details.why p,details.why ul{font-size:13px;line-height:1.7;color:var(--ink);margin:4px 0}
 details.why ul{padding-left:1.1em}
 .box.intro ul.kinds{margin:0 0 6px;padding-left:1.1em;font-size:13px;line-height:1.7}
+
+.x-goal .gbar{height:10px;border-radius:5px;background:var(--soft);overflow:hidden;margin:6px 0 8px}
+.x-goal .gbar span{display:block;height:100%;background:var(--mark)}
+.x-goal p{margin:4px 0;font-size:14px}

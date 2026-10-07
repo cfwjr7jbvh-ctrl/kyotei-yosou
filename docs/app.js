@@ -1143,12 +1143,41 @@ function uraMeta(it) {
   return (it.stars ? `<b class="ura-stars" title="注目度(買う人・見る人が多そうか)">注目度${esc(it.stars)}</b> ` : "") +
     `${esc(it.venue)} ${hd}〜 ・ 出場${it.n}人 ・ 注目${(it.picks || []).length}人` + pub;
 }
+// フォロワーの目標(2026-10-07 ユーザー「目標数決めていきたい」「最適は?」→ ふつう案。表示100回あたりプロフィールへ約1.3人(実績)・
+// そのうち15%がフォロー(仮。1週間で実績に置きかえる)から逆算。1日の表示は自分たちで動かせる先行の数字)
+const X_GOALS = [
+  { by: "2026-10-13", followers: 10, imp_day: 500, label: "平和島G1の前" },
+  { by: "2026-10-26", followers: 80, imp_day: 3000, label: "ダービーの前" },
+  { by: "2026-10-31", followers: 150, imp_day: 6000, label: "ダービーのあと" },
+  { by: "2026-12-31", followers: 1000, imp_day: 7500, label: "年末" },
+];
+function xGoalHTML(st) {
+  const today = jst().date;
+  const g = X_GOALS.find((x) => x.by >= today);
+  if (!g || st.followers == null) return "";
+  const days = Math.max(1, Math.round((Date.parse(g.by) - Date.parse(today)) / 864e5));
+  const left = Math.max(0, g.followers - st.followers);
+  const byDay = {};
+  for (const p of Object.values(st.posts || {})) {
+    const d = new Date(Date.parse(p.at) + 9 * 3600e3).toISOString().slice(0, 10);
+    byDay[d] = (byDay[d] || 0) + (p.impressions || 0);
+  }
+  const recent = Object.entries(byDay).filter(([d]) => d < today).sort().slice(-7);
+  const imp = recent.length ? Math.round(recent.reduce((n, [, v]) => n + v, 0) / recent.length) : 0;
+  const pct = Math.min(100, Math.round(st.followers / g.followers * 100));
+  return `<div class="ura-sec x-goal"><h3>フォロワーの目標<small> ${+g.by.slice(5, 7)}/${+g.by.slice(8)}(${esc(g.label)})までに${g.followers}人</small></h3>
+    <div class="gbar"><span style="width:${pct}%"></span></div>
+    <p>いま <b>${st.followers}人</b>。あと${left}人(${days}日で、1日${(left / days).toFixed(1)}人)</p>
+    <p>1日の表示 直近${recent.length}日の平均 <b>${imp.toLocaleString()}回</b> → 目標 ${g.imp_day.toLocaleString()}回${imp >= g.imp_day ? "(達成)" : `(いまの${imp ? (g.imp_day / imp).toFixed(0) : "-"}倍)`}</p>
+    <p class="ura-note">その先: ${X_GOALS.filter((x) => x.by > g.by).map((x) => `${+x.by.slice(5, 7)}/${+x.by.slice(8)} ${x.followers}人`).join(" ・ ")}。有料を続けるかの判断は1月上旬(300人未満なら無料で続ける)</p></div>`;
+}
 async function xStatsHTML() {
   let st = null, rep = null;
   try { st = await (await fetch("reports/x_stats.json?t=" + Date.now())).json(); } catch (e) { }
   try { rep = await getJSON("api/data/x_replies.json"); } catch (e) { }
   if (!st && !rep) return "";
   let html = "";
+  if (st) html += xGoalHTML(st);
   if (st && st.by_kind) {
     const rows = Object.entries(st.by_kind).sort((a, b) => b[1].impressions - a[1].impressions).map(([k, v]) =>
       `<tr><td>${esc(k)}</td><td>${v.n}</td><td>${v.impressions}</td><td>${v.react_pct ?? "-"}%</td><td>${v.profile_per_1000 ?? "-"}</td><td>${v.replies}</td><td>${v.votes ?? 0}</td></tr>`).join("");
@@ -1209,7 +1238,7 @@ async function renderUra() {
   const rep = await replyIdeasHTML();
   const bindCopy = () => $$("[data-copy]", box).forEach((b) => b.onclick = () => copyText(b.dataset.copy, b));
   try { URA.index = await getJSON("api/data/ura/index.json"); } catch (e) {
-    box.innerHTML = rep + `<div class="empty">${e instanceof Locked ? "記事の下書きは作り直し中です。しばらくすると見られます。" : "グレードレース(SG・G1)の初日が近づくと、ここに下書きが出ます。"}</div>`;
+    box.innerHTML = rep + await xStatsHTML() + `<div class="empty">${e instanceof Locked ? "記事の下書きは作り直し中です。しばらくすると見られます。" : "グレードレース(SG・G1)の初日が近づくと、ここに下書きが出ます。"}</div>`;
     bindCopy();
     return;
   }
