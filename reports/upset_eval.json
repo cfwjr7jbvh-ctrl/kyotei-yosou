@@ -3,705 +3,705 @@
   "20250128",
   "20261005"
  ],
- "races": 54914,
+ "races": 60666,
  "actual": {
-  "in_lose_rate": 0.4492,
-  "manshu_rate": 0.1649
+  "in_lose_rate": 0.4503,
+  "manshu_rate": 0.1653
  },
  "calibration": {
   "in_lose": [
    {
-    "pred": 0.1741,
-    "actual": 0.157,
-    "n": 5492
+    "pred": 0.1758,
+    "actual": 0.1582,
+    "n": 6067
    },
    {
-    "pred": 0.2391,
-    "actual": 0.2318,
-    "n": 5491
+    "pred": 0.2417,
+    "actual": 0.2344,
+    "n": 6066
    },
    {
-    "pred": 0.2904,
-    "actual": 0.2839,
-    "n": 5491
+    "pred": 0.2932,
+    "actual": 0.2891,
+    "n": 6067
    },
    {
-    "pred": 0.342,
-    "actual": 0.3321,
-    "n": 5492
+    "pred": 0.3442,
+    "actual": 0.3363,
+    "n": 6066
    },
    {
-    "pred": 0.3985,
-    "actual": 0.3959,
-    "n": 5491
+    "pred": 0.3998,
+    "actual": 0.3925,
+    "n": 6067
    },
    {
-    "pred": 0.4614,
-    "actual": 0.4553,
-    "n": 5491
+    "pred": 0.4622,
+    "actual": 0.4581,
+    "n": 6067
    },
    {
-    "pred": 0.5313,
-    "actual": 0.5335,
-    "n": 5492
+    "pred": 0.5314,
+    "actual": 0.5341,
+    "n": 6066
    },
    {
-    "pred": 0.6087,
-    "actual": 0.5979,
-    "n": 5491
+    "pred": 0.6077,
+    "actual": 0.595,
+    "n": 6066
    },
    {
-    "pred": 0.6964,
-    "actual": 0.69,
-    "n": 5491
+    "pred": 0.6947,
+    "actual": 0.6898,
+    "n": 6067
    },
    {
-    "pred": 0.8165,
-    "actual": 0.8143,
-    "n": 5492
+    "pred": 0.8146,
+    "actual": 0.8151,
+    "n": 6067
    }
   ],
   "manshu": [
    {
-    "pred": 0.1015,
-    "actual": 0.0932,
-    "n": 5492
+    "pred": 0.102,
+    "actual": 0.0895,
+    "n": 6067
    },
    {
-    "pred": 0.1246,
-    "actual": 0.1073,
-    "n": 5491
+    "pred": 0.1253,
+    "actual": 0.1106,
+    "n": 6066
    },
    {
-    "pred": 0.1393,
-    "actual": 0.1289,
-    "n": 5491
+    "pred": 0.1403,
+    "actual": 0.1272,
+    "n": 6067
    },
    {
-    "pred": 0.1524,
-    "actual": 0.1326,
-    "n": 5492
+    "pred": 0.1537,
+    "actual": 0.1391,
+    "n": 6066
    },
    {
-    "pred": 0.1649,
-    "actual": 0.1492,
-    "n": 5491
+    "pred": 0.1661,
+    "actual": 0.1493,
+    "n": 6067
    },
    {
-    "pred": 0.1773,
-    "actual": 0.1736,
-    "n": 5491
+    "pred": 0.1786,
+    "actual": 0.1686,
+    "n": 6066
    },
    {
-    "pred": 0.1906,
-    "actual": 0.1886,
-    "n": 5492
+    "pred": 0.192,
+    "actual": 0.1846,
+    "n": 6067
    },
    {
-    "pred": 0.2058,
-    "actual": 0.1952,
-    "n": 5491
+    "pred": 0.2071,
+    "actual": 0.2005,
+    "n": 6066
    },
    {
-    "pred": 0.2258,
-    "actual": 0.2191,
-    "n": 5491
+    "pred": 0.2271,
+    "actual": 0.2207,
+    "n": 6067
    },
    {
-    "pred": 0.2665,
-    "actual": 0.2617,
-    "n": 5492
+    "pred": 0.2673,
+    "actual": 0.2624,
+    "n": 6067
    }
   ],
   "manshu_odds": [
    {
-    "pred": 0.0999,
-    "actual": 0.0847,
-    "n": 5492
+    "pred": 0.101,
+    "actual": 0.0846,
+    "n": 6067
    },
    {
-    "pred": 0.1213,
-    "actual": 0.1036,
-    "n": 5491
+    "pred": 0.1225,
+    "actual": 0.1042,
+    "n": 6066
    },
    {
-    "pred": 0.1348,
-    "actual": 0.1244,
-    "n": 5491
+    "pred": 0.136,
+    "actual": 0.1264,
+    "n": 6067
    },
    {
-    "pred": 0.1466,
-    "actual": 0.1322,
-    "n": 5492
+    "pred": 0.1478,
+    "actual": 0.134,
+    "n": 6066
    },
    {
-    "pred": 0.158,
-    "actual": 0.1543,
-    "n": 5491
+    "pred": 0.1594,
+    "actual": 0.1513,
+    "n": 6067
    },
    {
-    "pred": 0.1698,
-    "actual": 0.1686,
-    "n": 5491
+    "pred": 0.1711,
+    "actual": 0.1698,
+    "n": 6066
    },
    {
-    "pred": 0.1825,
-    "actual": 0.1828,
-    "n": 5492
+    "pred": 0.1838,
+    "actual": 0.1854,
+    "n": 6067
    },
    {
-    "pred": 0.1974,
-    "actual": 0.1965,
-    "n": 5491
+    "pred": 0.1985,
+    "actual": 0.1949,
+    "n": 6066
    },
    {
-    "pred": 0.2175,
-    "actual": 0.2224,
-    "n": 5491
+    "pred": 0.2185,
+    "actual": 0.2228,
+    "n": 6067
    },
    {
-    "pred": 0.2609,
-    "actual": 0.2799,
-    "n": 5492
+    "pred": 0.2617,
+    "actual": 0.2792,
+    "n": 6067
    }
   ]
  },
  "cuts": {
   "in_lose": {
-   "top50": 0.42848466533449636,
-   "top30": 0.5686074971912344,
-   "top20": 0.6510965115334285
+   "top50": 0.4299223631995231,
+   "top30": 0.5682377316160798,
+   "top20": 0.649529150009909
   },
   "manshu": {
-   "top50": 0.17098210322828317,
-   "top30": 0.19785542848586515,
-   "top20": 0.2144449199565865
+   "top50": 0.17234219078616836,
+   "top30": 0.19909145581555934,
+   "top20": 0.2159431228842249
   }
  },
  "top5_all_races": {
   "in_lose": {
    "all": {
-    "races": 54914,
-    "bets": 274570,
-    "hits": 20040,
-    "roi": 0.8195,
-    "profit_yen": -4956520,
+    "races": 60666,
+    "bets": 303330,
+    "hits": 21944,
+    "roi": 0.8145,
+    "profit_yen": -5627240,
     "roi_ci90": [
-     0.8105,
-     0.8285
+     0.8059,
+     0.8233
     ]
    },
    "top50": {
-    "races": 27457,
-    "bets": 137285,
-    "hits": 8002,
-    "roi": 0.8113,
-    "profit_yen": -2590820,
+    "races": 30333,
+    "bets": 151665,
+    "hits": 8785,
+    "roi": 0.8099,
+    "profit_yen": -2883390,
     "roi_ci90": [
-     0.7969,
-     0.8258
+     0.7957,
+     0.8241
     ],
-    "threshold": 0.4285,
+    "threshold": 0.4299,
     "share_races": 0.5,
-    "diff_vs_all": -0.0082,
+    "diff_vs_all": -0.0046,
     "diff_vs_all_ci90": [
-     -0.0174,
-     0.0011
+     -0.0133,
+     0.0043
     ],
-    "p_better_than_all": 0.073,
-    "rest_roi": 0.8277,
+    "p_better_than_all": 0.197,
+    "rest_roi": 0.8191,
     "diff_vs_rest_ci90": [
-     -0.0347,
-     0.0022
+     -0.0267,
+     0.0086
     ]
    },
    "top30": {
-    "races": 16474,
-    "bets": 82370,
-    "hits": 4296,
-    "roi": 0.8122,
-    "profit_yen": -1546810,
+    "races": 18200,
+    "bets": 91000,
+    "hits": 4735,
+    "roi": 0.8118,
+    "profit_yen": -1713020,
     "roi_ci90": [
-     0.7929,
-     0.8327
+     0.7925,
+     0.8312
     ],
-    "threshold": 0.5686,
+    "threshold": 0.5682,
     "share_races": 0.3,
-    "diff_vs_all": -0.0073,
+    "diff_vs_all": -0.0027,
     "diff_vs_all_ci90": [
-     -0.0222,
-     0.0087
+     -0.0176,
+     0.0119
     ],
-    "p_better_than_all": 0.232,
-    "rest_roi": 0.8226,
+    "p_better_than_all": 0.37,
+    "rest_roi": 0.8157,
     "diff_vs_rest_ci90": [
-     -0.0318,
-     0.0125
+     -0.0251,
+     0.017
     ]
    },
    "top20": {
-    "races": 10983,
-    "bets": 54915,
-    "hits": 2729,
-    "roi": 0.8163,
-    "profit_yen": -1008880,
+    "races": 12134,
+    "bets": 60670,
+    "hits": 3005,
+    "roi": 0.8135,
+    "profit_yen": -1131290,
     "roi_ci90": [
-     0.7909,
-     0.8426
+     0.7889,
+     0.8384
     ],
-    "threshold": 0.6511,
+    "threshold": 0.6495,
     "share_races": 0.2,
-    "diff_vs_all": -0.0032,
+    "diff_vs_all": -0.001,
     "diff_vs_all_ci90": [
-     -0.0244,
-     0.0188
+     -0.022,
+     0.02
     ],
-    "p_better_than_all": 0.398,
-    "rest_roi": 0.8203,
+    "p_better_than_all": 0.452,
+    "rest_roi": 0.8147,
     "diff_vs_rest_ci90": [
-     -0.0305,
-     0.0235
+     -0.0275,
+     0.0249
     ]
    }
   },
   "manshu": {
    "all": {
-    "races": 54914,
-    "bets": 274570,
-    "hits": 20040,
-    "roi": 0.8195,
-    "profit_yen": -4956520,
+    "races": 60666,
+    "bets": 303330,
+    "hits": 21944,
+    "roi": 0.8145,
+    "profit_yen": -5627240,
     "roi_ci90": [
-     0.8105,
-     0.8285
+     0.8059,
+     0.8233
     ]
    },
    "top50": {
-    "races": 27457,
-    "bets": 137285,
-    "hits": 8120,
-    "roi": 0.7924,
-    "profit_yen": -2849380,
+    "races": 30333,
+    "bets": 151665,
+    "hits": 8911,
+    "roi": 0.7868,
+    "profit_yen": -3233220,
     "roi_ci90": [
-     0.7777,
-     0.8066
+     0.7731,
+     0.8
     ],
-    "threshold": 0.171,
+    "threshold": 0.1723,
     "share_races": 0.5,
-    "diff_vs_all": -0.0271,
+    "diff_vs_all": -0.0277,
     "diff_vs_all_ci90": [
-     -0.0364,
-     -0.0178
+     -0.0367,
+     -0.019
     ],
     "p_better_than_all": 0.0,
-    "rest_roi": 0.8465,
+    "rest_roi": 0.8422,
     "diff_vs_rest_ci90": [
-     -0.073,
-     -0.0356
+     -0.0733,
+     -0.038
     ]
    },
    "top30": {
-    "races": 16474,
-    "bets": 82370,
-    "hits": 4417,
-    "roi": 0.7846,
-    "profit_yen": -1774240,
+    "races": 18200,
+    "bets": 91000,
+    "hits": 4805,
+    "roi": 0.7737,
+    "profit_yen": -2059760,
     "roi_ci90": [
-     0.7648,
-     0.804
+     0.7555,
+     0.7917
     ],
-    "threshold": 0.1979,
+    "threshold": 0.1991,
     "share_races": 0.3,
-    "diff_vs_all": -0.0349,
+    "diff_vs_all": -0.0408,
     "diff_vs_all_ci90": [
-     -0.0504,
-     -0.0196
+     -0.0553,
+     -0.0259
     ],
     "p_better_than_all": 0.0,
-    "rest_roi": 0.8344,
+    "rest_roi": 0.832,
     "diff_vs_rest_ci90": [
-     -0.072,
-     -0.0281
+     -0.0791,
+     -0.0371
     ]
    },
    "top20": {
-    "races": 10983,
-    "bets": 54915,
-    "hits": 2750,
-    "roi": 0.7773,
-    "profit_yen": -1222770,
+    "races": 12134,
+    "bets": 60670,
+    "hits": 2974,
+    "roi": 0.7633,
+    "profit_yen": -1436290,
     "roi_ci90": [
-     0.7536,
-     0.801
+     0.7413,
+     0.7865
     ],
-    "threshold": 0.2144,
+    "threshold": 0.2159,
     "share_races": 0.2,
-    "diff_vs_all": -0.0422,
+    "diff_vs_all": -0.0512,
     "diff_vs_all_ci90": [
-     -0.0626,
-     -0.0218
+     -0.0707,
+     -0.0313
     ],
     "p_better_than_all": 0.0,
-    "rest_roi": 0.83,
+    "rest_roi": 0.8273,
     "diff_vs_rest_ci90": [
-     -0.0783,
-     -0.0272
+     -0.0884,
+     -0.0392
     ]
    }
   }
  },
- "odds_races": 54914,
+ "odds_races": 60666,
  "cuts_odds": {
   "manshu_odds": {
-   "top50": 0.16386886847734905,
-   "top30": 0.18930999973897691,
-   "top20": 0.20617845989423364
+   "top50": 0.1652076047775402,
+   "top30": 0.19060776173157412,
+   "top20": 0.20712484495901584
   },
   "in_lose_market": {
-   "top50": 0.4465842237507806,
-   "top30": 0.5750344330264652,
-   "top20": 0.6540592598742372
+   "top50": 0.4476910689001024,
+   "top30": 0.57522431190912,
+   "top20": 0.6544718684491555
   }
  },
  "ev_odds_races": {
   "model_ev100": {
    "in_lose": {
     "all": {
-     "races": 54728,
-     "bets": 252236,
-     "hits": 4702,
-     "roi": 0.8487,
-     "profit_yen": -3815770,
+     "races": 60445,
+     "bets": 278183,
+     "hits": 5132,
+     "roi": 0.8428,
+     "profit_yen": -4374370,
      "roi_ci90": [
-      0.8239,
-      0.8747
+      0.818,
+      0.8679
      ]
     },
     "top50": {
-     "races": 27409,
-     "bets": 131368,
-     "hits": 2025,
-     "roi": 0.8544,
-     "profit_yen": -1912120,
+     "races": 30281,
+     "bets": 144871,
+     "hits": 2230,
+     "roi": 0.8515,
+     "profit_yen": -2151740,
      "roi_ci90": [
-      0.8189,
-      0.8921
+      0.8143,
+      0.8857
      ],
-     "threshold": 0.4285,
+     "threshold": 0.4299,
      "share_races": 0.5,
-     "diff_vs_all": 0.0057,
+     "diff_vs_all": 0.0087,
      "diff_vs_all_ci90": [
-      -0.0173,
-      0.0295
+      -0.016,
+      0.0305
      ],
-     "p_better_than_all": 0.659,
-     "rest_roi": 0.8425,
+     "p_better_than_all": 0.714,
+     "rest_roi": 0.8333,
      "diff_vs_rest_ci90": [
-      -0.0359,
-      0.0618
+      -0.0334,
+      0.0635
      ]
     },
     "top30": {
-     "races": 16449,
-     "bets": 79860,
-     "hits": 1145,
-     "roi": 0.826,
-     "profit_yen": -1389760,
+     "races": 18179,
+     "bets": 88176,
+     "hits": 1252,
+     "roi": 0.8209,
+     "profit_yen": -1579670,
      "roi_ci90": [
-      0.779,
-      0.8732
+      0.7747,
+      0.8655
      ],
-     "threshold": 0.5686,
+     "threshold": 0.5682,
      "share_races": 0.3,
-     "diff_vs_all": -0.0227,
+     "diff_vs_all": -0.0219,
      "diff_vs_all_ci90": [
-      -0.0606,
-      0.0139
+      -0.0587,
+      0.0123
      ],
-     "p_better_than_all": 0.171,
-     "rest_roi": 0.8593,
+     "p_better_than_all": 0.151,
+     "rest_roi": 0.8529,
      "diff_vs_rest_ci90": [
-      -0.0886,
-      0.0204
+      -0.0862,
+      0.0181
      ]
     },
     "top20": {
-     "races": 10971,
-     "bets": 53558,
-     "hits": 783,
-     "roi": 0.85,
-     "profit_yen": -803220,
+     "races": 12122,
+     "bets": 59104,
+     "hits": 839,
+     "roi": 0.8258,
+     "profit_yen": -1029410,
      "roi_ci90": [
-      0.7922,
-      0.9086
+      0.7693,
+      0.8802
      ],
-     "threshold": 0.6511,
+     "threshold": 0.6495,
      "share_races": 0.2,
-     "diff_vs_all": 0.0013,
+     "diff_vs_all": -0.017,
      "diff_vs_all_ci90": [
-      -0.0503,
-      0.0522
+      -0.066,
+      0.03
      ],
-     "p_better_than_all": 0.514,
-     "rest_roi": 0.8484,
+     "p_better_than_all": 0.265,
+     "rest_roi": 0.8473,
      "diff_vs_rest_ci90": [
-      -0.0637,
-      0.0665
+      -0.0839,
+      0.0382
      ]
     }
    },
    "manshu": {
     "all": {
-     "races": 54728,
-     "bets": 252236,
-     "hits": 4702,
-     "roi": 0.8487,
-     "profit_yen": -3815770,
+     "races": 60445,
+     "bets": 278183,
+     "hits": 5132,
+     "roi": 0.8428,
+     "profit_yen": -4374370,
      "roi_ci90": [
-      0.8239,
-      0.8747
+      0.818,
+      0.8679
      ]
     },
     "top50": {
-     "races": 27375,
-     "bets": 128822,
-     "hits": 1976,
-     "roi": 0.8625,
-     "profit_yen": -1771050,
+     "races": 30229,
+     "bets": 141919,
+     "hits": 2141,
+     "roi": 0.8467,
+     "profit_yen": -2176160,
      "roi_ci90": [
-      0.8249,
-      0.9007
+      0.8096,
+      0.8849
      ],
-     "threshold": 0.171,
+     "threshold": 0.1723,
      "share_races": 0.5,
-     "diff_vs_all": 0.0138,
+     "diff_vs_all": 0.0039,
      "diff_vs_all_ci90": [
-      -0.0121,
-      0.0381
+      -0.0198,
+      0.0275
      ],
-     "p_better_than_all": 0.826,
-     "rest_roi": 0.8343,
+     "p_better_than_all": 0.589,
+     "rest_roi": 0.8387,
      "diff_vs_rest_ci90": [
-      -0.0247,
-      0.0776
+      -0.0403,
+      0.0564
      ]
     },
     "top30": {
-     "races": 16428,
-     "bets": 77617,
-     "hits": 1100,
-     "roi": 0.8623,
-     "profit_yen": -1069030,
+     "races": 18139,
+     "bets": 85576,
+     "hits": 1191,
+     "roi": 0.8515,
+     "profit_yen": -1270860,
      "roi_ci90": [
-      0.8124,
-      0.9109
+      0.8028,
+      0.899
      ],
-     "threshold": 0.1979,
+     "threshold": 0.1991,
      "share_races": 0.3,
-     "diff_vs_all": 0.0136,
+     "diff_vs_all": 0.0087,
      "diff_vs_all_ci90": [
-      -0.0253,
-      0.0531
+      -0.0294,
+      0.0454
      ],
-     "p_better_than_all": 0.711,
-     "rest_roi": 0.8427,
+     "p_better_than_all": 0.614,
+     "rest_roi": 0.8389,
      "diff_vs_rest_ci90": [
-      -0.0366,
-      0.0766
+      -0.0425,
+      0.0657
      ]
     },
     "top20": {
-     "races": 10952,
-     "bets": 51897,
-     "hits": 693,
-     "roi": 0.8639,
-     "profit_yen": -706390,
+     "races": 12089,
+     "bets": 57177,
+     "hits": 762,
+     "roi": 0.8609,
+     "profit_yen": -795490,
      "roi_ci90": [
-      0.8022,
-      0.9235
+      0.8025,
+      0.9217
      ],
-     "threshold": 0.2144,
+     "threshold": 0.2159,
      "share_races": 0.2,
-     "diff_vs_all": 0.0152,
+     "diff_vs_all": 0.0181,
      "diff_vs_all_ci90": [
-      -0.0383,
-      0.0674
+      -0.032,
+      0.0683
      ],
-     "p_better_than_all": 0.666,
-     "rest_roi": 0.8448,
+     "p_better_than_all": 0.698,
+     "rest_roi": 0.8381,
      "diff_vs_rest_ci90": [
-      -0.0483,
-      0.0849
+      -0.0404,
+      0.0859
      ]
     }
    },
    "manshu_odds": {
     "all": {
-     "races": 54728,
-     "bets": 252236,
-     "hits": 4702,
-     "roi": 0.8487,
-     "profit_yen": -3815770,
+     "races": 60445,
+     "bets": 278183,
+     "hits": 5132,
+     "roi": 0.8428,
+     "profit_yen": -4374370,
      "roi_ci90": [
-      0.8239,
-      0.8747
+      0.818,
+      0.8679
      ]
     },
     "top50": {
-     "races": 27400,
-     "bets": 130389,
-     "hits": 1958,
-     "roi": 0.8564,
-     "profit_yen": -1872930,
+     "races": 30265,
+     "bets": 143679,
+     "hits": 2140,
+     "roi": 0.8514,
+     "profit_yen": -2135540,
      "roi_ci90": [
-      0.8185,
-      0.895
+      0.8143,
+      0.8884
      ],
-     "threshold": 0.1639,
+     "threshold": 0.1652,
      "share_races": 0.5,
-     "diff_vs_all": 0.0077,
+     "diff_vs_all": 0.0086,
      "diff_vs_all_ci90": [
-      -0.018,
-      0.0311
+      -0.015,
+      0.0313
      ],
-     "p_better_than_all": 0.707,
-     "rest_roi": 0.8406,
+     "p_better_than_all": 0.719,
+     "rest_roi": 0.8335,
      "diff_vs_rest_ci90": [
-      -0.0371,
-      0.0643
+      -0.0308,
+      0.0645
      ]
     },
     "top30": {
-     "races": 16443,
-     "bets": 79052,
-     "hits": 1088,
-     "roi": 0.871,
-     "profit_yen": -1019400,
+     "races": 18160,
+     "bets": 87057,
+     "hits": 1183,
+     "roi": 0.8603,
+     "profit_yen": -1216430,
      "roi_ci90": [
-      0.8209,
-      0.9224
+      0.8125,
+      0.9084
      ],
-     "threshold": 0.1893,
+     "threshold": 0.1906,
      "share_races": 0.3,
-     "diff_vs_all": 0.0223,
+     "diff_vs_all": 0.0175,
      "diff_vs_all_ci90": [
-      -0.0166,
-      0.0622
+      -0.0216,
+      0.0554
      ],
-     "p_better_than_all": 0.827,
-     "rest_roi": 0.8385,
+     "p_better_than_all": 0.758,
+     "rest_roi": 0.8348,
      "diff_vs_rest_ci90": [
-      -0.0242,
-      0.0905
+      -0.0314,
+      0.0804
      ]
     },
     "top20": {
-     "races": 10965,
-     "bets": 53037,
-     "hits": 690,
-     "roi": 0.8825,
-     "profit_yen": -623220,
+     "races": 12111,
+     "bets": 58418,
+     "hits": 737,
+     "roi": 0.8632,
+     "profit_yen": -798980,
      "roi_ci90": [
-      0.8215,
-      0.9444
+      0.8027,
+      0.9242
      ],
-     "threshold": 0.2062,
+     "threshold": 0.2071,
      "share_races": 0.2,
-     "diff_vs_all": 0.0338,
+     "diff_vs_all": 0.0204,
      "diff_vs_all_ci90": [
-      -0.0191,
-      0.0869
+      -0.0318,
+      0.0727
      ],
-     "p_better_than_all": 0.847,
-     "rest_roi": 0.8397,
+     "p_better_than_all": 0.727,
+     "rest_roi": 0.8373,
      "diff_vs_rest_ci90": [
-      -0.0241,
-      0.1101
+      -0.0401,
+      0.0921
      ]
     }
    },
    "in_lose_market": {
     "all": {
-     "races": 54728,
-     "bets": 252236,
-     "hits": 4702,
-     "roi": 0.8487,
-     "profit_yen": -3815770,
+     "races": 60445,
+     "bets": 278183,
+     "hits": 5132,
+     "roi": 0.8428,
+     "profit_yen": -4374370,
      "roi_ci90": [
-      0.8239,
-      0.8747
+      0.818,
+      0.8679
      ]
     },
     "top50": {
-     "races": 27408,
-     "bets": 131413,
-     "hits": 2134,
-     "roi": 0.8477,
-     "profit_yen": -2001610,
+     "races": 30282,
+     "bets": 145000,
+     "hits": 2364,
+     "roi": 0.8493,
+     "profit_yen": -2185350,
      "roi_ci90": [
-      0.8128,
-      0.8851
+      0.8125,
+      0.8844
      ],
-     "threshold": 0.4466,
+     "threshold": 0.4477,
      "share_races": 0.5,
-     "diff_vs_all": -0.001,
+     "diff_vs_all": 0.0065,
      "diff_vs_all_ci90": [
-      -0.0237,
-      0.024
+      -0.0166,
+      0.029
      ],
-     "p_better_than_all": 0.49,
-     "rest_roi": 0.8498,
+     "p_better_than_all": 0.663,
+     "rest_roi": 0.8356,
      "diff_vs_rest_ci90": [
-      -0.0496,
-      0.0499
+      -0.0345,
+      0.0609
      ]
     },
     "top30": {
-     "races": 16453,
-     "bets": 79809,
-     "hits": 1210,
-     "roi": 0.8148,
-     "profit_yen": -1477720,
+     "races": 18182,
+     "bets": 88144,
+     "hits": 1329,
+     "roi": 0.8084,
+     "profit_yen": -1688860,
      "roi_ci90": [
-      0.7703,
-      0.8616
+      0.7632,
+      0.8529
      ],
-     "threshold": 0.575,
+     "threshold": 0.5752,
      "share_races": 0.3,
-     "diff_vs_all": -0.0339,
+     "diff_vs_all": -0.0344,
      "diff_vs_all_ci90": [
       -0.0693,
-      0.0033
+      0.0004
      ],
-     "p_better_than_all": 0.07,
-     "rest_roi": 0.8644,
+     "p_better_than_all": 0.052,
+     "rest_roi": 0.8587,
      "diff_vs_rest_ci90": [
-      -0.1014,
-      0.0048
+      -0.1013,
+      0.0006
      ]
     },
     "top20": {
-     "races": 10971,
-     "bets": 53479,
-     "hits": 804,
-     "roi": 0.8249,
-     "profit_yen": -936220,
+     "races": 12122,
+     "bets": 59051,
+     "hits": 877,
+     "roi": 0.8122,
+     "profit_yen": -1109100,
      "roi_ci90": [
-      0.7677,
-      0.881
+      0.7597,
+      0.8664
      ],
-     "threshold": 0.6541,
+     "threshold": 0.6545,
      "share_races": 0.2,
-     "diff_vs_all": -0.0238,
+     "diff_vs_all": -0.0306,
      "diff_vs_all_ci90": [
-      -0.0744,
-      0.0255
+      -0.0764,
+      0.0138
      ],
-     "p_better_than_all": 0.209,
-     "rest_roi": 0.8551,
+     "p_better_than_all": 0.13,
+     "rest_roi": 0.851,
      "diff_vs_rest_ci90": [
-      -0.0944,
-      0.0323
+      -0.0969,
+      0.0176
      ]
     }
    }
@@ -709,341 +709,341 @@
   "model_ev120": {
    "in_lose": {
     "all": {
-     "races": 50237,
-     "bets": 172747,
-     "hits": 2544,
-     "roi": 0.8466,
-     "profit_yen": -2649620,
+     "races": 55269,
+     "bets": 189245,
+     "hits": 2780,
+     "roi": 0.8399,
+     "profit_yen": -3029720,
      "roi_ci90": [
-      0.8144,
-      0.8802
+      0.8084,
+      0.8728
      ]
     },
     "top50": {
-     "races": 25836,
-     "bets": 97514,
-     "hits": 1274,
-     "roi": 0.8589,
-     "profit_yen": -1375620,
+     "races": 28389,
+     "bets": 106679,
+     "hits": 1393,
+     "roi": 0.8564,
+     "profit_yen": -1531480,
      "roi_ci90": [
-      0.8144,
-      0.9036
+      0.8117,
+      0.9009
      ],
-     "threshold": 0.4285,
+     "threshold": 0.4299,
      "share_races": 0.5,
-     "diff_vs_all": 0.0123,
+     "diff_vs_all": 0.0165,
      "diff_vs_all_ci90": [
-      -0.016,
-      0.0413
+      -0.0122,
+      0.0419
      ],
-     "p_better_than_all": 0.765,
-     "rest_roi": 0.8307,
+     "p_better_than_all": 0.832,
+     "rest_roi": 0.8185,
      "diff_vs_rest_ci90": [
-      -0.0366,
-      0.0946
+      -0.0279,
+      0.0961
      ]
     },
     "top30": {
-     "races": 15669,
-     "bets": 61576,
-     "hits": 762,
-     "roi": 0.8311,
-     "profit_yen": -1039780,
+     "races": 17257,
+     "bets": 67425,
+     "hits": 827,
+     "roi": 0.8294,
+     "profit_yen": -1150310,
      "roi_ci90": [
-      0.7755,
-      0.8882
+      0.7725,
+      0.8836
      ],
-     "threshold": 0.5686,
+     "threshold": 0.5682,
      "share_races": 0.3,
-     "diff_vs_all": -0.0155,
+     "diff_vs_all": -0.0105,
      "diff_vs_all_ci90": [
-      -0.061,
-      0.0285
+      -0.0549,
+      0.0286
      ],
-     "p_better_than_all": 0.285,
-     "rest_roi": 0.8552,
+     "p_better_than_all": 0.332,
+     "rest_roi": 0.8457,
      "diff_vs_rest_ci90": [
-      -0.0946,
-      0.0442
+      -0.0855,
+      0.0443
      ]
     },
     "top20": {
-     "races": 10499,
-     "bets": 41979,
-     "hits": 538,
-     "roi": 0.8615,
-     "profit_yen": -581560,
+     "races": 11570,
+     "bets": 45957,
+     "hits": 574,
+     "roi": 0.8466,
+     "profit_yen": -705170,
      "roi_ci90": [
-      0.7941,
-      0.9324
+      0.7774,
+      0.9144
      ],
-     "threshold": 0.6511,
+     "threshold": 0.6495,
      "share_races": 0.2,
-     "diff_vs_all": 0.0149,
+     "diff_vs_all": 0.0067,
      "diff_vs_all_ci90": [
-      -0.047,
-      0.074
+      -0.0533,
+      0.0625
      ],
-     "p_better_than_all": 0.65,
-     "rest_roi": 0.8419,
+     "p_better_than_all": 0.555,
+     "rest_roi": 0.8378,
      "diff_vs_rest_ci90": [
-      -0.0622,
-      0.0977
+      -0.0703,
+      0.0826
      ]
     }
    },
    "manshu": {
     "all": {
-     "races": 50237,
-     "bets": 172747,
-     "hits": 2544,
-     "roi": 0.8466,
-     "profit_yen": -2649620,
+     "races": 55269,
+     "bets": 189245,
+     "hits": 2780,
+     "roi": 0.8399,
+     "profit_yen": -3029720,
      "roi_ci90": [
-      0.8144,
-      0.8802
+      0.8084,
+      0.8728
      ]
     },
     "top50": {
-     "races": 25506,
-     "bets": 92269,
-     "hits": 1176,
-     "roi": 0.8608,
-     "profit_yen": -1284060,
+     "races": 28062,
+     "bets": 100969,
+     "hits": 1273,
+     "roi": 0.8426,
+     "profit_yen": -1589400,
      "roi_ci90": [
-      0.8133,
-      0.9084
+      0.7962,
+      0.8881
      ],
-     "threshold": 0.171,
+     "threshold": 0.1723,
      "share_races": 0.5,
-     "diff_vs_all": 0.0142,
+     "diff_vs_all": 0.0027,
      "diff_vs_all_ci90": [
-      -0.0168,
-      0.0444
+      -0.0273,
+      0.0319
      ],
-     "p_better_than_all": 0.775,
-     "rest_roi": 0.8303,
+     "p_better_than_all": 0.537,
+     "rest_roi": 0.8368,
      "diff_vs_rest_ci90": [
-      -0.036,
-      0.095
+      -0.0584,
+      0.0682
      ]
     },
     "top30": {
-     "races": 15368,
-     "bets": 56523,
-     "hits": 689,
-     "roi": 0.8741,
-     "profit_yen": -711840,
+     "races": 16904,
+     "bets": 62011,
+     "hits": 751,
+     "roi": 0.8692,
+     "profit_yen": -811090,
      "roi_ci90": [
-      0.8122,
-      0.9359
+      0.8104,
+      0.927
      ],
-     "threshold": 0.1979,
+     "threshold": 0.1991,
      "share_races": 0.3,
-     "diff_vs_all": 0.0275,
+     "diff_vs_all": 0.0293,
      "diff_vs_all_ci90": [
-      -0.0208,
-      0.0762
+      -0.0185,
+      0.0755
      ],
-     "p_better_than_all": 0.823,
-     "rest_roi": 0.8333,
+     "p_better_than_all": 0.838,
+     "rest_roi": 0.8256,
      "diff_vs_rest_ci90": [
-      -0.0309,
-      0.1131
+      -0.0276,
+      0.1126
      ]
     },
     "top20": {
-     "races": 10267,
-     "bets": 38293,
-     "hits": 454,
-     "roi": 0.8923,
-     "profit_yen": -412400,
+     "races": 11312,
+     "bets": 41982,
+     "hits": 499,
+     "roi": 0.8941,
+     "profit_yen": -444540,
      "roi_ci90": [
-      0.8147,
-      0.9673
+      0.8201,
+      0.9694
      ],
-     "threshold": 0.2144,
+     "threshold": 0.2159,
      "share_races": 0.2,
-     "diff_vs_all": 0.0457,
+     "diff_vs_all": 0.0542,
      "diff_vs_all_ci90": [
-      -0.0207,
-      0.1115
+      -0.0096,
+      0.1184
      ],
-     "p_better_than_all": 0.873,
-     "rest_roi": 0.8336,
+     "p_better_than_all": 0.921,
+     "rest_roi": 0.8245,
      "diff_vs_rest_ci90": [
-      -0.0266,
-      0.143
+      -0.0124,
+      0.1515
      ]
     }
    },
    "manshu_odds": {
     "all": {
-     "races": 50237,
-     "bets": 172747,
-     "hits": 2544,
-     "roi": 0.8466,
-     "profit_yen": -2649620,
+     "races": 55269,
+     "bets": 189245,
+     "hits": 2780,
+     "roi": 0.8399,
+     "profit_yen": -3029720,
      "roi_ci90": [
-      0.8144,
-      0.8802
+      0.8084,
+      0.8728
      ]
     },
     "top50": {
-     "races": 25823,
-     "bets": 96668,
-     "hits": 1219,
-     "roi": 0.8475,
-     "profit_yen": -1474040,
+     "races": 28404,
+     "bets": 105787,
+     "hits": 1344,
+     "roi": 0.8487,
+     "profit_yen": -1600710,
      "roi_ci90": [
-      0.803,
-      0.8944
+      0.8024,
+      0.8929
      ],
-     "threshold": 0.1639,
+     "threshold": 0.1652,
      "share_races": 0.5,
-     "diff_vs_all": 0.0009,
+     "diff_vs_all": 0.0088,
      "diff_vs_all_ci90": [
-      -0.0283,
-      0.0295
+      -0.0196,
+      0.0338
      ],
-     "p_better_than_all": 0.531,
-     "rest_roi": 0.8455,
+     "p_better_than_all": 0.68,
+     "rest_roi": 0.8288,
      "diff_vs_rest_ci90": [
-      -0.0643,
-      0.0669
+      -0.0445,
+      0.0768
      ]
     },
     "top30": {
-     "races": 15648,
-     "bets": 60762,
-     "hits": 729,
-     "roi": 0.8782,
-     "profit_yen": -740170,
+     "races": 17223,
+     "bets": 66644,
+     "hits": 793,
+     "roi": 0.8663,
+     "profit_yen": -891350,
      "roi_ci90": [
-      0.8196,
-      0.9377
+      0.8074,
+      0.9242
      ],
-     "threshold": 0.1893,
+     "threshold": 0.1906,
      "share_races": 0.3,
-     "diff_vs_all": 0.0316,
+     "diff_vs_all": 0.0264,
      "diff_vs_all_ci90": [
-      -0.0146,
-      0.0773
+      -0.0193,
+      0.0724
      ],
-     "p_better_than_all": 0.875,
-     "rest_roi": 0.8295,
+     "p_better_than_all": 0.817,
+     "rest_roi": 0.8256,
      "diff_vs_rest_ci90": [
-      -0.0226,
-      0.1196
+      -0.0297,
+      0.112
      ]
     },
     "top20": {
-     "races": 10490,
-     "bets": 41913,
-     "hits": 486,
-     "roi": 0.8946,
-     "profit_yen": -441800,
+     "races": 11560,
+     "bets": 45879,
+     "hits": 516,
+     "roi": 0.8741,
+     "profit_yen": -577470,
      "roi_ci90": [
-      0.82,
-      0.9679
+      0.8033,
+      0.9482
      ],
-     "threshold": 0.2062,
+     "threshold": 0.2071,
      "share_races": 0.2,
-     "diff_vs_all": 0.048,
+     "diff_vs_all": 0.0342,
      "diff_vs_all_ci90": [
-      -0.0157,
-      0.11
+      -0.0263,
+      0.096
      ],
-     "p_better_than_all": 0.897,
-     "rest_roi": 0.8313,
+     "p_better_than_all": 0.803,
+     "rest_roi": 0.829,
      "diff_vs_rest_ci90": [
-      -0.0207,
-      0.1453
+      -0.0347,
+      0.1267
      ]
     }
    },
    "in_lose_market": {
     "all": {
-     "races": 50237,
-     "bets": 172747,
-     "hits": 2544,
-     "roi": 0.8466,
-     "profit_yen": -2649620,
+     "races": 55269,
+     "bets": 189245,
+     "hits": 2780,
+     "roi": 0.8399,
+     "profit_yen": -3029720,
      "roi_ci90": [
-      0.8144,
-      0.8802
+      0.8084,
+      0.8728
      ]
     },
     "top50": {
-     "races": 25816,
-     "bets": 97025,
-     "hits": 1322,
-     "roi": 0.8527,
-     "profit_yen": -1428980,
+     "races": 28374,
+     "bets": 106242,
+     "hits": 1458,
+     "roi": 0.8534,
+     "profit_yen": -1557290,
      "roi_ci90": [
-      0.808,
-      0.897
+      0.8097,
+      0.8962
      ],
-     "threshold": 0.4466,
+     "threshold": 0.4477,
      "share_races": 0.5,
-     "diff_vs_all": 0.0061,
+     "diff_vs_all": 0.0135,
      "diff_vs_all_ci90": [
-      -0.0229,
-      0.0349
+      -0.0145,
+      0.0403
      ],
-     "p_better_than_all": 0.638,
-     "rest_roi": 0.8388,
+     "p_better_than_all": 0.786,
+     "rest_roi": 0.8226,
      "diff_vs_rest_ci90": [
-      -0.0523,
-      0.0799
+      -0.0331,
+      0.0922
      ]
     },
     "top30": {
-     "races": 15642,
-     "bets": 60793,
-     "hits": 790,
-     "roi": 0.8182,
-     "profit_yen": -1105050,
+     "races": 17218,
+     "bets": 66564,
+     "hits": 855,
+     "roi": 0.8121,
+     "profit_yen": -1250920,
      "roi_ci90": [
-      0.7649,
-      0.8729
+      0.7578,
+      0.865
      ],
-     "threshold": 0.575,
+     "threshold": 0.5752,
      "share_races": 0.3,
-     "diff_vs_all": -0.0284,
+     "diff_vs_all": -0.0278,
      "diff_vs_all_ci90": [
-      -0.0729,
-      0.0165
+      -0.0712,
+      0.0131
      ],
-     "p_better_than_all": 0.134,
-     "rest_roi": 0.862,
+     "p_better_than_all": 0.128,
+     "rest_roi": 0.855,
      "diff_vs_rest_ci90": [
-      -0.1125,
-      0.0255
+      -0.1098,
+      0.0203
      ]
     },
     "top20": {
-     "races": 10470,
-     "bets": 41321,
-     "hits": 553,
-     "roi": 0.8438,
-     "profit_yen": -645320,
+     "races": 11530,
+     "bets": 45254,
+     "hits": 597,
+     "roi": 0.8326,
+     "profit_yen": -757350,
      "roi_ci90": [
-      0.7752,
-      0.9096
+      0.769,
+      0.8966
      ],
-     "threshold": 0.6541,
+     "threshold": 0.6545,
      "share_races": 0.2,
-     "diff_vs_all": -0.0028,
+     "diff_vs_all": -0.0073,
      "diff_vs_all_ci90": [
-      -0.0635,
-      0.0563
+      -0.0658,
+      0.045
      ],
-     "p_better_than_all": 0.454,
-     "rest_roi": 0.8475,
+     "p_better_than_all": 0.402,
+     "rest_roi": 0.8422,
      "diff_vs_rest_ci90": [
-      -0.0836,
-      0.0741
+      -0.0865,
+      0.0591
      ]
     }
    }
@@ -1051,341 +1051,341 @@
   "blend_ev100": {
    "in_lose": {
     "all": {
-     "races": 12851,
-     "bets": 23263,
-     "hits": 566,
-     "roi": 0.8437,
-     "profit_yen": -363610,
+     "races": 13349,
+     "bets": 23947,
+     "hits": 587,
+     "roi": 0.8754,
+     "profit_yen": -298370,
      "roi_ci90": [
-      0.7707,
-      0.9184
+      0.8067,
+      0.9493
      ]
     },
     "top50": {
-     "races": 7992,
-     "bets": 15200,
-     "hits": 305,
-     "roi": 0.8775,
-     "profit_yen": -186210,
+     "races": 8323,
+     "bets": 15584,
+     "hits": 325,
+     "roi": 0.934,
+     "profit_yen": -102920,
      "roi_ci90": [
-      0.7847,
-      0.9743
+      0.8382,
+      1.0301
      ],
-     "threshold": 0.4285,
+     "threshold": 0.4299,
      "share_races": 0.5,
-     "diff_vs_all": 0.0338,
+     "diff_vs_all": 0.0586,
      "diff_vs_all_ci90": [
-      -0.0108,
-      0.0823
+      0.0108,
+      0.1054
      ],
-     "p_better_than_all": 0.893,
-     "rest_roi": 0.78,
+     "p_better_than_all": 0.978,
+     "rest_roi": 0.7663,
      "diff_vs_rest_ci90": [
-      -0.0307,
-      0.238
+      0.0315,
+      0.3027
      ]
     },
     "top30": {
-     "races": 5450,
-     "bets": 10593,
-     "hits": 179,
-     "roi": 0.7881,
-     "profit_yen": -224500,
+     "races": 5678,
+     "bets": 10789,
+     "hits": 192,
+     "roi": 0.8256,
+     "profit_yen": -188210,
      "roi_ci90": [
-      0.6808,
-      0.8985
+      0.7185,
+      0.9362
      ],
-     "threshold": 0.5686,
+     "threshold": 0.5682,
      "share_races": 0.3,
-     "diff_vs_all": -0.0556,
+     "diff_vs_all": -0.0498,
      "diff_vs_all_ci90": [
-      -0.1359,
-      0.0278
+      -0.1289,
+      0.0305
      ],
-     "p_better_than_all": 0.123,
-     "rest_roi": 0.8902,
+     "p_better_than_all": 0.157,
+     "rest_roi": 0.9163,
      "diff_vs_rest_ci90": [
-      -0.2494,
-      0.0517
+      -0.2348,
+      0.0549
      ]
     },
     "top20": {
-     "races": 4027,
-     "bets": 7916,
-     "hits": 135,
-     "roi": 0.8261,
-     "profit_yen": -137660,
+     "races": 4189,
+     "bets": 8060,
+     "hits": 141,
+     "roi": 0.8523,
+     "profit_yen": -119030,
      "roi_ci90": [
-      0.6948,
-      0.9619
+      0.725,
+      0.9913
      ],
-     "threshold": 0.6511,
+     "threshold": 0.6495,
      "share_races": 0.2,
-     "diff_vs_all": -0.0176,
+     "diff_vs_all": -0.0231,
      "diff_vs_all_ci90": [
-      -0.1201,
-      0.0918
+      -0.1269,
+      0.0883
      ],
-     "p_better_than_all": 0.392,
-     "rest_roi": 0.8528,
+     "p_better_than_all": 0.356,
+     "rest_roi": 0.8871,
      "diff_vs_rest_ci90": [
-      -0.1828,
-      0.1394
+      -0.1915,
+      0.1331
      ]
     }
    },
    "manshu": {
     "all": {
-     "races": 12851,
-     "bets": 23263,
-     "hits": 566,
-     "roi": 0.8437,
-     "profit_yen": -363610,
+     "races": 13349,
+     "bets": 23947,
+     "hits": 587,
+     "roi": 0.8754,
+     "profit_yen": -298370,
      "roi_ci90": [
-      0.7707,
-      0.9184
+      0.8067,
+      0.9493
      ]
     },
     "top50": {
-     "races": 7203,
-     "bets": 13439,
-     "hits": 283,
-     "roi": 0.8484,
-     "profit_yen": -203800,
+     "races": 7520,
+     "bets": 13910,
+     "hits": 285,
+     "roi": 0.8416,
+     "profit_yen": -220360,
      "roi_ci90": [
-      0.754,
-      0.9512
+      0.7484,
+      0.9357
      ],
-     "threshold": 0.171,
+     "threshold": 0.1723,
      "share_races": 0.5,
-     "diff_vs_all": 0.0047,
+     "diff_vs_all": -0.0338,
      "diff_vs_all_ci90": [
-      -0.0548,
-      0.0698
+      -0.0938,
+      0.0226
      ],
-     "p_better_than_all": 0.564,
-     "rest_roi": 0.8373,
+     "p_better_than_all": 0.175,
+     "rest_roi": 0.9223,
      "diff_vs_rest_ci90": [
-      -0.1286,
-      0.166
+      -0.2261,
+      0.0535
      ]
     },
     "top30": {
-     "races": 4484,
-     "bets": 8694,
-     "hits": 157,
-     "roi": 0.8003,
-     "profit_yen": -173620,
+     "races": 4714,
+     "bets": 8982,
+     "hits": 167,
+     "roi": 0.8435,
+     "profit_yen": -140540,
      "roi_ci90": [
-      0.6854,
-      0.9283
+      0.7233,
+      0.9648
      ],
-     "threshold": 0.1979,
+     "threshold": 0.1991,
      "share_races": 0.3,
-     "diff_vs_all": -0.0434,
+     "diff_vs_all": -0.0319,
      "diff_vs_all_ci90": [
-      -0.1354,
-      0.0553
+      -0.1251,
+      0.0598
      ],
-     "p_better_than_all": 0.229,
-     "rest_roi": 0.8696,
+     "p_better_than_all": 0.288,
+     "rest_roi": 0.8945,
      "diff_vs_rest_ci90": [
-      -0.2147,
-      0.0877
+      -0.2,
+      0.0961
      ]
     },
     "top20": {
-     "races": 3062,
-     "bets": 6003,
-     "hits": 104,
-     "roi": 0.843,
-     "profit_yen": -94240,
+     "races": 3245,
+     "bets": 6279,
+     "hits": 117,
+     "roi": 0.8894,
+     "profit_yen": -69420,
      "roi_ci90": [
-      0.6954,
-      0.9995
+      0.7373,
+      1.0382
      ],
-     "threshold": 0.2144,
+     "threshold": 0.2159,
      "share_races": 0.2,
-     "diff_vs_all": -0.0007,
+     "diff_vs_all": 0.014,
      "diff_vs_all_ci90": [
-      -0.13,
-      0.1318
+      -0.1147,
+      0.1394
      ],
-     "p_better_than_all": 0.496,
-     "rest_roi": 0.8439,
+     "p_better_than_all": 0.584,
+     "rest_roi": 0.8704,
      "diff_vs_rest_ci90": [
-      -0.1752,
-      0.1773
+      -0.155,
+      0.1894
      ]
     }
    },
    "manshu_odds": {
     "all": {
-     "races": 12851,
-     "bets": 23263,
-     "hits": 566,
-     "roi": 0.8437,
-     "profit_yen": -363610,
+     "races": 13349,
+     "bets": 23947,
+     "hits": 587,
+     "roi": 0.8754,
+     "profit_yen": -298370,
      "roi_ci90": [
-      0.7707,
-      0.9184
+      0.8067,
+      0.9493
      ]
     },
     "top50": {
-     "races": 7727,
-     "bets": 14916,
-     "hits": 312,
-     "roi": 0.8757,
-     "profit_yen": -185400,
+     "races": 8149,
+     "bets": 15514,
+     "hits": 331,
+     "roi": 0.9016,
+     "profit_yen": -152710,
      "roi_ci90": [
-      0.7805,
-      0.972
+      0.8094,
+      0.9954
      ],
-     "threshold": 0.1639,
+     "threshold": 0.1652,
      "share_races": 0.5,
-     "diff_vs_all": 0.032,
+     "diff_vs_all": 0.0262,
      "diff_vs_all_ci90": [
-      -0.0187,
-      0.0849
+      -0.0203,
+      0.0739
      ],
-     "p_better_than_all": 0.863,
-     "rest_roi": 0.7865,
+     "p_better_than_all": 0.82,
+     "rest_roi": 0.8273,
      "diff_vs_rest_ci90": [
-      -0.0522,
-      0.2362
+      -0.0579,
+      0.2126
      ]
     },
     "top30": {
-     "races": 5067,
-     "bets": 10158,
-     "hits": 191,
-     "roi": 0.8666,
-     "profit_yen": -135540,
+     "races": 5394,
+     "bets": 10670,
+     "hits": 208,
+     "roi": 0.893,
+     "profit_yen": -114130,
      "roi_ci90": [
-      0.7484,
-      0.9948
+      0.7797,
+      1.0093
      ],
-     "threshold": 0.1893,
+     "threshold": 0.1906,
      "share_races": 0.3,
-     "diff_vs_all": 0.0229,
+     "diff_vs_all": 0.0176,
      "diff_vs_all_ci90": [
       -0.0596,
-      0.1115
+      0.0973
      ],
-     "p_better_than_all": 0.685,
-     "rest_roi": 0.826,
+     "p_better_than_all": 0.625,
+     "rest_roi": 0.8612,
      "diff_vs_rest_ci90": [
-      -0.1066,
-      0.1973
+      -0.1083,
+      0.1748
      ]
     },
     "top20": {
-     "races": 3644,
-     "bets": 7560,
-     "hits": 132,
-     "roi": 0.8613,
-     "profit_yen": -104840,
+     "races": 3868,
+     "bets": 7870,
+     "hits": 144,
+     "roi": 0.9123,
+     "profit_yen": -69000,
      "roi_ci90": [
-      0.7233,
-      1.0136
+      0.7822,
+      1.0532
      ],
-     "threshold": 0.2062,
+     "threshold": 0.2071,
      "share_races": 0.2,
-     "diff_vs_all": 0.0176,
+     "diff_vs_all": 0.0369,
      "diff_vs_all_ci90": [
-      -0.0916,
-      0.1382
+      -0.0672,
+      0.1484
      ],
-     "p_better_than_all": 0.611,
-     "rest_roi": 0.8352,
+     "p_better_than_all": 0.719,
+     "rest_roi": 0.8573,
      "diff_vs_rest_ci90": [
-      -0.1351,
-      0.2036
+      -0.1007,
+      0.221
      ]
     }
    },
    "in_lose_market": {
     "all": {
-     "races": 12851,
-     "bets": 23263,
-     "hits": 566,
-     "roi": 0.8437,
-     "profit_yen": -363610,
+     "races": 13349,
+     "bets": 23947,
+     "hits": 587,
+     "roi": 0.8754,
+     "profit_yen": -298370,
      "roi_ci90": [
-      0.7707,
-      0.9184
+      0.8067,
+      0.9493
      ]
     },
     "top50": {
-     "races": 8596,
-     "bets": 16840,
-     "hits": 365,
-     "roi": 0.8514,
-     "profit_yen": -250240,
+     "races": 9001,
+     "bets": 17401,
+     "hits": 391,
+     "roi": 0.8972,
+     "profit_yen": -178890,
      "roi_ci90": [
-      0.7646,
-      0.9411
+      0.8124,
+      0.9862
      ],
-     "threshold": 0.4466,
+     "threshold": 0.4477,
      "share_races": 0.5,
-     "diff_vs_all": 0.0077,
+     "diff_vs_all": 0.0218,
      "diff_vs_all_ci90": [
-      -0.0313,
-      0.0505
+      -0.02,
+      0.062
      ],
-     "p_better_than_all": 0.642,
-     "rest_roi": 0.8235,
+     "p_better_than_all": 0.814,
+     "rest_roi": 0.8175,
      "diff_vs_rest_ci90": [
-      -0.1117,
-      0.184
+      -0.0723,
+      0.2273
      ]
     },
     "top30": {
-     "races": 5795,
-     "bets": 11748,
-     "hits": 227,
-     "roi": 0.7728,
-     "profit_yen": -266920,
+     "races": 6066,
+     "bets": 12106,
+     "hits": 238,
+     "roi": 0.8051,
+     "profit_yen": -235970,
      "roi_ci90": [
-      0.6815,
-      0.8752
+      0.7097,
+      0.906
      ],
-     "threshold": 0.575,
+     "threshold": 0.5752,
      "share_races": 0.3,
-     "diff_vs_all": -0.0709,
+     "diff_vs_all": -0.0703,
      "diff_vs_all_ci90": [
-      -0.1391,
-      0.0014
+      -0.143,
+      0.0005
      ],
-     "p_better_than_all": 0.056,
-     "rest_roi": 0.916,
+     "p_better_than_all": 0.051,
+     "rest_roi": 0.9473,
      "diff_vs_rest_ci90": [
-      -0.2807,
-      0.0029
+      -0.2881,
+      0.001
      ]
     },
     "top20": {
-     "races": 4159,
-     "bets": 8517,
-     "hits": 151,
-     "roi": 0.7444,
-     "profit_yen": -217710,
+     "races": 4365,
+     "bets": 8807,
+     "hits": 165,
+     "roi": 0.8026,
+     "profit_yen": -173820,
      "roi_ci90": [
-      0.6317,
-      0.8685
+      0.6855,
+      0.9247
      ],
-     "threshold": 0.6541,
+     "threshold": 0.6545,
      "share_races": 0.2,
-     "diff_vs_all": -0.0993,
+     "diff_vs_all": -0.0728,
      "diff_vs_all_ci90": [
-      -0.1917,
-      -0.0043
+      -0.1681,
+      0.0251
      ],
-     "p_better_than_all": 0.044,
-     "rest_roi": 0.9011,
+     "p_better_than_all": 0.108,
+     "rest_roi": 0.9177,
      "diff_vs_rest_ci90": [
-      -0.3018,
-      -0.0068
+      -0.2651,
+      0.0394
      ]
     }
    }
@@ -1393,341 +1393,341 @@
   "blend_ev120": {
    "in_lose": {
     "all": {
-     "races": 460,
-     "bets": 1004,
-     "hits": 33,
-     "roi": 1.4303,
-     "profit_yen": 43200,
+     "races": 469,
+     "bets": 1016,
+     "hits": 36,
+     "roi": 1.467,
+     "profit_yen": 47450,
      "roi_ci90": [
-      0.9269,
-      1.9907
+      0.9916,
+      2.0101
      ]
     },
     "top50": {
-     "races": 315,
-     "bets": 621,
-     "hits": 14,
-     "roi": 1.2565,
-     "profit_yen": 15930,
+     "races": 317,
+     "bets": 612,
+     "hits": 17,
+     "roi": 1.4462,
+     "profit_yen": 27310,
      "roi_ci90": [
-      0.5885,
-      1.9508
+      0.7945,
+      2.2095
      ],
-     "threshold": 0.4285,
+     "threshold": 0.4299,
      "share_races": 0.5,
-     "diff_vs_all": -0.1738,
+     "diff_vs_all": -0.0208,
      "diff_vs_all_ci90": [
-      -0.5981,
-      0.2239
+      -0.4336,
+      0.403
      ],
-     "p_better_than_all": 0.239,
-     "rest_roi": 1.712,
+     "p_better_than_all": 0.469,
+     "rest_roi": 1.4985,
      "diff_vs_rest_ci90": [
-      -1.5289,
-      0.5894
+      -1.056,
+      1.0309
      ]
     },
     "top30": {
      "races": 235,
-     "bets": 446,
-     "hits": 6,
-     "roi": 0.9935,
-     "profit_yen": -290,
+     "bets": 431,
+     "hits": 9,
+     "roi": 1.2712,
+     "profit_yen": 11690,
      "roi_ci90": [
-      0.2886,
-      1.8556
+      0.4916,
+      2.2405
      ],
-     "threshold": 0.5686,
+     "threshold": 0.5682,
      "share_races": 0.3,
-     "diff_vs_all": -0.4368,
+     "diff_vs_all": -0.1958,
      "diff_vs_all_ci90": [
-      -1.0207,
-      0.1726
+      -0.7887,
+      0.477
      ],
-     "p_better_than_all": 0.121,
-     "rest_roi": 1.7794,
+     "p_better_than_all": 0.291,
+     "rest_roi": 1.6113,
      "diff_vs_rest_ci90": [
-      -1.8106,
-      0.3099
+      -1.3574,
+      0.802
      ]
     },
     "top20": {
-     "races": 184,
-     "bets": 325,
-     "hits": 4,
-     "roi": 1.0668,
-     "profit_yen": 2170,
+     "races": 177,
+     "bets": 304,
+     "hits": 6,
+     "roi": 1.3461,
+     "profit_yen": 10520,
      "roi_ci90": [
-      0.1448,
-      2.1865
+      0.3379,
+      2.6228
      ],
-     "threshold": 0.6511,
+     "threshold": 0.6495,
      "share_races": 0.2,
-     "diff_vs_all": -0.3635,
+     "diff_vs_all": -0.1209,
      "diff_vs_all_ci90": [
-      -1.1272,
-      0.5169
+      -0.9332,
+      0.8944
      ],
-     "p_better_than_all": 0.241,
-     "rest_roi": 1.6043,
+     "p_better_than_all": 0.376,
+     "rest_roi": 1.5187,
      "diff_vs_rest_ci90": [
-      -1.6508,
-      0.7596
+      -1.3315,
+      1.2843
      ]
     }
    },
    "manshu": {
     "all": {
-     "races": 460,
-     "bets": 1004,
-     "hits": 33,
-     "roi": 1.4303,
-     "profit_yen": 43200,
+     "races": 469,
+     "bets": 1016,
+     "hits": 36,
+     "roi": 1.467,
+     "profit_yen": 47450,
      "roi_ci90": [
-      0.9269,
-      1.9907
+      0.9916,
+      2.0101
      ]
     },
     "top50": {
-     "races": 232,
-     "bets": 341,
-     "hits": 6,
-     "roi": 0.6721,
-     "profit_yen": -11180,
+     "races": 241,
+     "bets": 351,
+     "hits": 8,
+     "roi": 0.7544,
+     "profit_yen": -8620,
      "roi_ci90": [
-      0.202,
-      1.2307
+      0.2795,
+      1.3263
      ],
-     "threshold": 0.171,
+     "threshold": 0.1723,
      "share_races": 0.5,
-     "diff_vs_all": -0.7582,
+     "diff_vs_all": -0.7126,
      "diff_vs_all_ci90": [
-      -1.3766,
-      -0.1653
+      -1.3168,
+      -0.106
      ],
-     "p_better_than_all": 0.017,
-     "rest_roi": 1.8202,
+     "p_better_than_all": 0.026,
+     "rest_roi": 1.8432,
      "diff_vs_rest_ci90": [
-      -2.091,
-      -0.2518
+      -2.01,
+      -0.1622
      ]
     },
     "top30": {
-     "races": 161,
-     "bets": 236,
-     "hits": 4,
-     "roi": 0.6,
-     "profit_yen": -9440,
+     "races": 166,
+     "bets": 233,
+     "hits": 6,
+     "roi": 0.7605,
+     "profit_yen": -5580,
      "roi_ci90": [
-      0.1191,
-      1.1689
+      0.239,
+      1.3831
      ],
-     "threshold": 0.1979,
+     "threshold": 0.1991,
      "share_races": 0.3,
-     "diff_vs_all": -0.8303,
+     "diff_vs_all": -0.7065,
      "diff_vs_all_ci90": [
-      -1.5242,
-      -0.1664
+      -1.3656,
+      -0.0279
      ],
-     "p_better_than_all": 0.022,
-     "rest_roi": 1.6854,
+     "p_better_than_all": 0.045,
+     "rest_roi": 1.6773,
      "diff_vs_rest_ci90": [
-      -1.983,
-      -0.2266
+      -1.77,
+      -0.0356
      ]
     },
     "top20": {
-     "races": 115,
-     "bets": 169,
+     "races": 126,
+     "bets": 173,
      "hits": 4,
-     "roi": 0.8379,
-     "profit_yen": -2740,
+     "roi": 0.7208,
+     "profit_yen": -4830,
      "roi_ci90": [
-      0.1658,
-      1.6334
+      0.2013,
+      1.3726
      ],
-     "threshold": 0.2144,
+     "threshold": 0.2159,
      "share_races": 0.2,
-     "diff_vs_all": -0.5924,
+     "diff_vs_all": -0.7462,
      "diff_vs_all_ci90": [
-      -1.4001,
-      0.2381
+      -1.4294,
+      -0.0209
      ],
-     "p_better_than_all": 0.119,
-     "rest_roi": 1.5502,
+     "p_better_than_all": 0.046,
+     "rest_roi": 1.6202,
      "diff_vs_rest_ci90": [
-      -1.6901,
-      0.278
+      -1.7056,
+      -0.0248
      ]
     }
    },
    "manshu_odds": {
     "all": {
-     "races": 460,
-     "bets": 1004,
-     "hits": 33,
-     "roi": 1.4303,
-     "profit_yen": 43200,
+     "races": 469,
+     "bets": 1016,
+     "hits": 36,
+     "roi": 1.467,
+     "profit_yen": 47450,
      "roi_ci90": [
-      0.9269,
-      1.9907
+      0.9916,
+      2.0101
      ]
     },
     "top50": {
-     "races": 318,
-     "bets": 661,
-     "hits": 20,
-     "roi": 1.6257,
-     "profit_yen": 41360,
+     "races": 327,
+     "bets": 672,
+     "hits": 22,
+     "roi": 1.6275,
+     "profit_yen": 42170,
      "roi_ci90": [
-      0.9234,
-      2.4097
+      1.0128,
+      2.3656
      ],
-     "threshold": 0.1639,
+     "threshold": 0.1652,
      "share_races": 0.5,
-     "diff_vs_all": 0.1954,
+     "diff_vs_all": 0.1605,
      "diff_vs_all_ci90": [
-      -0.1432,
-      0.5258
+      -0.1619,
+      0.4996
      ],
-     "p_better_than_all": 0.838,
-     "rest_roi": 1.0536,
+     "p_better_than_all": 0.806,
+     "rest_roi": 1.1535,
      "diff_vs_rest_ci90": [
-      -0.4166,
-      1.5729
+      -0.4617,
+      1.4462
      ]
     },
     "top30": {
-     "races": 244,
-     "bets": 519,
-     "hits": 13,
-     "roi": 1.3855,
-     "profit_yen": 20010,
+     "races": 250,
+     "bets": 521,
+     "hits": 15,
+     "roi": 1.4486,
+     "profit_yen": 23370,
      "roi_ci90": [
-      0.5996,
-      2.2553
+      0.6966,
+      2.3171
      ],
-     "threshold": 0.1893,
+     "threshold": 0.1906,
      "share_races": 0.3,
-     "diff_vs_all": -0.0448,
+     "diff_vs_all": -0.0184,
      "diff_vs_all_ci90": [
-      -0.515,
-      0.4649
+      -0.5093,
+      0.5009
      ],
-     "p_better_than_all": 0.435,
-     "rest_roi": 1.4781,
+     "p_better_than_all": 0.482,
+     "rest_roi": 1.4865,
      "diff_vs_rest_ci90": [
-      -1.0453,
-      0.975
+      -1.0312,
+      1.0231
      ]
     },
     "top20": {
-     "races": 196,
-     "bets": 417,
+     "races": 197,
+     "bets": 406,
      "hits": 12,
-     "roi": 1.6168,
-     "profit_yen": 25720,
+     "roi": 1.6682,
+     "profit_yen": 27130,
      "roi_ci90": [
-      0.6488,
-      2.6952
+      0.7485,
+      2.7553
      ],
-     "threshold": 0.2062,
+     "threshold": 0.2071,
      "share_races": 0.2,
-     "diff_vs_all": 0.1865,
+     "diff_vs_all": 0.2012,
      "diff_vs_all_ci90": [
-      -0.4289,
-      0.9065
+      -0.4557,
+      0.9342
      ],
-     "p_better_than_all": 0.662,
-     "rest_roi": 1.2978,
+     "p_better_than_all": 0.668,
+     "rest_roi": 1.3331,
      "diff_vs_rest_ci90": [
-      -0.736,
-      1.5519
+      -0.758,
+      1.5471
      ]
     }
    },
    "in_lose_market": {
     "all": {
-     "races": 460,
-     "bets": 1004,
-     "hits": 33,
-     "roi": 1.4303,
-     "profit_yen": 43200,
+     "races": 469,
+     "bets": 1016,
+     "hits": 36,
+     "roi": 1.467,
+     "profit_yen": 47450,
      "roi_ci90": [
-      0.9269,
-      1.9907
+      0.9916,
+      2.0101
      ]
     },
     "top50": {
-     "races": 354,
-     "bets": 695,
-     "hits": 20,
-     "roi": 1.534,
-     "profit_yen": 37110,
+     "races": 357,
+     "bets": 690,
+     "hits": 22,
+     "roi": 1.6396,
+     "profit_yen": 44130,
      "roi_ci90": [
-      0.8589,
-      2.2554
+      1.006,
+      2.3865
      ],
-     "threshold": 0.4466,
+     "threshold": 0.4477,
      "share_races": 0.5,
-     "diff_vs_all": 0.1037,
+     "diff_vs_all": 0.1726,
      "diff_vs_all_ci90": [
-      -0.1788,
-      0.3861
+      -0.1278,
+      0.4766
      ],
-     "p_better_than_all": 0.733,
-     "rest_roi": 1.1971,
+     "p_better_than_all": 0.829,
+     "rest_roi": 1.1018,
      "diff_vs_rest_ci90": [
-      -0.5726,
-      1.2657
+      -0.3877,
+      1.4795
      ]
     },
     "top30": {
-     "races": 271,
-     "bets": 501,
-     "hits": 9,
-     "roi": 0.9711,
-     "profit_yen": -1450,
+     "races": 272,
+     "bets": 491,
+     "hits": 11,
+     "roi": 1.1236,
+     "profit_yen": 6070,
      "roi_ci90": [
-      0.343,
-      1.7422
+      0.4574,
+      1.9584
      ],
-     "threshold": 0.575,
+     "threshold": 0.5752,
      "share_races": 0.3,
-     "diff_vs_all": -0.4592,
+     "diff_vs_all": -0.3434,
      "diff_vs_all_ci90": [
-      -0.9901,
-      0.0623
+      -0.8741,
+      0.2118
      ],
-     "p_better_than_all": 0.072,
-     "rest_roi": 1.8877,
+     "p_better_than_all": 0.158,
+     "rest_roi": 1.7882,
      "diff_vs_rest_ci90": [
-      -1.9495,
-      0.13
+      -1.676,
+      0.4198
      ]
     },
     "top20": {
-     "races": 211,
-     "bets": 373,
-     "hits": 5,
-     "roi": 0.9794,
-     "profit_yen": -770,
+     "races": 210,
+     "bets": 364,
+     "hits": 7,
+     "roi": 1.1753,
+     "profit_yen": 6380,
      "roi_ci90": [
-      0.1741,
-      1.9448
+      0.3343,
+      2.2661
      ],
-     "threshold": 0.6541,
+     "threshold": 0.6545,
      "share_races": 0.2,
-     "diff_vs_all": -0.4509,
+     "diff_vs_all": -0.2917,
      "diff_vs_all_ci90": [
-      -1.1141,
-      0.2819
+      -0.9749,
+      0.486
      ],
-     "p_better_than_all": 0.153,
-     "rest_roi": 1.6968,
+     "p_better_than_all": 0.243,
+     "rest_roi": 1.6299,
      "diff_vs_rest_ci90": [
-      -1.7521,
-      0.4395
+      -1.5212,
+      0.7697
      ]
     }
    }
@@ -1737,351 +1737,351 @@
   "first_half": {
    "period": [
     "20250128",
-    "20260410"
+    "20260320"
    ],
    "in_lose": {
     "all": {
-     "races": 27359,
-     "bets": 126513,
-     "hits": 2226,
-     "roi": 0.8336,
-     "profit_yen": -2104920,
+     "races": 30203,
+     "bets": 139047,
+     "hits": 2434,
+     "roi": 0.8231,
+     "profit_yen": -2459960,
      "roi_ci90": [
-      0.797,
-      0.8712
+      0.7896,
+      0.8566
      ]
     },
     "top50": {
-     "races": 13959,
-     "bets": 66894,
-     "hits": 983,
-     "roi": 0.83,
-     "profit_yen": -1136920,
+     "races": 15447,
+     "bets": 73740,
+     "hits": 1086,
+     "roi": 0.8249,
+     "profit_yen": -1291080,
      "roi_ci90": [
-      0.7815,
-      0.8842
+      0.7764,
+      0.8741
      ],
-     "threshold": 0.4285,
-     "share_races": 0.509,
-     "diff_vs_all": -0.0036,
+     "threshold": 0.4299,
+     "share_races": 0.51,
+     "diff_vs_all": 0.0018,
      "diff_vs_all_ci90": [
-      -0.0361,
-      0.029
+      -0.0287,
+      0.0331
      ],
-     "p_better_than_all": 0.438,
-     "rest_roi": 0.8376,
+     "p_better_than_all": 0.528,
+     "rest_roi": 0.821,
      "diff_vs_rest_ci90": [
-      -0.0766,
-      0.0612
+      -0.0611,
+      0.0706
      ]
     },
     "top30": {
-     "races": 8293,
-     "bets": 40286,
-     "hits": 566,
-     "roi": 0.8193,
-     "profit_yen": -727830,
+     "races": 9181,
+     "bets": 44520,
+     "hits": 607,
+     "roi": 0.8003,
+     "profit_yen": -889270,
      "roi_ci90": [
-      0.7572,
-      0.8846
+      0.7385,
+      0.864
      ],
-     "threshold": 0.5686,
+     "threshold": 0.5682,
      "share_races": 0.303,
-     "diff_vs_all": -0.0143,
+     "diff_vs_all": -0.0228,
      "diff_vs_all_ci90": [
-      -0.0662,
-      0.0361
+      -0.0719,
+      0.0287
      ],
-     "p_better_than_all": 0.33,
-     "rest_roi": 0.8403,
+     "p_better_than_all": 0.229,
+     "rest_roi": 0.8338,
      "diff_vs_rest_ci90": [
-      -0.0969,
-      0.0529
+      -0.106,
+      0.0423
      ]
     },
     "top20": {
-     "races": 5497,
-     "bets": 26852,
-     "hits": 391,
-     "roi": 0.8591,
-     "profit_yen": -378370,
+     "races": 6060,
+     "bets": 29527,
+     "hits": 392,
+     "roi": 0.7865,
+     "profit_yen": -630470,
      "roi_ci90": [
-      0.779,
-      0.944
+      0.7116,
+      0.8649
      ],
-     "threshold": 0.6511,
+     "threshold": 0.6495,
      "share_races": 0.2,
-     "diff_vs_all": 0.0255,
+     "diff_vs_all": -0.0366,
      "diff_vs_all_ci90": [
-      -0.0463,
-      0.1009
+      -0.1029,
+      0.0322
      ],
-     "p_better_than_all": 0.733,
-     "rest_roi": 0.8268,
+     "p_better_than_all": 0.185,
+     "rest_roi": 0.833,
      "diff_vs_rest_ci90": [
-      -0.0586,
-      0.1286
+      -0.1309,
+      0.0408
      ]
     }
    },
    "manshu_odds": {
     "all": {
-     "races": 27359,
-     "bets": 126513,
-     "hits": 2226,
-     "roi": 0.8336,
-     "profit_yen": -2104920,
+     "races": 30203,
+     "bets": 139047,
+     "hits": 2434,
+     "roi": 0.8231,
+     "profit_yen": -2459960,
      "roi_ci90": [
-      0.797,
-      0.8712
+      0.7896,
+      0.8566
      ]
     },
     "top50": {
-     "races": 14854,
-     "bets": 70498,
-     "hits": 1036,
-     "roi": 0.8371,
-     "profit_yen": -1148100,
+     "races": 16129,
+     "bets": 76216,
+     "hits": 1098,
+     "roi": 0.826,
+     "profit_yen": -1326170,
      "roi_ci90": [
-      0.7872,
-      0.89
+      0.779,
+      0.8764
      ],
-     "threshold": 0.1639,
-     "share_races": 0.542,
-     "diff_vs_all": 0.0035,
+     "threshold": 0.1652,
+     "share_races": 0.533,
+     "diff_vs_all": 0.0029,
      "diff_vs_all_ci90": [
-      -0.028,
-      0.0344
+      -0.0269,
+      0.0319
      ],
-     "p_better_than_all": 0.558,
-     "rest_roi": 0.8292,
+     "p_better_than_all": 0.57,
+     "rest_roi": 0.8195,
      "diff_vs_rest_ci90": [
-      -0.0635,
-      0.078
+      -0.0595,
+      0.0703
      ]
     },
     "top30": {
-     "races": 9091,
-     "bets": 43590,
-     "hits": 583,
-     "roi": 0.8492,
-     "profit_yen": -657470,
+     "races": 9842,
+     "bets": 46946,
+     "hits": 606,
+     "roi": 0.8187,
+     "profit_yen": -850900,
      "roi_ci90": [
-      0.7824,
-      0.9171
+      0.7575,
+      0.8839
      ],
-     "threshold": 0.1893,
-     "share_races": 0.332,
-     "diff_vs_all": 0.0156,
+     "threshold": 0.1906,
+     "share_races": 0.325,
+     "diff_vs_all": -0.0044,
      "diff_vs_all_ci90": [
-      -0.0357,
-      0.0669
+      -0.0547,
+      0.0456
      ],
-     "p_better_than_all": 0.674,
-     "rest_roi": 0.8254,
+     "p_better_than_all": 0.436,
+     "rest_roi": 0.8253,
      "diff_vs_rest_ci90": [
-      -0.0546,
-      0.1022
+      -0.0826,
+      0.0688
      ]
     },
     "top20": {
-     "races": 6147,
-     "bets": 29648,
-     "hits": 382,
-     "roi": 0.8692,
-     "profit_yen": -387870,
+     "races": 6607,
+     "bets": 31716,
+     "hits": 377,
+     "roi": 0.8201,
+     "profit_yen": -570430,
      "roi_ci90": [
-      0.7899,
-      0.9542
+      0.7441,
+      0.9002
      ],
-     "threshold": 0.2062,
-     "share_races": 0.224,
-     "diff_vs_all": 0.0356,
+     "threshold": 0.2071,
+     "share_races": 0.218,
+     "diff_vs_all": -0.003,
      "diff_vs_all_ci90": [
-      -0.0311,
-      0.107
+      -0.0697,
+      0.0669
      ],
-     "p_better_than_all": 0.794,
-     "rest_roi": 0.8227,
+     "p_better_than_all": 0.453,
+     "rest_roi": 0.824,
      "diff_vs_rest_ci90": [
-      -0.0407,
-      0.1398
+      -0.0904,
+      0.0868
      ]
     }
    }
   },
   "second_half": {
    "period": [
-    "20260410",
+    "20260320",
     "20261005"
    ],
    "in_lose": {
     "all": {
-     "races": 27369,
-     "bets": 125723,
-     "hits": 2476,
-     "roi": 0.8639,
-     "profit_yen": -1710850,
+     "races": 30242,
+     "bets": 139136,
+     "hits": 2698,
+     "roi": 0.8624,
+     "profit_yen": -1914410,
      "roi_ci90": [
-      0.8281,
-      0.9001
+      0.8261,
+      0.8966
      ]
     },
     "top50": {
-     "races": 13450,
-     "bets": 64474,
-     "hits": 1042,
-     "roi": 0.8798,
-     "profit_yen": -775200,
+     "races": 14834,
+     "bets": 71131,
+     "hits": 1144,
+     "roi": 0.879,
+     "profit_yen": -860660,
      "roi_ci90": [
-      0.8271,
-      0.9317
+      0.8247,
+      0.93
      ],
-     "threshold": 0.4285,
-     "share_races": 0.491,
-     "diff_vs_all": 0.0159,
+     "threshold": 0.4299,
+     "share_races": 0.49,
+     "diff_vs_all": 0.0166,
      "diff_vs_all_ci90": [
-      -0.0199,
-      0.0495
+      -0.0187,
+      0.0487
      ],
-     "p_better_than_all": 0.773,
-     "rest_roi": 0.8472,
+     "p_better_than_all": 0.78,
+     "rest_roi": 0.845,
      "diff_vs_rest_ci90": [
-      -0.0411,
-      0.1019
+      -0.0383,
+      0.0997
      ]
     },
     "top30": {
-     "races": 8156,
-     "bets": 39574,
-     "hits": 579,
-     "roi": 0.8327,
-     "profit_yen": -661930,
+     "races": 8998,
+     "bets": 43656,
+     "hits": 645,
+     "roi": 0.8419,
+     "profit_yen": -690400,
      "roi_ci90": [
-      0.7665,
-      0.8985
+      0.7744,
+      0.9085
      ],
-     "threshold": 0.5686,
+     "threshold": 0.5682,
      "share_races": 0.297,
-     "diff_vs_all": -0.0312,
+     "diff_vs_all": -0.0205,
      "diff_vs_all_ci90": [
-      -0.0855,
-      0.022
+      -0.0754,
+      0.0333
      ],
-     "p_better_than_all": 0.173,
-     "rest_roi": 0.8782,
+     "p_better_than_all": 0.258,
+     "rest_roi": 0.8718,
      "diff_vs_rest_ci90": [
-      -0.1249,
-      0.0321
+      -0.1096,
+      0.0487
      ]
     },
     "top20": {
-     "races": 5474,
-     "bets": 26706,
-     "hits": 392,
-     "roi": 0.8409,
-     "profit_yen": -424850,
+     "races": 6062,
+     "bets": 29577,
+     "hits": 447,
+     "roi": 0.8651,
+     "profit_yen": -398940,
      "roi_ci90": [
-      0.7551,
-      0.9241
+      0.7817,
+      0.9458
      ],
-     "threshold": 0.6511,
+     "threshold": 0.6495,
      "share_races": 0.2,
-     "diff_vs_all": -0.023,
+     "diff_vs_all": 0.0027,
      "diff_vs_all_ci90": [
-      -0.096,
-      0.0484
+      -0.067,
+      0.0745
      ],
-     "p_better_than_all": 0.303,
-     "rest_roi": 0.8701,
+     "p_better_than_all": 0.509,
+     "rest_roi": 0.8617,
      "diff_vs_rest_ci90": [
-      -0.1222,
-      0.0617
+      -0.0854,
+      0.0946
      ]
     }
    },
    "manshu_odds": {
     "all": {
-     "races": 27369,
-     "bets": 125723,
-     "hits": 2476,
-     "roi": 0.8639,
-     "profit_yen": -1710850,
+     "races": 30242,
+     "bets": 139136,
+     "hits": 2698,
+     "roi": 0.8624,
+     "profit_yen": -1914410,
      "roi_ci90": [
-      0.8281,
-      0.9001
+      0.8261,
+      0.8966
      ]
     },
     "top50": {
-     "races": 12546,
-     "bets": 59891,
-     "hits": 922,
-     "roi": 0.879,
-     "profit_yen": -724830,
+     "races": 14136,
+     "bets": 67463,
+     "hits": 1042,
+     "roi": 0.88,
+     "profit_yen": -809370,
      "roi_ci90": [
-      0.8223,
-      0.9331
+      0.8245,
+      0.9333
      ],
-     "threshold": 0.1639,
-     "share_races": 0.458,
-     "diff_vs_all": 0.0151,
+     "threshold": 0.1652,
+     "share_races": 0.467,
+     "diff_vs_all": 0.0176,
      "diff_vs_all_ci90": [
-      -0.0239,
-      0.0524
+      -0.0181,
+      0.0519
      ],
-     "p_better_than_all": 0.717,
-     "rest_roi": 0.8502,
+     "p_better_than_all": 0.797,
+     "rest_roi": 0.8458,
      "diff_vs_rest_ci90": [
-      -0.0459,
-      0.1002
+      -0.0349,
+      0.1007
      ]
     },
     "top30": {
-     "races": 7352,
-     "bets": 35462,
-     "hits": 505,
-     "roi": 0.8979,
-     "profit_yen": -361930,
+     "races": 8318,
+     "bets": 40111,
+     "hits": 577,
+     "roi": 0.9089,
+     "profit_yen": -365530,
      "roi_ci90": [
-      0.8221,
-      0.973
+      0.8322,
+      0.9823
      ],
-     "threshold": 0.1893,
-     "share_races": 0.268,
-     "diff_vs_all": 0.034,
+     "threshold": 0.1906,
+     "share_races": 0.275,
+     "diff_vs_all": 0.0465,
      "diff_vs_all_ci90": [
-      -0.0271,
-      0.0957
+      -0.014,
+      0.1048
      ],
-     "p_better_than_all": 0.806,
-     "rest_roi": 0.8506,
+     "p_better_than_all": 0.904,
+     "rest_roi": 0.8436,
      "diff_vs_rest_ci90": [
-      -0.0377,
-      0.1337
+      -0.0197,
+      0.1471
      ]
     },
     "top20": {
-     "races": 4818,
-     "bets": 23389,
-     "hits": 308,
-     "roi": 0.8994,
-     "profit_yen": -235350,
+     "races": 5504,
+     "bets": 26702,
+     "hits": 360,
+     "roi": 0.9144,
+     "profit_yen": -228550,
      "roi_ci90": [
-      0.8032,
-      0.9941
+      0.823,
+      1.006
      ],
-     "threshold": 0.2062,
-     "share_races": 0.176,
-     "diff_vs_all": 0.0355,
+     "threshold": 0.2071,
+     "share_races": 0.182,
+     "diff_vs_all": 0.052,
      "diff_vs_all_ci90": [
-      -0.0496,
-      0.1182
+      -0.0262,
+      0.1324
      ],
-     "p_better_than_all": 0.745,
-     "rest_roi": 0.8558,
+     "p_better_than_all": 0.864,
+     "rest_roi": 0.8501,
      "diff_vs_rest_ci90": [
-      -0.0607,
-      0.1453
+      -0.0323,
+      0.164
      ]
     }
    }
@@ -2093,17 +2093,17 @@
     "20250128",
     "20261005"
    ],
-   "races": 54914,
+   "races": 60666,
    "bands": [
     {
-     "bets": 192215,
-     "races": 52980,
-     "hits": 4816,
-     "roi": 0.8488,
-     "profit_yen": -2905580,
+     "bets": 212184,
+     "races": 58518,
+     "hits": 5265,
+     "roi": 0.8514,
+     "profit_yen": -3153550,
      "roi_ci90": [
-      0.8253,
-      0.8727
+      0.829,
+      0.8752
      ],
      "band": [
       1.0,
@@ -2111,14 +2111,14 @@
      ]
     },
     {
-     "bets": 131584,
-     "races": 47444,
-     "hits": 2333,
-     "roi": 0.8641,
-     "profit_yen": -1788440,
+     "bets": 144272,
+     "races": 52168,
+     "hits": 2532,
+     "roi": 0.856,
+     "profit_yen": -2077780,
      "roi_ci90": [
-      0.8298,
-      0.8976
+      0.8239,
+      0.888
      ],
      "band": [
       1.2,
@@ -2126,14 +2126,14 @@
      ]
     },
     {
-     "bets": 62754,
-     "races": 30633,
-     "hits": 751,
-     "roi": 0.8597,
-     "profit_yen": -880300,
+     "bets": 68687,
+     "races": 33547,
+     "hits": 826,
+     "roi": 0.8499,
+     "profit_yen": -1031060,
      "roi_ci90": [
-      0.8005,
-      0.9195
+      0.7944,
+      0.9057
      ],
      "band": [
       1.5,
@@ -2141,14 +2141,14 @@
      ]
     },
     {
-     "bets": 17853,
-     "races": 10199,
-     "hits": 139,
-     "roi": 0.8397,
-     "profit_yen": -286270,
+     "bets": 19270,
+     "races": 11093,
+     "hits": 157,
+     "roi": 0.8732,
+     "profit_yen": -244290,
      "roi_ci90": [
-      0.7171,
-      0.9741
+      0.7464,
+      1.0082
      ],
      "band": [
       2.0,
@@ -2157,66 +2157,66 @@
     }
    ],
    "all_ev100": {
-    "bets": 404406,
-    "races": 54728,
-    "hits": 8039,
-    "roi": 0.8551,
-    "profit_yen": -5860590,
+    "bets": 444413,
+    "races": 60445,
+    "hits": 8780,
+    "roi": 0.8536,
+    "profit_yen": -6506680,
     "roi_ci90": [
-     0.8351,
-     0.8739
+     0.8368,
+     0.8721
     ]
    },
    "pick_rule": {
-    "bets": 160562,
-    "races": 54728,
-    "hits": 2673,
-    "roi": 0.8393,
-    "profit_yen": -2579810,
+    "bets": 177222,
+    "races": 60445,
+    "hits": 2941,
+    "roi": 0.8448,
+    "profit_yen": -2750010,
     "roi_ci90": [
-     0.8046,
-     0.8747
+     0.8137,
+     0.8778
     ]
    },
    "pick_mid": {
-    "bets": 157611,
-    "races": 54575,
-    "hits": 3270,
-    "roi": 0.858,
-    "profit_yen": -2238660,
+    "bets": 173973,
+    "races": 60277,
+    "hits": 3560,
+    "roi": 0.854,
+    "profit_yen": -2539210,
     "roi_ci90": [
-     0.8279,
-     0.8896
+     0.8248,
+     0.8816
     ]
    },
    "blend_ev100": {
-    "bets": 25487,
-    "races": 12851,
-    "hits": 635,
-    "roi": 0.9223,
-    "profit_yen": -198030,
+    "bets": 26266,
+    "races": 13349,
+    "hits": 658,
+    "roi": 0.9507,
+    "profit_yen": -129390,
     "roi_ci90": [
-     0.843,
-     1.0066
+     0.8734,
+     1.0338
     ]
    }
   },
   "first_half": {
    "period": [
     "20250128",
-    "20260410"
+    "20260320"
    ],
-   "races": 27457,
+   "races": 30333,
    "bands": [
     {
-     "bets": 96762,
-     "races": 26486,
-     "hits": 2338,
-     "roi": 0.8447,
-     "profit_yen": -1503050,
+     "bets": 106673,
+     "races": 29254,
+     "hits": 2567,
+     "roi": 0.8568,
+     "profit_yen": -1527200,
      "roi_ci90": [
-      0.8082,
-      0.8797
+      0.8247,
+      0.8886
      ],
      "band": [
       1.0,
@@ -2224,14 +2224,14 @@
      ]
     },
     {
-     "bets": 66807,
-     "races": 23788,
-     "hits": 1141,
-     "roi": 0.8473,
-     "profit_yen": -1020210,
+     "bets": 72331,
+     "races": 25968,
+     "hits": 1235,
+     "roi": 0.8532,
+     "profit_yen": -1061850,
      "roi_ci90": [
-      0.8015,
-      0.8942
+      0.8093,
+      0.8954
      ],
      "band": [
       1.2,
@@ -2239,14 +2239,14 @@
      ]
     },
     {
-     "bets": 32232,
-     "races": 15481,
-     "hits": 376,
-     "roi": 0.8588,
-     "profit_yen": -454970,
+     "bets": 34474,
+     "races": 16650,
+     "hits": 398,
+     "roi": 0.8164,
+     "profit_yen": -633080,
      "roi_ci90": [
-      0.7795,
-      0.9386
+      0.7484,
+      0.8908
      ],
      "band": [
       1.5,
@@ -2254,14 +2254,14 @@
      ]
     },
     {
-     "bets": 9360,
-     "races": 5306,
-     "hits": 75,
-     "roi": 0.9169,
-     "profit_yen": -77770,
+     "bets": 9675,
+     "races": 5558,
+     "hits": 80,
+     "roi": 0.9376,
+     "profit_yen": -60340,
      "roi_ci90": [
-      0.7289,
-      1.1307
+      0.7506,
+      1.139
      ],
      "band": [
       2.0,
@@ -2270,66 +2270,66 @@
     }
    ],
    "all_ev100": {
-    "bets": 205161,
-    "races": 27359,
-    "hits": 3930,
-    "roi": 0.851,
-    "profit_yen": -3056000,
+    "bets": 223153,
+    "races": 30203,
+    "hits": 4280,
+    "roi": 0.8529,
+    "profit_yen": -3282470,
     "roi_ci90": [
-     0.8237,
-     0.8792
+     0.8273,
+     0.8782
     ]
    },
    "pick_rule": {
-    "bets": 80315,
-    "races": 27359,
-    "hits": 1256,
-    "roi": 0.8256,
-    "profit_yen": -1400700,
+    "bets": 88491,
+    "races": 30203,
+    "hits": 1401,
+    "roi": 0.8379,
+    "profit_yen": -1434090,
     "roi_ci90": [
-     0.7789,
-     0.8749
+     0.7918,
+     0.8823
     ]
    },
    "pick_mid": {
-    "bets": 78839,
-    "races": 27280,
-    "hits": 1526,
-    "roi": 0.8195,
-    "profit_yen": -1422660,
+    "bets": 86896,
+    "races": 30120,
+    "hits": 1678,
+    "roi": 0.8368,
+    "profit_yen": -1418170,
     "roi_ci90": [
-     0.7799,
-     0.8591
+     0.7985,
+     0.8745
     ]
    },
    "blend_ev100": {
-    "bets": 11122,
-    "races": 5691,
-    "hits": 257,
-    "roi": 1.0066,
-    "profit_yen": 7310,
+    "bets": 11645,
+    "races": 5985,
+    "hits": 297,
+    "roi": 1.0296,
+    "profit_yen": 34510,
     "roi_ci90": [
-     0.8726,
-     1.1635
+     0.8992,
+     1.1754
     ]
    }
   },
   "second_half": {
    "period": [
-    "20260410",
+    "20260320",
     "20261005"
    ],
-   "races": 27457,
+   "races": 30333,
    "bands": [
     {
-     "bets": 95453,
-     "races": 26494,
-     "hits": 2478,
-     "roi": 0.8531,
-     "profit_yen": -1402530,
+     "bets": 105511,
+     "races": 29264,
+     "hits": 2698,
+     "roi": 0.8459,
+     "profit_yen": -1626350,
      "roi_ci90": [
-      0.82,
-      0.8881
+      0.8138,
+      0.88
      ],
      "band": [
       1.0,
@@ -2337,14 +2337,14 @@
      ]
     },
     {
-     "bets": 64777,
-     "races": 23656,
-     "hits": 1192,
-     "roi": 0.8814,
-     "profit_yen": -768230,
+     "bets": 71941,
+     "races": 26200,
+     "hits": 1297,
+     "roi": 0.8588,
+     "profit_yen": -1015930,
      "roi_ci90": [
-      0.8346,
-      0.9307
+      0.8125,
+      0.9022
      ],
      "band": [
       1.2,
@@ -2352,14 +2352,14 @@
      ]
     },
     {
-     "bets": 30522,
-     "races": 15152,
-     "hits": 375,
-     "roi": 0.8606,
-     "profit_yen": -425330,
+     "bets": 34213,
+     "races": 16897,
+     "hits": 428,
+     "roi": 0.8837,
+     "profit_yen": -397980,
      "roi_ci90": [
-      0.7753,
-      0.9471
+      0.8012,
+      0.9682
      ],
      "band": [
       1.5,
@@ -2367,14 +2367,14 @@
      ]
     },
     {
-     "bets": 8493,
-     "races": 4893,
-     "hits": 64,
-     "roi": 0.7545,
-     "profit_yen": -208500,
+     "bets": 9595,
+     "races": 5535,
+     "hits": 77,
+     "roi": 0.8083,
+     "profit_yen": -183950,
      "roi_ci90": [
-      0.592,
-      0.9286
+      0.6477,
+      0.9696
      ],
      "band": [
       2.0,
@@ -2383,47 +2383,47 @@
     }
    ],
    "all_ev100": {
-    "bets": 199245,
-    "races": 27369,
-    "hits": 4109,
-    "roi": 0.8592,
-    "profit_yen": -2804590,
+    "bets": 221260,
+    "races": 30242,
+    "hits": 4500,
+    "roi": 0.8543,
+    "profit_yen": -3224210,
     "roi_ci90": [
-     0.835,
-     0.8877
+     0.8287,
+     0.8798
     ]
    },
    "pick_rule": {
-    "bets": 80247,
-    "races": 27369,
-    "hits": 1417,
-    "roi": 0.8531,
-    "profit_yen": -1179110,
+    "bets": 88731,
+    "races": 30242,
+    "hits": 1540,
+    "roi": 0.8517,
+    "profit_yen": -1315920,
     "roi_ci90": [
-     0.8021,
-     0.901
+     0.804,
+     0.8985
     ]
    },
    "pick_mid": {
-    "bets": 78772,
-    "races": 27295,
-    "hits": 1744,
-    "roi": 0.8964,
-    "profit_yen": -816000,
+    "bets": 87077,
+    "races": 30157,
+    "hits": 1882,
+    "roi": 0.8713,
+    "profit_yen": -1121040,
     "roi_ci90": [
-     0.8507,
-     0.9435
+     0.8276,
+     0.9159
     ]
    },
    "blend_ev100": {
-    "bets": 14365,
-    "races": 7160,
-    "hits": 378,
-    "roi": 0.8571,
-    "profit_yen": -205340,
+    "bets": 14621,
+    "races": 7364,
+    "hits": 361,
+    "roi": 0.8879,
+    "profit_yen": -163900,
     "roi_ci90": [
-     0.768,
-     0.9431
+     0.7923,
+     0.9844
     ]
    }
   }
@@ -2431,23 +2431,23 @@
  "blend_sweep": {
   "fits": {
    "first": {
-    "a": 0.36,
-    "b": 0.699,
-    "share": 0.34
+    "a": 0.359,
+    "b": 0.701,
+    "share": 0.339
    },
    "second": {
-    "a": 0.376,
-    "b": 0.69,
-    "share": 0.352
+    "a": 0.369,
+    "b": 0.692,
+    "share": 0.348
    }
   },
   "periods": {
    "first": [
     "20250128",
-    "20260410"
+    "20260320"
    ],
    "second": [
-    "20260410",
+    "20260320",
     "20261005"
    ]
   },
@@ -2456,25 +2456,25 @@
     "share": 0.1,
     "th": 1.0,
     "first": {
-     "bets": 213,
-     "races": 49,
-     "hits": 13,
-     "roi": 1.4427,
-     "profit_yen": 9430,
+     "bets": 172,
+     "races": 40,
+     "hits": 10,
+     "roi": 1.5209,
+     "profit_yen": 8960,
      "roi_ci90": [
-      0.6558,
-      2.4095
+      0.6125,
+      2.6671
      ]
     },
     "second": {
-     "bets": 265,
-     "races": 58,
-     "hits": 18,
-     "roi": 1.2517,
-     "profit_yen": 6670,
+     "bets": 326,
+     "races": 71,
+     "hits": 23,
+     "roi": 1.2196,
+     "profit_yen": 7160,
      "roi_ci90": [
-      0.7713,
-      1.7777
+      0.8102,
+      1.704
      ]
     }
    },
@@ -2482,25 +2482,25 @@
     "share": 0.1,
     "th": 1.1,
     "first": {
-     "bets": 154,
-     "races": 34,
-     "hits": 9,
-     "roi": 1.6162,
-     "profit_yen": 9490,
+     "bets": 133,
+     "races": 28,
+     "hits": 7,
+     "roi": 1.5722,
+     "profit_yen": 7610,
      "roi_ci90": [
-      0.5885,
-      2.9223
+      0.3727,
+      3.0459
      ]
     },
     "second": {
-     "bets": 205,
-     "races": 45,
-     "hits": 15,
-     "roi": 1.4659,
-     "profit_yen": 9550,
+     "bets": 238,
+     "races": 54,
+     "hits": 17,
+     "roi": 1.4185,
+     "profit_yen": 9960,
      "roi_ci90": [
-      0.9024,
-      2.14
+      0.8891,
+      2.0158
      ]
     }
    },
@@ -2508,25 +2508,25 @@
     "share": 0.1,
     "th": 1.2,
     "first": {
-     "bets": 97,
-     "races": 24,
-     "hits": 6,
-     "roi": 1.9144,
-     "profit_yen": 8870,
+     "bets": 92,
+     "races": 23,
+     "hits": 5,
+     "roi": 1.7141,
+     "profit_yen": 6570,
      "roi_ci90": [
-      0.4535,
-      3.9042
+      0.2174,
+      3.7762
      ]
     },
     "second": {
-     "bets": 154,
-     "races": 34,
-     "hits": 13,
-     "roi": 1.8253,
-     "profit_yen": 12710,
+     "bets": 172,
+     "races": 39,
+     "hits": 15,
+     "roi": 1.836,
+     "profit_yen": 14380,
      "roi_ci90": [
-      1.0744,
-      2.7284
+      1.1548,
+      2.6468
      ]
     }
    },
@@ -2534,25 +2534,25 @@
     "share": 0.1,
     "th": 1.3,
     "first": {
-     "bets": 75,
-     "races": 16,
-     "hits": 4,
-     "roi": 2.2267,
-     "profit_yen": 9200,
+     "bets": 70,
+     "races": 15,
+     "hits": 3,
+     "roi": 2.0229,
+     "profit_yen": 7160,
      "roi_ci90": [
-      0.3722,
-      4.7738
+      0.0,
+      4.776
      ]
     },
     "second": {
-     "bets": 116,
-     "races": 26,
-     "hits": 10,
-     "roi": 1.6672,
-     "profit_yen": 7740,
+     "bets": 129,
+     "races": 28,
+     "hits": 11,
+     "roi": 1.6961,
+     "profit_yen": 8980,
      "roi_ci90": [
-      1.005,
-      2.356
+      1.0404,
+      2.3636
      ]
     }
    },
@@ -2560,22 +2560,25 @@
     "share": 0.1,
     "th": 1.5,
     "first": {
-     "bets": 25,
-     "races": 7,
-     "hits": 2,
-     "roi": 5.18,
-     "profit_yen": 10450,
-     "roi_ci90": null
+     "bets": 31,
+     "races": 9,
+     "hits": 3,
+     "roi": 4.5677,
+     "profit_yen": 11060,
+     "roi_ci90": [
+      0.318,
+      9.7755
+     ]
     },
     "second": {
-     "bets": 74,
-     "races": 16,
+     "bets": 75,
+     "races": 17,
      "hits": 7,
-     "roi": 1.9905,
-     "profit_yen": 7330,
+     "roi": 1.964,
+     "profit_yen": 7230,
      "roi_ci90": [
-      0.9949,
-      3.0858
+      1.0288,
+      2.9882
      ]
     }
    },
@@ -2603,25 +2606,25 @@
     "share": 0.2,
     "th": 1.0,
     "first": {
-     "bets": 408,
-     "races": 144,
+     "bets": 398,
+     "races": 157,
      "hits": 18,
-     "roi": 1.2404,
-     "profit_yen": 9810,
+     "roi": 1.4015,
+     "profit_yen": 15980,
      "roi_ci90": [
-      0.6759,
-      1.8687
+      0.77,
+      2.1009
      ]
     },
     "second": {
-     "bets": 455,
-     "races": 155,
-     "hits": 22,
-     "roi": 1.3358,
-     "profit_yen": 15280,
+     "bets": 518,
+     "races": 167,
+     "hits": 26,
+     "roi": 1.3319,
+     "profit_yen": 17190,
      "roi_ci90": [
-      0.7145,
-      2.0287
+      0.777,
+      1.9862
      ]
     }
    },
@@ -2629,25 +2632,25 @@
     "share": 0.2,
     "th": 1.1,
     "first": {
-     "bets": 234,
-     "races": 54,
-     "hits": 13,
-     "roi": 1.553,
-     "profit_yen": 12940,
+     "bets": 193,
+     "races": 46,
+     "hits": 9,
+     "roi": 1.4575,
+     "profit_yen": 8830,
      "roi_ci90": [
-      0.6797,
-      2.6453
+      0.4447,
+      2.6522
      ]
     },
     "second": {
-     "bets": 291,
-     "races": 64,
-     "hits": 18,
-     "roi": 1.8753,
-     "profit_yen": 25470,
+     "bets": 350,
+     "races": 75,
+     "hits": 22,
+     "roi": 1.7937,
+     "profit_yen": 27780,
      "roi_ci90": [
-      0.9204,
-      2.9833
+      1.0128,
+      2.7085
      ]
     }
    },
@@ -2655,25 +2658,25 @@
     "share": 0.2,
     "th": 1.2,
     "first": {
-     "bets": 191,
-     "races": 42,
-     "hits": 10,
-     "roi": 1.6157,
-     "profit_yen": 11760,
+     "bets": 153,
+     "races": 33,
+     "hits": 7,
+     "roi": 1.7131,
+     "profit_yen": 10910,
      "roi_ci90": [
-      0.6367,
-      2.7526
+      0.542,
+      3.1929
      ]
     },
     "second": {
-     "bets": 243,
-     "races": 54,
-     "hits": 16,
-     "roi": 1.9428,
-     "profit_yen": 22910,
+     "bets": 292,
+     "races": 64,
+     "hits": 19,
+     "roi": 1.776,
+     "profit_yen": 22660,
      "roi_ci90": [
-      0.9129,
-      3.2181
+      0.9086,
+      2.8115
      ]
     }
    },
@@ -2681,25 +2684,25 @@
     "share": 0.2,
     "th": 1.3,
     "first": {
-     "bets": 146,
-     "races": 34,
-     "hits": 8,
-     "roi": 1.624,
-     "profit_yen": 9110,
+     "bets": 128,
+     "races": 28,
+     "hits": 6,
+     "roi": 1.5813,
+     "profit_yen": 7440,
      "roi_ci90": [
-      0.5426,
-      2.9827
+      0.3628,
+      3.1879
      ]
     },
     "second": {
-     "bets": 197,
-     "races": 45,
-     "hits": 14,
-     "roi": 2.3051,
-     "profit_yen": 25710,
+     "bets": 230,
+     "races": 54,
+     "hits": 16,
+     "roi": 2.1252,
+     "profit_yen": 25880,
      "roi_ci90": [
-      1.0435,
-      3.7948
+      1.0421,
+      3.3366
      ]
     }
    },
@@ -2707,25 +2710,25 @@
     "share": 0.2,
     "th": 1.5,
     "first": {
-     "bets": 89,
-     "races": 20,
-     "hits": 4,
-     "roi": 1.8764,
-     "profit_yen": 7800,
+     "bets": 84,
+     "races": 19,
+     "hits": 3,
+     "roi": 1.6857,
+     "profit_yen": 5760,
      "roi_ci90": [
-      0.3432,
-      3.9792
+      0.1343,
+      3.9671
      ]
     },
     "second": {
-     "bets": 142,
-     "races": 31,
-     "hits": 12,
-     "roi": 3.0613,
-     "profit_yen": 29270,
+     "bets": 156,
+     "races": 33,
+     "hits": 13,
+     "roi": 2.9494,
+     "profit_yen": 30410,
      "roi_ci90": [
-      1.3585,
-      5.4558
+      1.3212,
+      5.1335
      ]
     }
    },
@@ -2733,1270 +2736,1270 @@
     "share": 0.2,
     "th": 2.0,
     "first": {
-     "bets": 26,
-     "races": 6,
+     "bets": 29,
+     "races": 7,
      "hits": 2,
-     "roi": 4.9808,
-     "profit_yen": 10350,
+     "roi": 4.4655,
+     "profit_yen": 10050,
      "roi_ci90": null
     },
     "second": {
-     "bets": 74,
+     "bets": 73,
      "races": 16,
      "hits": 8,
-     "roi": 4.3919,
-     "profit_yen": 25100,
+     "roi": 4.4521,
+     "profit_yen": 25200,
      "roi_ci90": [
-      1.4469,
-      8.9193
+      1.5236,
+      8.9692
      ]
     }
    },
    {
     "share": 0.3,
     "th": 1.0,
-    "first": {
-     "bets": 4809,
-     "races": 2905,
-     "hits": 104,
-     "roi": 0.8555,
-     "profit_yen": -69470,
-     "roi_ci90": [
-      0.7039,
-      1.0056
-     ]
-    },
-    "second": {
-     "bets": 5197,
-     "races": 3142,
-     "hits": 130,
-     "roi": 0.7467,
-     "profit_yen": -131660,
-     "roi_ci90": [
-      0.6096,
-      0.8854
-     ]
-    }
-   },
-   {
-    "share": 0.3,
-    "th": 1.1,
-    "first": {
-     "bets": 654,
-     "races": 345,
-     "hits": 21,
-     "roi": 1.0561,
-     "profit_yen": 3670,
-     "roi_ci90": [
-      0.6316,
-      1.5611
-     ]
-    },
-    "second": {
-     "bets": 737,
-     "races": 385,
-     "hits": 22,
-     "roi": 1.148,
-     "profit_yen": 10910,
-     "roi_ci90": [
-      0.6654,
-      1.7121
-     ]
-    }
-   },
-   {
-    "share": 0.3,
-    "th": 1.2,
-    "first": {
-     "bets": 271,
-     "races": 80,
-     "hits": 10,
-     "roi": 1.462,
-     "profit_yen": 12520,
-     "roi_ci90": [
-      0.6344,
-      2.4791
-     ]
-    },
-    "second": {
-     "bets": 317,
-     "races": 85,
-     "hits": 16,
-     "roi": 1.6744,
-     "profit_yen": 21380,
-     "roi_ci90": [
-      0.8241,
-      2.7648
-     ]
-    }
-   },
-   {
-    "share": 0.3,
-    "th": 1.3,
-    "first": {
-     "bets": 206,
-     "races": 50,
-     "hits": 10,
-     "roi": 1.9233,
-     "profit_yen": 19020,
-     "roi_ci90": [
-      0.8431,
-      3.1129
-     ]
-    },
-    "second": {
-     "bets": 248,
-     "races": 59,
-     "hits": 14,
-     "roi": 1.8435,
-     "profit_yen": 20920,
-     "roi_ci90": [
-      0.8219,
-      3.0596
-     ]
-    }
-   },
-   {
-    "share": 0.3,
-    "th": 1.5,
-    "first": {
-     "bets": 126,
-     "races": 33,
-     "hits": 7,
-     "roi": 2.4976,
-     "profit_yen": 18870,
-     "roi_ci90": [
-      0.8852,
-      4.395
-     ]
-    },
-    "second": {
-     "bets": 186,
-     "races": 43,
-     "hits": 14,
-     "roi": 2.4581,
-     "profit_yen": 27120,
-     "roi_ci90": [
-      1.1526,
-      4.1487
-     ]
-    }
-   },
-   {
-    "share": 0.3,
-    "th": 2.0,
-    "first": {
-     "bets": 58,
-     "races": 14,
-     "hits": 3,
-     "roi": 2.9224,
-     "profit_yen": 11150,
-     "roi_ci90": [
-      0.1801,
-      6.1743
-     ]
-    },
-    "second": {
-     "bets": 99,
-     "races": 22,
-     "hits": 7,
-     "roi": 3.1374,
-     "profit_yen": 21160,
-     "roi_ci90": [
-      0.9125,
-      6.5664
-     ]
-    }
-   },
-   {
-    "share": 0.4,
-    "th": 1.0,
-    "first": {
-     "bets": 22427,
-     "races": 11018,
-     "hits": 528,
-     "roi": 0.9305,
-     "profit_yen": -155900,
-     "roi_ci90": [
-      0.8488,
-      1.0146
-     ]
-    },
-    "second": {
-     "bets": 23455,
-     "races": 11442,
-     "hits": 596,
-     "roi": 0.8278,
-     "profit_yen": -403950,
-     "roi_ci90": [
-      0.7604,
-      0.8988
-     ]
-    }
-   },
-   {
-    "share": 0.4,
-    "th": 1.1,
     "first": {
      "bets": 5187,
-     "races": 3195,
-     "hits": 105,
-     "roi": 0.9845,
-     "profit_yen": -8020,
+     "races": 3060,
+     "hits": 131,
+     "roi": 0.8704,
+     "profit_yen": -67230,
      "roi_ci90": [
-      0.8101,
-      1.1737
+      0.7319,
+      1.0159
      ]
     },
     "second": {
-     "bets": 5303,
-     "races": 3234,
-     "hits": 101,
-     "roi": 0.7474,
-     "profit_yen": -133960,
+     "bets": 5611,
+     "races": 3399,
+     "hits": 133,
+     "roi": 0.8018,
+     "profit_yen": -111190,
      "roi_ci90": [
-      0.5842,
-      0.9267
+      0.6642,
+      0.9469
      ]
     }
    },
    {
-    "share": 0.4,
-    "th": 1.2,
-    "first": {
-     "bets": 1263,
-     "races": 792,
-     "hits": 28,
-     "roi": 1.0476,
-     "profit_yen": 6010,
-     "roi_ci90": [
-      0.67,
-      1.485
-     ]
-    },
-    "second": {
-     "bets": 1325,
-     "races": 789,
-     "hits": 27,
-     "roi": 0.8621,
-     "profit_yen": -18270,
-     "roi_ci90": [
-      0.5559,
-      1.2145
-     ]
-    }
-   },
-   {
-    "share": 0.4,
-    "th": 1.3,
-    "first": {
-     "bets": 440,
-     "races": 205,
-     "hits": 14,
-     "roi": 1.7336,
-     "profit_yen": 32280,
-     "roi_ci90": [
-      0.9144,
-      2.7452
-     ]
-    },
-    "second": {
-     "bets": 482,
-     "races": 221,
-     "hits": 15,
-     "roi": 1.4002,
-     "profit_yen": 19290,
-     "roi_ci90": [
-      0.7098,
-      2.2589
-     ]
-    }
-   },
-   {
-    "share": 0.4,
-    "th": 1.5,
-    "first": {
-     "bets": 177,
-     "races": 49,
-     "hits": 9,
-     "roi": 3.0034,
-     "profit_yen": 35460,
-     "roi_ci90": [
-      1.3404,
-      5.016
-     ]
-    },
-    "second": {
-     "bets": 221,
-     "races": 58,
-     "hits": 11,
-     "roi": 1.9312,
-     "profit_yen": 20580,
-     "roi_ci90": [
-      0.7967,
-      3.4101
-     ]
-    }
-   },
-   {
-    "share": 0.4,
-    "th": 2.0,
-    "first": {
-     "bets": 74,
-     "races": 17,
-     "hits": 4,
-     "roi": 4.2676,
-     "profit_yen": 24180,
-     "roi_ci90": [
-      0.7352,
-      8.5459
-     ]
-    },
-    "second": {
-     "bets": 118,
-     "races": 26,
-     "hits": 9,
-     "roi": 3.3695,
-     "profit_yen": 27960,
-     "roi_ci90": [
-      1.2021,
-      6.8113
-     ]
-    }
-   },
-   {
-    "share": 0.5,
-    "th": 1.0,
-    "first": {
-     "bets": 49364,
-     "races": 19127,
-     "hits": 1148,
-     "roi": 0.8844,
-     "profit_yen": -570830,
-     "roi_ci90": [
-      0.8339,
-      0.9348
-     ]
-    },
-    "second": {
-     "bets": 49987,
-     "races": 19402,
-     "hits": 1329,
-     "roi": 0.8383,
-     "profit_yen": -808220,
-     "roi_ci90": [
-      0.7934,
-      0.8844
-     ]
-    }
-   },
-   {
-    "share": 0.5,
+    "share": 0.3,
     "th": 1.1,
     "first": {
-     "bets": 18298,
-     "races": 9475,
-     "hits": 337,
-     "roi": 0.9052,
-     "profit_yen": -173500,
+     "bets": 690,
+     "races": 375,
+     "hits": 24,
+     "roi": 1.183,
+     "profit_yen": 12630,
      "roi_ci90": [
-      0.7994,
-      1.0048
+      0.7474,
+      1.6379
      ]
     },
     "second": {
-     "bets": 18445,
-     "races": 9622,
-     "hits": 372,
-     "roi": 0.7956,
-     "profit_yen": -377050,
+     "bets": 841,
+     "races": 424,
+     "hits": 25,
+     "roi": 1.1326,
+     "profit_yen": 11150,
      "roi_ci90": [
-      0.7148,
-      0.8804
+      0.6822,
+      1.6285
      ]
     }
    },
    {
-    "share": 0.5,
+    "share": 0.3,
     "th": 1.2,
     "first": {
-     "bets": 6410,
-     "races": 3876,
-     "hits": 106,
-     "roi": 0.9327,
-     "profit_yen": -43110,
-     "roi_ci90": [
-      0.7753,
-      1.1099
-     ]
-    },
-    "second": {
-     "bets": 6268,
-     "races": 3819,
-     "hits": 92,
-     "roi": 0.6567,
-     "profit_yen": -215210,
-     "roi_ci90": [
-      0.5053,
-      0.8245
-     ]
-    }
-   },
-   {
-    "share": 0.5,
-    "th": 1.3,
-    "first": {
-     "bets": 2253,
-     "races": 1476,
-     "hits": 40,
-     "roi": 1.026,
-     "profit_yen": 5860,
-     "roi_ci90": [
-      0.7285,
-      1.3585
-     ]
-    },
-    "second": {
-     "bets": 2287,
-     "races": 1436,
-     "hits": 35,
-     "roi": 0.7154,
-     "profit_yen": -65090,
-     "roi_ci90": [
-      0.4773,
-      0.9811
-     ]
-    }
-   },
-   {
-    "share": 0.5,
-    "th": 1.5,
-    "first": {
-     "bets": 422,
-     "races": 222,
-     "hits": 13,
-     "roi": 2.1704,
-     "profit_yen": 49390,
-     "roi_ci90": [
-      1.1268,
-      3.4638
-     ]
-    },
-    "second": {
-     "bets": 449,
-     "races": 216,
-     "hits": 13,
-     "roi": 1.3332,
-     "profit_yen": 14960,
-     "roi_ci90": [
-      0.605,
-      2.1573
-     ]
-    }
-   },
-   {
-    "share": 0.5,
-    "th": 2.0,
-    "first": {
-     "bets": 98,
-     "races": 27,
-     "hits": 5,
-     "roi": 3.6561,
-     "profit_yen": 26030,
-     "roi_ci90": [
-      0.8395,
-      6.91
-     ]
-    },
-    "second": {
-     "bets": 141,
-     "races": 36,
+     "bets": 220,
+     "races": 69,
      "hits": 10,
-     "roi": 2.9064,
-     "profit_yen": 26880,
+     "roi": 1.6909,
+     "profit_yen": 15200,
      "roi_ci90": [
-      1.1239,
-      5.524
-     ]
-    }
-   },
-   {
-    "share": 0.6,
-    "th": 1.0,
-    "first": {
-     "bets": 75152,
-     "races": 23742,
-     "hits": 1749,
-     "roi": 0.8533,
-     "profit_yen": -1102700,
-     "roi_ci90": [
-      0.809,
-      0.8969
+      0.7222,
+      2.8624
      ]
     },
     "second": {
-     "bets": 75194,
-     "races": 23906,
-     "hits": 1998,
-     "roi": 0.8592,
-     "profit_yen": -1058440,
+     "bets": 381,
+     "races": 100,
+     "hits": 18,
+     "roi": 1.6344,
+     "profit_yen": 24170,
      "roi_ci90": [
-      0.8192,
-      0.898
+      0.8602,
+      2.526
      ]
     }
    },
    {
-    "share": 0.6,
-    "th": 1.1,
-    "first": {
-     "bets": 38326,
-     "races": 16350,
-     "hits": 732,
-     "roi": 0.8721,
-     "profit_yen": -490310,
-     "roi_ci90": [
-      0.8076,
-      0.9342
-     ]
-    },
-    "second": {
-     "bets": 38004,
-     "races": 16372,
-     "hits": 782,
-     "roi": 0.8133,
-     "profit_yen": -709350,
-     "roi_ci90": [
-      0.7583,
-      0.8686
-     ]
-    }
-   },
-   {
-    "share": 0.6,
-    "th": 1.2,
-    "first": {
-     "bets": 17880,
-     "races": 9345,
-     "hits": 276,
-     "roi": 0.8582,
-     "profit_yen": -253500,
-     "roi_ci90": [
-      0.7571,
-      0.9653
-     ]
-    },
-    "second": {
-     "bets": 17630,
-     "races": 9325,
-     "hits": 313,
-     "roi": 0.8239,
-     "profit_yen": -310450,
-     "roi_ci90": [
-      0.7318,
-      0.9226
-     ]
-    }
-   },
-   {
-    "share": 0.6,
+    "share": 0.3,
     "th": 1.3,
     "first": {
-     "bets": 8197,
-     "races": 4857,
-     "hits": 116,
-     "roi": 0.8638,
-     "profit_yen": -111620,
-     "roi_ci90": [
-      0.7226,
-      1.0116
-     ]
-    },
-    "second": {
-     "bets": 7905,
-     "races": 4746,
-     "hits": 113,
-     "roi": 0.8122,
-     "profit_yen": -148430,
-     "roi_ci90": [
-      0.6509,
-      0.9887
-     ]
-    }
-   },
-   {
-    "share": 0.6,
-    "th": 1.5,
-    "first": {
-     "bets": 1763,
-     "races": 1173,
-     "hits": 30,
-     "roi": 1.2822,
-     "profit_yen": 49760,
-     "roi_ci90": [
-      0.8457,
-      1.7395
-     ]
-    },
-    "second": {
-     "bets": 1744,
-     "races": 1110,
-     "hits": 23,
-     "roi": 0.845,
-     "profit_yen": -27040,
-     "roi_ci90": [
-      0.4692,
-      1.3036
-     ]
-    }
-   },
-   {
-    "share": 0.6,
-    "th": 2.0,
-    "first": {
-     "bets": 164,
-     "races": 66,
-     "hits": 5,
-     "roi": 2.5055,
-     "profit_yen": 24690,
-     "roi_ci90": [
-      0.5414,
-      5.0731
-     ]
-    },
-    "second": {
-     "bets": 198,
-     "races": 63,
-     "hits": 11,
-     "roi": 2.1556,
-     "profit_yen": 22880,
-     "roi_ci90": [
-      0.8603,
-      4.0043
-     ]
-    }
-   },
-   {
-    "share": 0.7,
-    "th": 1.0,
-    "first": {
-     "bets": 95640,
-     "races": 25982,
-     "hits": 2215,
-     "roi": 0.8589,
-     "profit_yen": -1349420,
-     "roi_ci90": [
-      0.8184,
-      0.8981
-     ]
-    },
-    "second": {
-     "bets": 95207,
-     "races": 25995,
-     "hits": 2504,
-     "roi": 0.8618,
-     "profit_yen": -1315630,
-     "roi_ci90": [
-      0.8257,
-      0.8981
-     ]
-    }
-   },
-   {
-    "share": 0.7,
-    "th": 1.1,
-    "first": {
-     "bets": 59994,
-     "races": 21398,
-     "hits": 1155,
-     "roi": 0.8551,
-     "profit_yen": -869490,
-     "roi_ci90": [
-      0.8063,
-      0.9086
-     ]
-    },
-    "second": {
-     "bets": 59028,
-     "races": 21304,
-     "hits": 1287,
-     "roi": 0.8421,
-     "profit_yen": -932270,
-     "roi_ci90": [
-      0.798,
-      0.8892
-     ]
-    }
-   },
-   {
-    "share": 0.7,
-    "th": 1.2,
-    "first": {
-     "bets": 34611,
-     "races": 15276,
-     "hits": 563,
-     "roi": 0.8645,
-     "profit_yen": -468850,
-     "roi_ci90": [
-      0.7967,
-      0.9369
-     ]
-    },
-    "second": {
-     "bets": 33653,
-     "races": 15109,
-     "hits": 582,
-     "roi": 0.7852,
-     "profit_yen": -722810,
-     "roi_ci90": [
-      0.7215,
-      0.8528
-     ]
-    }
-   },
-   {
-    "share": 0.7,
-    "th": 1.3,
-    "first": {
-     "bets": 19059,
-     "races": 9868,
-     "hits": 267,
-     "roi": 0.8663,
-     "profit_yen": -254840,
-     "roi_ci90": [
-      0.7642,
-      0.9717
-     ]
-    },
-    "second": {
-     "bets": 18403,
-     "races": 9631,
-     "hits": 286,
-     "roi": 0.8059,
-     "profit_yen": -357160,
-     "roi_ci90": [
-      0.71,
-      0.9105
-     ]
-    }
-   },
-   {
-    "share": 0.7,
-    "th": 1.5,
-    "first": {
-     "bets": 5847,
-     "races": 3583,
-     "hits": 73,
-     "roi": 0.9742,
-     "profit_yen": -15070,
-     "roi_ci90": [
-      0.7676,
-      1.1856
-     ]
-    },
-    "second": {
-     "bets": 5451,
-     "races": 3417,
-     "hits": 59,
-     "roi": 0.7095,
-     "profit_yen": -158370,
-     "roi_ci90": [
-      0.522,
-      0.921
-     ]
-    }
-   },
-   {
-    "share": 0.7,
-    "th": 2.0,
-    "first": {
-     "bets": 435,
-     "races": 265,
+     "bets": 171,
+     "races": 42,
      "hits": 8,
-     "roi": 1.7818,
-     "profit_yen": 34010,
+     "roi": 1.8942,
+     "profit_yen": 15290,
      "roi_ci90": [
-      0.6352,
-      3.0751
+      0.6947,
+      3.2307
      ]
     },
     "second": {
-     "bets": 462,
-     "races": 258,
-     "hits": 10,
-     "roi": 0.887,
-     "profit_yen": -5220,
-     "roi_ci90": [
-      0.2982,
-      1.6424
-     ]
-    }
-   },
-   {
-    "share": 0.8,
-    "th": 1.0,
-    "first": {
-     "bets": 109775,
-     "races": 26854,
-     "hits": 2526,
-     "roi": 0.8736,
-     "profit_yen": -1387510,
-     "roi_ci90": [
-      0.8358,
-      0.91
-     ]
-    },
-    "second": {
-     "bets": 109352,
-     "races": 26900,
-     "hits": 2781,
-     "roi": 0.8431,
-     "profit_yen": -1716170,
-     "roi_ci90": [
-      0.8091,
-      0.8774
-     ]
-    }
-   },
-   {
-    "share": 0.8,
-    "th": 1.1,
-    "first": {
-     "bets": 79378,
-     "races": 24302,
-     "hits": 1568,
-     "roi": 0.8754,
-     "profit_yen": -989270,
-     "roi_ci90": [
-      0.8298,
-      0.9255
-     ]
-    },
-    "second": {
-     "bets": 78049,
-     "races": 24253,
-     "hits": 1722,
-     "roi": 0.8412,
-     "profit_yen": -1239280,
-     "roi_ci90": [
-      0.802,
-      0.8855
-     ]
-    }
-   },
-   {
-    "share": 0.8,
-    "th": 1.2,
-    "first": {
-     "bets": 52732,
-     "races": 19910,
-     "hits": 889,
-     "roi": 0.8821,
-     "profit_yen": -621760,
-     "roi_ci90": [
-      0.8228,
-      0.9405
-     ]
-    },
-    "second": {
-     "bets": 51381,
-     "races": 19703,
-     "hits": 941,
-     "roi": 0.8255,
-     "profit_yen": -896610,
-     "roi_ci90": [
-      0.7723,
-      0.8807
-     ]
-    }
-   },
-   {
-    "share": 0.8,
-    "th": 1.3,
-    "first": {
-     "bets": 33694,
-     "races": 14981,
-     "hits": 483,
-     "roi": 0.8739,
-     "profit_yen": -424920,
-     "roi_ci90": [
-      0.7937,
-      0.9489
-     ]
-    },
-    "second": {
-     "bets": 32436,
-     "races": 14685,
-     "hits": 501,
-     "roi": 0.7837,
-     "profit_yen": -701530,
-     "roi_ci90": [
-      0.7146,
-      0.8551
-     ]
-    }
-   },
-   {
-    "share": 0.8,
-    "th": 1.5,
-    "first": {
-     "bets": 13359,
-     "races": 7382,
-     "hits": 165,
-     "roi": 0.9172,
-     "profit_yen": -110580,
-     "roi_ci90": [
-      0.796,
-      1.0484
-     ]
-    },
-    "second": {
-     "bets": 12348,
-     "races": 6997,
-     "hits": 151,
-     "roi": 0.7621,
-     "profit_yen": -293790,
-     "roi_ci90": [
-      0.6286,
-      0.9006
-     ]
-    }
-   },
-   {
-    "share": 0.8,
-    "th": 2.0,
-    "first": {
-     "bets": 1481,
-     "races": 983,
-     "hits": 18,
-     "roi": 1.2658,
-     "profit_yen": 39370,
-     "roi_ci90": [
-      0.75,
-      1.8487
-     ]
-    },
-    "second": {
-     "bets": 1356,
-     "races": 896,
-     "hits": 18,
-     "roi": 0.849,
-     "profit_yen": -20470,
-     "roi_ci90": [
-      0.4679,
-      1.2727
-     ]
-    }
-   },
-   {
-    "share": 0.9,
-    "th": 1.0,
-    "first": {
-     "bets": 119417,
-     "races": 27198,
-     "hits": 2691,
-     "roi": 0.8695,
-     "profit_yen": -1558640,
-     "roi_ci90": [
-      0.8356,
-      0.906
-     ]
-    },
-    "second": {
-     "bets": 118833,
-     "races": 27235,
-     "hits": 2990,
-     "roi": 0.8593,
-     "profit_yen": -1672070,
-     "roi_ci90": [
-      0.8238,
-      0.8932
-     ]
-    }
-   },
-   {
-    "share": 0.9,
-    "th": 1.1,
-    "first": {
-     "bets": 94977,
-     "races": 25856,
-     "hits": 1863,
-     "roi": 0.8677,
-     "profit_yen": -1256410,
-     "roi_ci90": [
-      0.824,
-      0.9108
-     ]
-    },
-    "second": {
-     "bets": 93622,
-     "races": 25856,
-     "hits": 2082,
-     "roi": 0.8671,
-     "profit_yen": -1244600,
-     "roi_ci90": [
-      0.8271,
-      0.9075
-     ]
-    }
-   },
-   {
-    "share": 0.9,
-    "th": 1.2,
-    "first": {
-     "bets": 70170,
-     "races": 23060,
-     "hits": 1202,
-     "roi": 0.8761,
-     "profit_yen": -869250,
-     "roi_ci90": [
-      0.8257,
-      0.9273
-     ]
-    },
-    "second": {
-     "bets": 68119,
-     "races": 22801,
-     "hits": 1294,
-     "roi": 0.8438,
-     "profit_yen": -1064100,
-     "roi_ci90": [
-      0.7989,
-      0.8891
-     ]
-    }
-   },
-   {
-    "share": 0.9,
-    "th": 1.3,
-    "first": {
-     "bets": 49804,
-     "races": 19195,
-     "hits": 748,
-     "roi": 0.8737,
-     "profit_yen": -629100,
-     "roi_ci90": [
-      0.8125,
-      0.9372
-     ]
-    },
-    "second": {
-     "bets": 47820,
-     "races": 18882,
-     "hits": 766,
-     "roi": 0.8318,
-     "profit_yen": -804460,
-     "roi_ci90": [
-      0.7755,
-      0.8882
-     ]
-    }
-   },
-   {
-    "share": 0.9,
-    "th": 1.5,
-    "first": {
-     "bets": 23724,
-     "races": 11586,
-     "hits": 286,
-     "roi": 0.8765,
-     "profit_yen": -293070,
-     "roi_ci90": [
-      0.7785,
-      0.9821
-     ]
-    },
-    "second": {
-     "bets": 22290,
-     "races": 11166,
-     "hits": 293,
-     "roi": 0.8419,
-     "profit_yen": -352470,
-     "roi_ci90": [
-      0.7472,
-      0.9429
-     ]
-    }
-   },
-   {
-    "share": 0.9,
-    "th": 2.0,
-    "first": {
-     "bets": 3856,
-     "races": 2465,
-     "hits": 39,
-     "roi": 1.0919,
-     "profit_yen": 35450,
-     "roi_ci90": [
-      0.7841,
-      1.406
-     ]
-    },
-    "second": {
-     "bets": 3519,
-     "races": 2285,
-     "hits": 32,
-     "roi": 0.8109,
-     "profit_yen": -66530,
-     "roi_ci90": [
-      0.5311,
-      1.1079
-     ]
-    }
-   },
-   {
-    "share": "fit",
-    "th": 1.0,
-    "first": {
-     "bets": 10137,
-     "races": 5691,
-     "hits": 225,
-     "roi": 0.8942,
-     "profit_yen": -107270,
-     "roi_ci90": [
-      0.7842,
-      1.0121
-     ]
-    },
-    "second": {
-     "bets": 13126,
-     "races": 7160,
-     "hits": 341,
-     "roi": 0.8047,
-     "profit_yen": -256340,
-     "roi_ci90": [
-      0.7157,
-      0.8948
-     ]
-    }
-   },
-   {
-    "share": "fit",
-    "th": 1.1,
-    "first": {
-     "bets": 1636,
-     "races": 1031,
-     "hits": 42,
-     "roi": 1.2251,
-     "profit_yen": 36820,
-     "roi_ci90": [
-      0.8833,
-      1.5999
-     ]
-    },
-    "second": {
-     "bets": 2239,
-     "races": 1376,
-     "hits": 52,
-     "roi": 0.8648,
-     "profit_yen": -30280,
-     "roi_ci90": [
-      0.6117,
-      1.119
-     ]
-    }
-   },
-   {
-    "share": "fit",
-    "th": 1.2,
-    "first": {
-     "bets": 430,
-     "races": 186,
+     "bets": 300,
+     "races": 71,
      "hits": 16,
-     "roi": 1.6293,
-     "profit_yen": 27060,
+     "roi": 1.8303,
+     "profit_yen": 24910,
      "roi_ci90": [
-      0.8542,
-      2.5736
-     ]
-    },
-    "second": {
-     "bets": 574,
-     "races": 274,
-     "hits": 17,
-     "roi": 1.2812,
-     "profit_yen": 16140,
-     "roi_ci90": [
-      0.707,
-      1.962
+      0.891,
+      2.8747
      ]
     }
    },
    {
-    "share": "fit",
-    "th": 1.3,
-    "first": {
-     "bets": 239,
-     "races": 67,
-     "hits": 10,
-     "roi": 2.1636,
-     "profit_yen": 27810,
-     "roi_ci90": [
-      0.8863,
-      3.7078
-     ]
-    },
-    "second": {
-     "bets": 294,
-     "races": 85,
-     "hits": 13,
-     "roi": 1.7997,
-     "profit_yen": 23510,
-     "roi_ci90": [
-      0.8569,
-      2.8627
-     ]
-    }
-   },
-   {
-    "share": "fit",
+    "share": 0.3,
     "th": 1.5,
     "first": {
-     "bets": 138,
-     "races": 36,
-     "hits": 8,
-     "roi": 3.6326,
-     "profit_yen": 36330,
+     "bets": 111,
+     "races": 26,
+     "hits": 7,
+     "roi": 2.8595,
+     "profit_yen": 20640,
      "roi_ci90": [
-      1.3606,
-      6.0726
+      1.0562,
+      5.0058
      ]
     },
     "second": {
-     "bets": 204,
-     "races": 50,
-     "hits": 12,
-     "roi": 2.3108,
-     "profit_yen": 26740,
+     "bets": 210,
+     "races": 51,
+     "hits": 14,
+     "roi": 2.2576,
+     "profit_yen": 26410,
      "roi_ci90": [
-      1.0243,
-      3.8357
+      1.0639,
+      3.8801
      ]
     }
    },
    {
-    "share": "fit",
+    "share": 0.3,
     "th": 2.0,
     "first": {
      "bets": 62,
      "races": 14,
      "hits": 4,
-     "roi": 5.0935,
-     "profit_yen": 25380,
+     "roi": 3.1871,
+     "profit_yen": 13560,
      "roi_ci90": [
-      0.9294,
-      9.9738
+      0.5357,
+      6.3039
      ]
     },
     "second": {
-     "bets": 110,
-     "races": 26,
-     "hits": 8,
-     "roi": 3.4427,
-     "profit_yen": 26870,
+     "bets": 105,
+     "races": 24,
+     "hits": 7,
+     "roi": 2.9581,
+     "profit_yen": 20560,
      "roi_ci90": [
-      1.0634,
-      6.8374
+      0.8297,
+      6.1765
+     ]
+    }
+   },
+   {
+    "share": 0.4,
+    "th": 1.0,
+    "first": {
+     "bets": 24103,
+     "races": 11818,
+     "hits": 592,
+     "roi": 0.9186,
+     "profit_yen": -196160,
+     "roi_ci90": [
+      0.8491,
+      0.993
+     ]
+    },
+    "second": {
+     "bets": 25575,
+     "races": 12587,
+     "hits": 622,
+     "roi": 0.8548,
+     "profit_yen": -371440,
+     "roi_ci90": [
+      0.7848,
+      0.9257
+     ]
+    }
+   },
+   {
+    "share": 0.4,
+    "th": 1.1,
+    "first": {
+     "bets": 5507,
+     "races": 3326,
+     "hits": 115,
+     "roi": 0.9138,
+     "profit_yen": -47450,
+     "roi_ci90": [
+      0.7438,
+      1.0691
+     ]
+    },
+    "second": {
+     "bets": 5857,
+     "races": 3579,
+     "hits": 107,
+     "roi": 0.799,
+     "profit_yen": -117740,
+     "roi_ci90": [
+      0.6359,
+      0.9764
+     ]
+    }
+   },
+   {
+    "share": 0.4,
+    "th": 1.2,
+    "first": {
+     "bets": 1358,
+     "races": 855,
+     "hits": 31,
+     "roi": 1.0146,
+     "profit_yen": 1980,
+     "roi_ci90": [
+      0.6618,
+      1.4148
+     ]
+    },
+    "second": {
+     "bets": 1482,
+     "races": 873,
+     "hits": 30,
+     "roi": 0.9196,
+     "profit_yen": -11910,
+     "roi_ci90": [
+      0.5722,
+      1.2914
+     ]
+    }
+   },
+   {
+    "share": 0.4,
+    "th": 1.3,
+    "first": {
+     "bets": 413,
+     "races": 213,
+     "hits": 17,
+     "roi": 1.6559,
+     "profit_yen": 27090,
+     "roi_ci90": [
+      0.9443,
+      2.4706
+     ]
+    },
+    "second": {
+     "bets": 554,
+     "races": 248,
+     "hits": 18,
+     "roi": 1.6177,
+     "profit_yen": 34220,
+     "roi_ci90": [
+      0.8467,
+      2.4453
+     ]
+    }
+   },
+   {
+    "share": 0.4,
+    "th": 1.5,
+    "first": {
+     "bets": 152,
+     "races": 41,
+     "hits": 8,
+     "roi": 2.2875,
+     "profit_yen": 19570,
+     "roi_ci90": [
+      0.9522,
+      3.9481
+     ]
+    },
+    "second": {
+     "bets": 258,
+     "races": 69,
+     "hits": 13,
+     "roi": 2.476,
+     "profit_yen": 38080,
+     "roi_ci90": [
+      1.1255,
+      4.2058
+     ]
+    }
+   },
+   {
+    "share": 0.4,
+    "th": 2.0,
+    "first": {
+     "bets": 71,
+     "races": 15,
+     "hits": 4,
+     "roi": 2.7831,
+     "profit_yen": 12660,
+     "roi_ci90": [
+      0.4714,
+      5.6384
+     ]
+    },
+    "second": {
+     "bets": 130,
+     "races": 30,
+     "hits": 10,
+     "roi": 4.1838,
+     "profit_yen": 41390,
+     "roi_ci90": [
+      1.534,
+      7.5414
+     ]
+    }
+   },
+   {
+    "share": 0.5,
+    "th": 1.0,
+    "first": {
+     "bets": 52957,
+     "races": 20676,
+     "hits": 1251,
+     "roi": 0.8707,
+     "profit_yen": -684530,
+     "roi_ci90": [
+      0.8242,
+      0.916
+     ]
+    },
+    "second": {
+     "bets": 55121,
+     "races": 21457,
+     "hits": 1393,
+     "roi": 0.8425,
+     "profit_yen": -868280,
+     "roi_ci90": [
+      0.7967,
+      0.8893
+     ]
+    }
+   },
+   {
+    "share": 0.5,
+    "th": 1.1,
+    "first": {
+     "bets": 19488,
+     "races": 10091,
+     "hits": 384,
+     "roi": 0.8847,
+     "profit_yen": -224780,
+     "roi_ci90": [
+      0.798,
+      0.9735
+     ]
+    },
+    "second": {
+     "bets": 20436,
+     "races": 10701,
+     "hits": 402,
+     "roi": 0.8348,
+     "profit_yen": -337550,
+     "roi_ci90": [
+      0.7511,
+      0.9265
+     ]
+    }
+   },
+   {
+    "share": 0.5,
+    "th": 1.2,
+    "first": {
+     "bets": 6662,
+     "races": 4032,
+     "hits": 117,
+     "roi": 0.8904,
+     "profit_yen": -73040,
+     "roi_ci90": [
+      0.741,
+      1.0375
+     ]
+    },
+    "second": {
+     "bets": 6962,
+     "races": 4234,
+     "hits": 108,
+     "roi": 0.7637,
+     "profit_yen": -164500,
+     "roi_ci90": [
+      0.5981,
+      0.9403
+     ]
+    }
+   },
+   {
+    "share": 0.5,
+    "th": 1.3,
+    "first": {
+     "bets": 2395,
+     "races": 1553,
+     "hits": 42,
+     "roi": 0.8636,
+     "profit_yen": -32670,
+     "roi_ci90": [
+      0.6059,
+      1.1341
+     ]
+    },
+    "second": {
+     "bets": 2557,
+     "races": 1612,
+     "hits": 42,
+     "roi": 0.8933,
+     "profit_yen": -27280,
+     "roi_ci90": [
+      0.6262,
+      1.1748
+     ]
+    }
+   },
+   {
+    "share": 0.5,
+    "th": 1.5,
+    "first": {
+     "bets": 413,
+     "races": 224,
+     "hits": 13,
+     "roi": 1.5274,
+     "profit_yen": 21780,
+     "roi_ci90": [
+      0.8132,
+      2.3297
+     ]
+    },
+    "second": {
+     "bets": 518,
+     "races": 247,
+     "hits": 15,
+     "roi": 1.5649,
+     "profit_yen": 29260,
+     "roi_ci90": [
+      0.7564,
+      2.449
+     ]
+    }
+   },
+   {
+    "share": 0.5,
+    "th": 2.0,
+    "first": {
+     "bets": 86,
+     "races": 24,
+     "hits": 5,
+     "roi": 2.65,
+     "profit_yen": 14190,
+     "roi_ci90": [
+      0.7505,
+      5.1748
+     ]
+    },
+    "second": {
+     "bets": 161,
+     "races": 42,
+     "hits": 11,
+     "roi": 3.454,
+     "profit_yen": 39510,
+     "roi_ci90": [
+      1.3561,
+      5.9536
+     ]
+    }
+   },
+   {
+    "share": 0.6,
+    "th": 1.0,
+    "first": {
+     "bets": 81047,
+     "races": 25927,
+     "hits": 1919,
+     "roi": 0.852,
+     "profit_yen": -1199530,
+     "roi_ci90": [
+      0.8144,
+      0.8902
+     ]
+    },
+    "second": {
+     "bets": 83223,
+     "races": 26446,
+     "hits": 2109,
+     "roi": 0.8598,
+     "profit_yen": -1166990,
+     "roi_ci90": [
+      0.8216,
+      0.8984
+     ]
+    }
+   },
+   {
+    "share": 0.6,
+    "th": 1.1,
+    "first": {
+     "bets": 40767,
+     "races": 17505,
+     "hits": 803,
+     "roi": 0.8649,
+     "profit_yen": -550670,
+     "roi_ci90": [
+      0.805,
+      0.9245
+     ]
+    },
+    "second": {
+     "bets": 42182,
+     "races": 18184,
+     "hits": 841,
+     "roi": 0.8332,
+     "profit_yen": -703750,
+     "roi_ci90": [
+      0.7777,
+      0.8923
+     ]
+    }
+   },
+   {
+    "share": 0.6,
+    "th": 1.2,
+    "first": {
+     "bets": 18927,
+     "races": 9909,
+     "hits": 319,
+     "roi": 0.8689,
+     "profit_yen": -248060,
+     "roi_ci90": [
+      0.7678,
+      0.9646
+     ]
+    },
+    "second": {
+     "bets": 19648,
+     "races": 10408,
+     "hits": 343,
+     "roi": 0.8549,
+     "profit_yen": -285170,
+     "roi_ci90": [
+      0.7521,
+      0.9607
+     ]
+    }
+   },
+   {
+    "share": 0.6,
+    "th": 1.3,
+    "first": {
+     "bets": 8520,
+     "races": 5071,
+     "hits": 130,
+     "roi": 0.8598,
+     "profit_yen": -119480,
+     "roi_ci90": [
+      0.7212,
+      0.9974
+     ]
+    },
+    "second": {
+     "bets": 8890,
+     "races": 5350,
+     "hits": 132,
+     "roi": 0.8722,
+     "profit_yen": -113590,
+     "roi_ci90": [
+      0.7213,
+      1.0469
+     ]
+    }
+   },
+   {
+    "share": 0.6,
+    "th": 1.5,
+    "first": {
+     "bets": 1872,
+     "races": 1231,
+     "hits": 30,
+     "roi": 0.9153,
+     "profit_yen": -15850,
+     "roi_ci90": [
+      0.6004,
+      1.2671
+     ]
+    },
+    "second": {
+     "bets": 1987,
+     "races": 1264,
+     "hits": 28,
+     "roi": 0.9427,
+     "profit_yen": -11390,
+     "roi_ci90": [
+      0.5703,
+      1.3626
+     ]
+    }
+   },
+   {
+    "share": 0.6,
+    "th": 2.0,
+    "first": {
+     "bets": 144,
+     "races": 60,
+     "hits": 5,
+     "roi": 1.1549,
+     "profit_yen": 2230,
+     "roi_ci90": [
+      0.3414,
+      2.0845
+     ]
+    },
+    "second": {
+     "bets": 229,
+     "races": 76,
+     "hits": 12,
+     "roi": 2.5026,
+     "profit_yen": 34410,
+     "roi_ci90": [
+      0.9588,
+      4.3481
+     ]
+    }
+   },
+   {
+    "share": 0.7,
+    "th": 1.0,
+    "first": {
+     "bets": 103702,
+     "races": 28483,
+     "hits": 2455,
+     "roi": 0.8626,
+     "profit_yen": -1424460,
+     "roi_ci90": [
+      0.8295,
+      0.8975
+     ]
+    },
+    "second": {
+     "bets": 105406,
+     "races": 28748,
+     "hits": 2664,
+     "roi": 0.8623,
+     "profit_yen": -1451250,
+     "roi_ci90": [
+      0.8261,
+      0.8991
+     ]
+    }
+   },
+   {
+    "share": 0.7,
+    "th": 1.1,
+    "first": {
+     "bets": 64150,
+     "races": 23171,
+     "hits": 1255,
+     "roi": 0.861,
+     "profit_yen": -891580,
+     "roi_ci90": [
+      0.8144,
+      0.9082
+     ]
+    },
+    "second": {
+     "bets": 65573,
+     "races": 23617,
+     "hits": 1398,
+     "roi": 0.8563,
+     "profit_yen": -942520,
+     "roi_ci90": [
+      0.8087,
+      0.9028
+     ]
+    }
+   },
+   {
+    "share": 0.7,
+    "th": 1.2,
+    "first": {
+     "bets": 36517,
+     "races": 16285,
+     "hits": 616,
+     "roi": 0.8545,
+     "profit_yen": -531410,
+     "roi_ci90": [
+      0.7905,
+      0.9161
+     ]
+    },
+    "second": {
+     "bets": 37530,
+     "races": 16823,
+     "hits": 639,
+     "roi": 0.8173,
+     "profit_yen": -685730,
+     "roi_ci90": [
+      0.7455,
+      0.8848
+     ]
+    }
+   },
+   {
+    "share": 0.7,
+    "th": 1.3,
+    "first": {
+     "bets": 20013,
+     "races": 10383,
+     "hits": 304,
+     "roi": 0.8808,
+     "profit_yen": -238580,
+     "roi_ci90": [
+      0.7885,
+      0.976
+     ]
+    },
+    "second": {
+     "bets": 20595,
+     "races": 10794,
+     "hits": 314,
+     "roi": 0.8374,
+     "profit_yen": -334970,
+     "roi_ci90": [
+      0.7441,
+      0.9411
+     ]
+    }
+   },
+   {
+    "share": 0.7,
+    "th": 1.5,
+    "first": {
+     "bets": 5998,
+     "races": 3693,
+     "hits": 78,
+     "roi": 0.9274,
+     "profit_yen": -43560,
+     "roi_ci90": [
+      0.7442,
+      1.1262
+     ]
+    },
+    "second": {
+     "bets": 6191,
+     "races": 3866,
+     "hits": 71,
+     "roi": 0.8288,
+     "profit_yen": -106000,
+     "roi_ci90": [
+      0.6408,
+      1.0373
+     ]
+    }
+   },
+   {
+    "share": 0.7,
+    "th": 2.0,
+    "first": {
+     "bets": 424,
+     "races": 269,
+     "hits": 8,
+     "roi": 1.2795,
+     "profit_yen": 11850,
+     "roi_ci90": [
+      0.4158,
+      2.3208
+     ]
+    },
+    "second": {
+     "bets": 518,
+     "races": 290,
+     "hits": 11,
+     "roi": 1.0736,
+     "profit_yen": 3810,
+     "roi_ci90": [
+      0.3772,
+      1.8771
+     ]
+    }
+   },
+   {
+    "share": 0.8,
+    "th": 1.0,
+    "first": {
+     "bets": 119896,
+     "races": 29561,
+     "hits": 2771,
+     "roi": 0.865,
+     "profit_yen": -1619170,
+     "roi_ci90": [
+      0.8324,
+      0.8975
+     ]
+    },
+    "second": {
+     "bets": 121038,
+     "races": 29728,
+     "hits": 2989,
+     "roi": 0.8509,
+     "profit_yen": -1805010,
+     "roi_ci90": [
+      0.8155,
+      0.8851
+     ]
+    }
+   },
+   {
+    "share": 0.8,
+    "th": 1.1,
+    "first": {
+     "bets": 85384,
+     "races": 26471,
+     "hits": 1689,
+     "roi": 0.8667,
+     "profit_yen": -1138160,
+     "roi_ci90": [
+      0.8277,
+      0.9072
+     ]
+    },
+    "second": {
+     "bets": 86673,
+     "races": 26861,
+     "hits": 1855,
+     "roi": 0.8475,
+     "profit_yen": -1322020,
+     "roi_ci90": [
+      0.8075,
+      0.8868
+     ]
+    }
+   },
+   {
+    "share": 0.8,
+    "th": 1.2,
+    "first": {
+     "bets": 56285,
+     "races": 21542,
+     "hits": 965,
+     "roi": 0.8778,
+     "profit_yen": -687980,
+     "roi_ci90": [
+      0.8273,
+      0.9286
+     ]
+    },
+    "second": {
+     "bets": 57288,
+     "races": 21895,
+     "hits": 1023,
+     "roi": 0.8396,
+     "profit_yen": -919000,
+     "roi_ci90": [
+      0.7869,
+      0.8956
+     ]
+    }
+   },
+   {
+    "share": 0.8,
+    "th": 1.3,
+    "first": {
+     "bets": 35655,
+     "races": 16026,
+     "hits": 536,
+     "roi": 0.8712,
+     "profit_yen": -459280,
+     "roi_ci90": [
+      0.8057,
+      0.9435
+     ]
+    },
+    "second": {
+     "bets": 36305,
+     "races": 16392,
+     "hits": 557,
+     "roi": 0.8181,
+     "profit_yen": -660490,
+     "roi_ci90": [
+      0.7448,
+      0.8881
+     ]
+    }
+   },
+   {
+    "share": 0.8,
+    "th": 1.5,
+    "first": {
+     "bets": 13778,
+     "races": 7708,
+     "hits": 175,
+     "roi": 0.8808,
+     "profit_yen": -164260,
+     "roi_ci90": [
+      0.7604,
+      1.0023
+     ]
+    },
+    "second": {
+     "bets": 13903,
+     "races": 7854,
+     "hits": 177,
+     "roi": 0.838,
+     "profit_yen": -225240,
+     "roi_ci90": [
+      0.7082,
+      0.97
+     ]
+    }
+   },
+   {
+    "share": 0.8,
+    "th": 2.0,
+    "first": {
+     "bets": 1515,
+     "races": 1016,
+     "hits": 20,
+     "roi": 1.2844,
+     "profit_yen": 43090,
+     "roi_ci90": [
+      0.724,
+      1.8405
+     ]
+    },
+    "second": {
+     "bets": 1538,
+     "races": 1017,
+     "hits": 20,
+     "roi": 0.8597,
+     "profit_yen": -21580,
+     "roi_ci90": [
+      0.5006,
+      1.2794
+     ]
+    }
+   },
+   {
+    "share": 0.9,
+    "th": 1.0,
+    "first": {
+     "bets": 130940,
+     "races": 29991,
+     "hits": 2963,
+     "roi": 0.8607,
+     "profit_yen": -1823590,
+     "roi_ci90": [
+      0.8295,
+      0.8922
+     ]
+    },
+    "second": {
+     "bets": 131528,
+     "races": 30090,
+     "hits": 3228,
+     "roi": 0.8678,
+     "profit_yen": -1739220,
+     "roi_ci90": [
+      0.8346,
+      0.9019
+     ]
+    }
+   },
+   {
+    "share": 0.9,
+    "th": 1.1,
+    "first": {
+     "bets": 103008,
+     "races": 28363,
+     "hits": 2029,
+     "roi": 0.8571,
+     "profit_yen": -1471760,
+     "roi_ci90": [
+      0.8221,
+      0.8932
+     ]
+    },
+    "second": {
+     "bets": 103929,
+     "races": 28606,
+     "hits": 2255,
+     "roi": 0.8713,
+     "profit_yen": -1337580,
+     "roi_ci90": [
+      0.8322,
+      0.9099
+     ]
+    }
+   },
+   {
+    "share": 0.9,
+    "th": 1.2,
+    "first": {
+     "bets": 75243,
+     "races": 25070,
+     "hits": 1309,
+     "roi": 0.8771,
+     "profit_yen": -924980,
+     "roi_ci90": [
+      0.8304,
+      0.9228
+     ]
+    },
+    "second": {
+     "bets": 75948,
+     "races": 25316,
+     "hits": 1413,
+     "roi": 0.8538,
+     "profit_yen": -1110150,
+     "roi_ci90": [
+      0.8073,
+      0.8998
+     ]
+    }
+   },
+   {
+    "share": 0.9,
+    "th": 1.3,
+    "first": {
+     "bets": 52917,
+     "races": 20746,
+     "hits": 813,
+     "roi": 0.8695,
+     "profit_yen": -690630,
+     "roi_ci90": [
+      0.81,
+      0.9256
+     ]
+    },
+    "second": {
+     "bets": 53432,
+     "races": 20987,
+     "hits": 842,
+     "roi": 0.8485,
+     "profit_yen": -809750,
+     "roi_ci90": [
+      0.7914,
+      0.9104
+     ]
+    }
+   },
+   {
+    "share": 0.9,
+    "th": 1.5,
+    "first": {
+     "bets": 24918,
+     "races": 12293,
+     "hits": 314,
+     "roi": 0.8658,
+     "profit_yen": -334480,
+     "roi_ci90": [
+      0.7707,
+      0.9569
+     ]
+    },
+    "second": {
+     "bets": 25046,
+     "races": 12484,
+     "hits": 324,
+     "roi": 0.863,
+     "profit_yen": -343140,
+     "roi_ci90": [
+      0.7697,
+      0.9535
+     ]
+    }
+   },
+   {
+    "share": 0.9,
+    "th": 2.0,
+    "first": {
+     "bets": 3991,
+     "races": 2550,
+     "hits": 38,
+     "roi": 0.9627,
+     "profit_yen": -14870,
+     "roi_ci90": [
+      0.6838,
+      1.2428
+     ]
+    },
+    "second": {
+     "bets": 3996,
+     "races": 2600,
+     "hits": 37,
+     "roi": 0.8141,
+     "profit_yen": -74280,
+     "roi_ci90": [
+      0.5607,
+      1.1026
+     ]
+    }
+   },
+   {
+    "share": "fit",
+    "th": 1.0,
+    "first": {
+     "bets": 10706,
+     "races": 5985,
+     "hits": 273,
+     "roi": 0.9445,
+     "profit_yen": -59440,
+     "roi_ci90": [
+      0.8411,
+      1.0454
+     ]
+    },
+    "second": {
+     "bets": 13241,
+     "races": 7364,
+     "hits": 314,
+     "roi": 0.8196,
+     "profit_yen": -238930,
+     "roi_ci90": [
+      0.7253,
+      0.9201
+     ]
+    }
+   },
+   {
+    "share": "fit",
+    "th": 1.1,
+    "first": {
+     "bets": 1720,
+     "races": 1086,
+     "hits": 44,
+     "roi": 1.1231,
+     "profit_yen": 21180,
+     "roi_ci90": [
+      0.8178,
+      1.4687
+     ]
+    },
+    "second": {
+     "bets": 2239,
+     "races": 1359,
+     "hits": 52,
+     "roi": 0.9616,
+     "profit_yen": -8590,
+     "roi_ci90": [
+      0.6979,
+      1.2544
+     ]
+    }
+   },
+   {
+    "share": "fit",
+    "th": 1.2,
+    "first": {
+     "bets": 406,
+     "races": 198,
+     "hits": 17,
+     "roi": 1.4246,
+     "profit_yen": 17240,
+     "roi_ci90": [
+      0.775,
+      2.1511
+     ]
+    },
+    "second": {
+     "bets": 610,
+     "races": 271,
+     "hits": 19,
+     "roi": 1.4952,
+     "profit_yen": 30210,
+     "roi_ci90": [
+      0.8363,
+      2.2466
+     ]
+    }
+   },
+   {
+    "share": "fit",
+    "th": 1.3,
+    "first": {
+     "bets": 189,
+     "races": 53,
+     "hits": 8,
+     "roi": 1.7138,
+     "profit_yen": 13490,
+     "roi_ci90": [
+      0.6386,
+      2.9663
+     ]
+    },
+    "second": {
+     "bets": 345,
+     "races": 94,
+     "hits": 15,
+     "roi": 2.0458,
+     "profit_yen": 36080,
+     "roi_ci90": [
+      0.971,
+      3.3239
+     ]
+    }
+   },
+   {
+    "share": "fit",
+    "th": 1.5,
+    "first": {
+     "bets": 122,
+     "races": 30,
+     "hits": 7,
+     "roi": 2.6016,
+     "profit_yen": 19540,
+     "roi_ci90": [
+      0.9651,
+      4.4712
+     ]
+    },
+    "second": {
+     "bets": 233,
+     "races": 59,
+     "hits": 13,
+     "roi": 2.7416,
+     "profit_yen": 40580,
+     "roi_ci90": [
+      1.2172,
+      4.6024
+     ]
+    }
+   },
+   {
+    "share": "fit",
+    "th": 2.0,
+    "first": {
+     "bets": 66,
+     "races": 14,
+     "hits": 4,
+     "roi": 2.9939,
+     "profit_yen": 13160,
+     "roi_ci90": [
+      0.4835,
+      6.1021
+     ]
+    },
+    "second": {
+     "bets": 117,
+     "races": 29,
+     "hits": 8,
+     "roi": 4.3111,
+     "profit_yen": 38740,
+     "roi_ci90": [
+      1.2808,
+      8.1784
      ]
     }
    },
@@ -4004,25 +4007,25 @@
     "share": "ai",
     "th": 1.0,
     "first": {
-     "bets": 126513,
-     "races": 27359,
-     "hits": 2226,
-     "roi": 0.8336,
-     "profit_yen": -2104920,
+     "bets": 139047,
+     "races": 30203,
+     "hits": 2434,
+     "roi": 0.8231,
+     "profit_yen": -2459960,
      "roi_ci90": [
-      0.7998,
-      0.869
+      0.7934,
+      0.8526
      ]
     },
     "second": {
-     "bets": 125723,
-     "races": 27369,
-     "hits": 2476,
-     "roi": 0.8639,
-     "profit_yen": -1710850,
+     "bets": 139136,
+     "races": 30242,
+     "hits": 2698,
+     "roi": 0.8624,
+     "profit_yen": -1914410,
      "roi_ci90": [
-      0.8273,
-      0.9001
+      0.8264,
+      0.8984
      ]
     }
    },
@@ -4030,25 +4033,25 @@
     "share": "ai",
     "th": 1.1,
     "first": {
-     "bets": 108671,
-     "races": 26701,
-     "hits": 1705,
-     "roi": 0.8295,
-     "profit_yen": -1852990,
+     "bets": 118286,
+     "races": 29419,
+     "hits": 1862,
+     "roi": 0.8248,
+     "profit_yen": -2072890,
      "roi_ci90": [
-      0.7904,
-      0.8689
+      0.7901,
+      0.8603
      ]
     },
     "second": {
-     "bets": 107070,
-     "races": 26744,
-     "hits": 1898,
-     "roi": 0.868,
-     "profit_yen": -1413270,
+     "bets": 118768,
+     "races": 29563,
+     "hits": 2078,
+     "roi": 0.8673,
+     "profit_yen": -1575830,
      "roi_ci90": [
-      0.8264,
-      0.9101
+      0.8274,
+      0.9069
      ]
     }
    },
@@ -4056,25 +4059,25 @@
     "share": "ai",
     "th": 1.2,
     "first": {
-     "bets": 87648,
-     "races": 25175,
-     "hits": 1232,
-     "roi": 0.8353,
-     "profit_yen": -1443840,
+     "bets": 94473,
+     "races": 27522,
+     "hits": 1333,
+     "roi": 0.8219,
+     "profit_yen": -1682670,
      "roi_ci90": [
-      0.7905,
-      0.8813
+      0.7812,
+      0.8619
      ]
     },
     "second": {
-     "bets": 85099,
-     "races": 25062,
-     "hits": 1312,
-     "roi": 0.8583,
-     "profit_yen": -1205780,
+     "bets": 94772,
+     "races": 27747,
+     "hits": 1447,
+     "roi": 0.8579,
+     "profit_yen": -1347050,
      "roi_ci90": [
-      0.8108,
-      0.9052
+      0.8134,
+      0.9024
      ]
     }
    },
@@ -4082,25 +4085,25 @@
     "share": "ai",
     "th": 1.3,
     "first": {
-     "bets": 68000,
-     "races": 22745,
-     "hits": 858,
-     "roi": 0.8326,
-     "profit_yen": -1138400,
+     "bets": 72826,
+     "races": 24716,
+     "hits": 918,
+     "roi": 0.8234,
+     "profit_yen": -1286150,
      "roi_ci90": [
-      0.779,
-      0.8829
+      0.776,
+      0.8711
      ]
     },
     "second": {
-     "bets": 65145,
-     "races": 22336,
-     "hits": 875,
-     "roi": 0.8403,
-     "profit_yen": -1040290,
+     "bets": 72754,
+     "races": 24796,
+     "hits": 975,
+     "roi": 0.8459,
+     "profit_yen": -1120880,
      "roi_ci90": [
-      0.7865,
-      0.894
+      0.7967,
+      0.8962
      ]
     }
    },
@@ -4108,25 +4111,25 @@
     "share": "ai",
     "th": 1.5,
     "first": {
-     "bets": 38274,
-     "races": 16371,
-     "hits": 401,
-     "roi": 0.8466,
-     "profit_yen": -587300,
+     "bets": 40658,
+     "races": 17591,
+     "hits": 419,
+     "roi": 0.8099,
+     "profit_yen": -773010,
      "roi_ci90": [
-      0.7725,
-      0.9252
+      0.7418,
+      0.8786
      ]
     },
     "second": {
-     "bets": 36164,
-     "races": 15995,
-     "hits": 392,
-     "roi": 0.8079,
-     "profit_yen": -694710,
+     "bets": 40576,
+     "races": 17834,
+     "hits": 450,
+     "roi": 0.8378,
+     "profit_yen": -658340,
      "roi_ci90": [
-      0.7339,
-      0.8827
+      0.7645,
+      0.9103
      ]
     }
    },
@@ -4134,25 +4137,25 @@
     "share": "ai",
     "th": 2.0,
     "first": {
-     "bets": 8929,
-     "races": 5306,
-     "hits": 65,
-     "roi": 0.8302,
-     "profit_yen": -151600,
+     "bets": 9255,
+     "races": 5558,
+     "hits": 67,
+     "roi": 0.8309,
+     "profit_yen": -156470,
      "roi_ci90": [
-      0.6565,
-      1.0148
+      0.6659,
+      1.0048
      ]
     },
     "second": {
-     "bets": 8063,
-     "races": 4893,
-     "hits": 52,
-     "roi": 0.6888,
-     "profit_yen": -250920,
+     "bets": 9129,
+     "races": 5535,
+     "hits": 64,
+     "roi": 0.7488,
+     "profit_yen": -229340,
      "roi_ci90": [
-      0.5148,
-      0.8632
+      0.5892,
+      0.9148
      ]
     }
    }
@@ -4160,37 +4163,37 @@
   "chosen": [
    {
     "chosen_on": "first",
-    "share": 0.5,
-    "th": 1.5,
-    "roi_chosen": 2.1704,
+    "share": 0.4,
+    "th": 1.3,
+    "roi_chosen": 1.6559,
     "check_on": "second",
     "check": {
-     "bets": 449,
-     "races": 216,
-     "hits": 13,
-     "roi": 1.3332,
-     "profit_yen": 14960,
+     "bets": 554,
+     "races": 248,
+     "hits": 18,
+     "roi": 1.6177,
+     "profit_yen": 34220,
      "roi_ci90": [
-      0.605,
-      2.1573
+      0.8467,
+      2.4453
      ]
     }
    },
    {
     "chosen_on": "second",
-    "share": 0.3,
-    "th": 1.2,
-    "roi_chosen": 1.6744,
+    "share": "fit",
+    "th": 1.3,
+    "roi_chosen": 2.0458,
     "check_on": "first",
     "check": {
-     "bets": 271,
-     "races": 80,
-     "hits": 10,
-     "roi": 1.462,
-     "profit_yen": 12520,
+     "bets": 189,
+     "races": 53,
+     "hits": 8,
+     "roi": 1.7138,
+     "profit_yen": 13490,
      "roi_ci90": [
-      0.6344,
-      2.4791
+      0.6386,
+      2.9663
      ]
     }
    }
@@ -4198,24 +4201,24 @@
  },
  "confirm": {
   "rule": "1号艇が負ける確率 ≥ 0.63 のレースだけ、モデルの期待値100%以上を買う",
-  "races": 53138,
-  "hi_races": 11880,
+  "races": 58890,
+  "hi_races": 13101,
   "passed": false,
   "period": [
-   "20251011",
+   "20250830",
    "20261005"
   ],
-  "roi_all": 0.8516,
-  "roi_hi": 0.8575,
-  "bets_hi": 57887,
-  "days": 356,
+  "roi_all": 0.8452,
+  "roi_hi": 0.8294,
+  "bets_hi": 63778,
+  "days": 398,
   "diff_ci90": [
-   -0.042,
-   0.0536
+   -0.0611,
+   0.0293
   ],
   "roi_hi_ci90": [
-   0.802,
-   0.9138
+   0.7786,
+   0.88
   ]
  },
  "mode": "walk_forward",
@@ -4227,8 +4230,8 @@
   },
   {
    "half": "2025H2",
-   "train_until": "2025-07-12",
-   "races": 11350
+   "train_until": "2025-05-31",
+   "races": 17102
   },
   {
    "half": "2026H1",
