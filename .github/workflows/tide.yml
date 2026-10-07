@@ -1,0 +1,41 @@
+name: 潮位をためる
+
+# 気象庁の潮位表(天文潮の推算。過去の年もさかのぼれる)を data/tide/ に。24場に近い観測点を割り当てる(scripts/fetch_tide.py)。
+# 最初は2023〜2027年をまとめて、以後は月1で今年と来年(来年分は気象庁が前の年に出す)
+on:
+  workflow_dispatch:
+    inputs:
+      years:
+        description: "取る年(空白区切り)"
+        default: "2023 2024 2025 2026 2027"
+  schedule:
+    - cron: "50 20 1 * *"   # 毎月2日 5:50 JST
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tide
+  cancel-in-progress: false
+
+jobs:
+  tide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q requests pandas numpy
+      - name: 潮位を取る
+        run: |
+          Y="${{ inputs.years }}"
+          if [ -z "$Y" ]; then Y="$(TZ=Asia/Tokyo date +%Y) $(( $(TZ=Asia/Tokyo date +%Y) + 1 ))"; fi
+          python scripts/fetch_tide.py --years $Y
+      - name: コミット
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/commit_files.sh "[CI Skip] data: 潮位" data/tide/*
