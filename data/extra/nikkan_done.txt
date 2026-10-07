@@ -164,6 +164,7 @@ biwako/2026-09-26
 biwako/2026-09-27
 biwako/2026-10-03
 biwako/2026-10-04
+biwako/2026-10-05
 fukuoka/2026-07-01
 fukuoka/2026-07-02
 fukuoka/2026-07-03
@@ -697,6 +698,7 @@ tokuyama/2026-09-26
 tokuyama/2026-10-02
 tokuyama/2026-10-03
 tokuyama/2026-10-04
+tokuyama/2026-10-05
 tsu/2026-07-03
 tsu/2026-07-04
 tsu/2026-07-05
