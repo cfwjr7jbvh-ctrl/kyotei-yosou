@@ -427,9 +427,15 @@ def news_posts(live: list[dict], races: list[dict], day: dt.date | None = None, 
         body = None
         if st_:   # 問い → 本線と狙い目かも → ここを見て決める → あなたは?(「だから何?」で終わらせない)
             h_ = st_["branches"][0]
-            n_ = st_["branches"][1] if len(st_["branches"]) > 1 else None
+            n_ = next((x for x in st_["branches"][1:] if x.get("ratio")), None)          # 狙い目かも?(ふだんより高い艇)
+            k_ = next((x for x in st_["branches"][1:] if x.get("k") == "崩すなら"), None)  # 狙い目が無いときの「崩すなら」
             lines = [f"本線 {h_['lane']}号艇{('の' + h_['type']) if h_['type'] else ''} {_rf._pct(h_['p'])}%"]
-            lines.append(f"狙い目かも? {n_['lane']}号艇{('の' + n_['type']) if n_['type'] else ''} {_rf._pct(n_['p'])}%(ふだんの{n_['ratio']:.1f}倍)" if n_ else "狙い目かも? 本線が堅め")
+            if n_:
+                lines.append(f"狙い目かも? {n_['lane']}号艇{('の' + n_['type']) if n_['type'] else ''} {_rf._pct(n_['p'])}%(ふだんの{n_['ratio']:.1f}倍)")
+            elif k_:
+                lines.append(f"崩すなら {k_['lane']}号艇{('の' + k_['type']) if k_['type'] else ''} {_rf._pct(k_['p'])}%")
+            else:
+                lines.append("狙い目かも? 本線が堅め")
             for k in (2, 1, 0):
                 chk = ("見るのはここ: " + " / ".join(st_["short"][:k])) if k else ""
                 b = (f"{head}\n{st_['hook']}🔥\n\n" + "\n".join(lines) + (f"\n{chk}" if chk else "")
