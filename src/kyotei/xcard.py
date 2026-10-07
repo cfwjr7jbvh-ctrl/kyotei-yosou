@@ -126,7 +126,8 @@ def lab_card_html(title: str, verdict: str, real: bool, cond: str, sv: str,
 
 
 def tenji_card_html(day_label: str, race: str, deadline: str, race_type: str, hook: str, rows: list[dict],
-                    view_label: str, course_line: str, fact: tuple[str, str, str] | None, dev_line: str = "", nerai: str = "") -> str:
+                    view_label: str, course_line: str, fact: tuple[str, str, str] | None, dev_line: str = "", nerai: str = "",
+                    hook_red: bool = False) -> str:
     """展示速報(展示が出たらすぐ。2026-10-07 ユーザー「情報量ふやして、読み手の予測がワクワクする感じで」「狙い目かも?をオッズから逆算」)。
     hook: いちばん大きく見せる1行(「1号艇は展示2位。逃げの見込み 52%→58%」)
     rows: 艇番順 [{"lane", "time", "rank", "course", "p", "p0", "mkt", "nerai"}](p=展示込みの1着の見込み、p0=朝の見立て、mkt=人気から考えた1着の確率)
@@ -156,14 +157,14 @@ def tenji_card_html(day_label: str, race: str, deadline: str, race_type: str, ho
 .tr.r1{{background:#fff3c4}} .tr.r1 .rk,.tr.r1 .tm{{color:#c8141c}}
 .cl{{margin:14px 60px 0;font:900 34px/1.35 {F}}}
 .fact{{margin:8px 60px 0;font:700 34px/1.4 {F};color:{MUTE}}} .fact b{{font:900 44px {F};color:{INK}}} .fact em{{font-style:normal;color:#c8141c}}
-.ngl{{margin:8px 60px 0;font:900 34px/1.4 {F};color:#c8141c}}
+.ngl{{margin:8px 60px 0;font:900 34px/1.4 {F};color:#c8141c}} .hk.red{{color:#c8141c}} .ngl.ink{{color:{INK}}}
 .tr .rk sup{{font-size:30px;margin-left:2px}} .tr .rk .up{{color:#1e6b3f}} .tr .rk .dn{{color:#0b5fb4}}
 .dvl{{margin:8px 60px 0;font:700 32px/1.4 {F};color:{INK}}}"""
     return (f'<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>{css}</style></head><body><div class="c">'
-            f'<div class="top"><small>展示が出た ・ {e(day_label)}</small><div class="rc">{e(race)}</div><div class="rs">{e(sub)}</div>{_lanes_bar()}</div>'
-            f'<div class="hk">{e(hook)}</div>'
+            f'<div class="top"><small>展示速報 ・ {e(day_label)}</small><div class="rc">{e(race)}</div><div class="rs">{e(sub)}</div>{_lanes_bar()}</div>'
+            f'<div class="hk{" red" if hook_red else ""}">{e(hook)}</div>'
             f'<div class="hd"><span>艇・展示</span><span>タイム</span><span>{e(view_label)}</span><span>人気</span></div>'
             f'<div class="lst">{trs}</div><div class="cl">{e(course_line)}</div>{fh}'
             + (f'<div class="dvl">{e(dev_line)}</div>' if dev_line else "")
-            + (f'<div class="ngl">{e(nerai)}</div>' if nerai else "")
+            + (f'<div class="ngl{" ink" if hook_red else ""}">{e(nerai)}</div>' if nerai else "")
             + f'{_foot("見立て=AIの1着の見込み / 人気=締切前のオッズ / ↑↓=ふだんの展示順位より2つ以上上・下")}</div></body></html>')

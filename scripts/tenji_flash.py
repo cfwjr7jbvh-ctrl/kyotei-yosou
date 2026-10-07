@@ -261,20 +261,23 @@ def build(race: dict, info: dict, day: dt.date, late: dict | None = None, mornin
              "course": (f"進入{int(bx[l]['ex_course'])}" if bx.get(l, {}).get("ex_course") and int(bx[l]["ex_course"]) != l else ""),
              "nerai": l == nl} for l in sorted(ts)]
     rt = str(race.get("race_type") or "")
-    head = f"【展示】{race['venue']}{race['rno']}R{(' ' + rt) if rt else ''}(締切{race['deadline']})"
+    # 1行目は市場の型(場名+R+締切)に「展示速報」。2行目に、出した理由の「狙い目かも?」(2026-10-07 ユーザー「速報の時は何でタイトル?」)
+    head = f"【展示速報】{race['venue']}{race['rno']}R{(' ' + rt) if rt else ''} 締切{race['deadline']}"
     f_ = f"→ 展示1位の艇の3着以内は{fact[1]}→{fact[2]}に上がる"
     tail = f"\n\n展示を見て、予想は変わった?\n{seo.x_tags(race['venue'])}"
     text = ""
-    for parts in ([head, hook, dev_line, type_line, nerai], [head, hook, dev_line, nerai], [head, hook, f_, cl, nerai], [head, hook, f_, nerai],
-                  [head, hook, type_line, nerai], [head, hook, nerai], [head, hook, dev_line], [head, hook, f_], [head, hook]):
+    for parts in ([head, nerai, hook, dev_line, type_line], [head, nerai, hook, dev_line], [head, nerai, hook, f_, cl], [head, nerai, hook, f_],
+                  [head, nerai, hook, type_line], [head, nerai, hook], [head, nerai], [head, hook]):
         t = "\n".join(x for x in parts if x) + tail
         if xlen(t) <= 280:
             text = t
             break
     hook_card = re.sub(r"に(上がる|下がる)$", "", hook)   # 画像は矢印で向きが分かるので短く(2行に折れないように)
-    card = tenji_card_html(f"{day.month}/{day.day}({WEEK[day.weekday()]})", f"{race['venue']}{race['rno']}R", race["deadline"], rt, hook_card, rows,
-                           "見立て(展示込み)" if pw else "見立て(朝)", cl or "進入は展示の情報なし", fact, dev_line or type_line,
-                           (f"狙い目かも? {nl}号艇の1着 見立て{round(pw[nl] * 100)}% / 人気{round(mk[nl] * 100)}%" if nl else nerai))
+    # 画像: いちばん大きい行は「狙い目かも?」(出した理由)。1号艇・展示1位の見込みの動きは下の段に
+    ng_card = f"狙い目かも? {nl}号艇の1着 見立て{round(pw[nl] * 100)}% / 人気{round(mk[nl] * 100)}%" if nl else ""
+    card = tenji_card_html(f"{day.month}/{day.day}({WEEK[day.weekday()]})", f"{race['venue']}{race['rno']}R", race["deadline"], rt,
+                           ng_card or hook_card, rows, "見立て(展示込み)" if pw else "見立て(朝)", cl or "進入は展示の情報なし", fact,
+                           dev_line or type_line, hook_card if ng_card else nerai, hook_red=bool(ng_card))
     return {"text": text or (head + tail), "card": card, "late": bool(pw), "nerai": nl}
 
 
