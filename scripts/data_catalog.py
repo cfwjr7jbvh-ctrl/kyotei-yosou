@@ -50,7 +50,8 @@ def _period(name: str) -> str | None:
         return f"20{f.group(1)}-{f.group(2)}"
     m = re.search(r"(20\d{2})(\d{2})(\d{2})?", name)
     if not m:
-        return None
+        y = re.search(r"_(20\d{2})\.", name)   # 年ごとのファイル(tide_2023.csv.gz)
+        return y.group(1) if y else None
     return f"{m.group(1)}-{m.group(2)}" + (f"-{m.group(3)}" if m.group(3) else "")
 
 

@@ -1,5 +1,5 @@
 {
- "asof": "2026-10-07 13:14",
+ "asof": "2026-10-07 13:18",
  "datasets": {
   "成績・出走表": {
    "files": "data/history/entries_*.csv.gz",
@@ -102,10 +102,10 @@
   },
   "潮位": {
    "files": "data/tide/tide_*.csv.gz",
-   "n_files": 0,
-   "first": "",
-   "last": "",
-   "mb": 0.0,
+   "n_files": 5,
+   "first": "2023",
+   "last": "2027",
+   "mb": 1.7,
    "workflow": "tide.yml(月1)",
    "backfill": "○ 天文潮の推算なので何年でも",
    "what": "毎時の潮位・満潮干潮の時刻と高さ",
@@ -135,10 +135,10 @@
   },
   "選手の期別成績": {
    "files": "data/racers/*",
-   "n_files": 7,
+   "n_files": 8,
    "first": "2023-04",
    "last": "2026-04",
-   "mb": 5.1,
+   "mb": 5.9,
    "workflow": "racers.yml(5月・11月)",
    "backfill": "○ 公式は2002年〜",
    "what": "期ごとの勝率・コース別など",
@@ -151,7 +151,7 @@
    "what": "検証ラボ: 満潮はイン、干潮は外",
    "data": "潮位",
    "need": "2023年〜の潮位がそろう",
-   "ready": false
+   "ready": true
   },
   {
    "id": "E10",
