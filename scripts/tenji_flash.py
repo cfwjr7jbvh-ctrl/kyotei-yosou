@@ -235,7 +235,8 @@ def build(race: dict, info: dict, day: dt.date, late: dict | None = None, mornin
         cands = [(pw[l] / mk[l], l) for l in pw if mk.get(l, 0) > 0.005 and pw[l] >= 0.08 and pw[l] / mk[l] >= 1.3]
         if cands:
             ratio, nl = max(cands)
-            nerai = f"狙い目かも? {nl}号艇の1着(見立て{round(pw[nl] * 100)}%、人気から考えると{round(mk[nl] * 100)}%)"
+            nerai = (f"狙い目かも? {nl}号艇の1着\n人気は{round(mk[nl] * 100)}%、ミカタの見立ては{round(pw[nl] * 100)}%"
+                     f"(人気の{ratio:.1f}倍)→ 人気の割に来そう")
         else:
             nerai = "狙い目かも? 今回は見立てと人気がほぼ同じ(人気どおり)"
     # 今日の展示順位と、その選手のふだんの展示順位の差(+ はふだんより上)。2つ以上の差がある艇を1つ取り上げる
@@ -263,22 +264,35 @@ def build(race: dict, info: dict, day: dt.date, late: dict | None = None, mornin
     rt = str(race.get("race_type") or "")
     # 1行目は市場の型(場名+R+締切)に「展示速報」。2行目に、出した理由の「狙い目かも?」(2026-10-07 ユーザー「速報の時は何でタイトル?」)
     head = f"【展示速報】{race['venue']}{race['rno']}R{(' ' + rt) if rt else ''} 締切{race['deadline']}"
-    f_ = f"→ 展示1位の艇の3着以内は{fact[1]}→{fact[2]}に上がる"
+    f_ = f"{'・'.join(f'{l}号艇' for l in top)}は展示1位。展示1位の艇の3着以内は{fact[1]}→{fact[2]}"
     tail = f"\n\n展示を見て、予想は変わった?\n{seo.x_tags(race['venue'])}"
     text = ""
-    for parts in ([head, nerai, hook, dev_line, type_line], [head, nerai, hook, dev_line], [head, nerai, hook, f_, cl], [head, nerai, hook, f_],
-                  [head, nerai, hook, type_line], [head, nerai, hook], [head, nerai], [head, hook]):
+    for parts in ([head, nerai, hook, dev_line], [head, nerai, hook, f_], [head, nerai, dev_line], [head, nerai, hook],
+                  [head, nerai], [head, hook]):
         t = "\n".join(x for x in parts if x) + tail
         if xlen(t) <= 280:
             text = t
             break
     hook_card = re.sub(r"に(上がる|下がる)$", "", hook)   # 画像は矢印で向きが分かるので短く(2行に折れないように)
-    # 画像: いちばん大きい行は「狙い目かも?」(出した理由)。1号艇・展示1位の見込みの動きは下の段に
-    ng_card = f"狙い目かも? {nl}号艇の1着 見立て{round(pw[nl] * 100)}% / 人気{round(mk[nl] * 100)}%" if nl else ""
-    card = tenji_card_html(f"{day.month}/{day.day}({WEEK[day.weekday()]})", f"{race['venue']}{race['rno']}R", race["deadline"], rt,
-                           ng_card or hook_card, rows, "見立て(展示込み)" if pw else "見立て(朝)", cl or "進入は展示の情報なし", fact,
-                           dev_line or type_line, hook_card if ng_card else nerai, hook_red=bool(ng_card))
-    return {"text": text or (head + tail), "card": card, "late": bool(pw), "nerai": nl}
+    dl_ = f"{day.month}/{day.day}({WEEK[day.weekday()]})"
+    rc_ = f"{race['venue']}{race['rno']}R"
+    # 2枚目: 6艇の展示順位・タイム・見立て・人気(いちばん大きい行は1号艇/展示1位の見込みの動き)
+    table = tenji_card_html(dl_, rc_, race["deadline"], rt, hook_card, rows, "見立て(展示込み)" if pw else "見立て(朝)",
+                            cl or "進入は展示の情報なし", fact, dev_line or type_line, "")
+    cards = [table]
+    if nl:   # 1枚目: 狙い目かも?(人気=みんなの予想と、ミカタの見立てを2本の棒で。なぜその艇か、を3つまで)
+        from kyotei.xcard import myomi_card_html
+        why = [f"展示タイム{rank[nl]}位" + (f"(ふだんは{(usual or {})[rid[nl]][0]:.0f}位前後)" if dev.get(nl, 0) >= 2 else "")]
+        c_ = (bx.get(nl) or {}).get("ex_course")
+        if c_ and int(c_) != nl:
+            why.append(f"展示の進入は{int(c_)}コース")
+        if p0.get(nl) is not None and round(p0[nl] * 100) != round(pw[nl] * 100):
+            why.append(f"ミカタの見立ては朝{round(p0[nl] * 100)}%→展示込み{round(pw[nl] * 100)}%")
+        good = [t for t in ((tags or {}).get(nl) or []) if t]
+        if good:
+            why.append(f"型: {'・'.join(good[:2])}")
+        cards.insert(0, myomi_card_html(dl_, rc_, race["deadline"], rt, nl, pw[nl], mk[nl], why))
+    return {"text": text or (head + tail), "cards": cards, "card": cards[0], "late": bool(pw), "nerai": nl}
 
 
 async def _render(html: str) -> bytes:
@@ -302,14 +316,16 @@ def render(html: str) -> bytes | None:
         return None
 
 
-def send(text: str, png: bytes | None) -> str | None:
+def send(text: str, pngs: list[bytes] | bytes | None) -> str | None:
     import x_post
     if not x_post.creds() or os.environ.get("X_AUTOPOST") != "1":
         log("下書き(鍵か X_AUTOPOST が無い):\n" + text)
         return None
+    if isinstance(pngs, (bytes, bytearray)):
+        pngs = [pngs]
     s = x_post.session()
-    mid = x_post.upload_media(s, png) if png else None
-    return x_post.post(s, text, mid)
+    mids = [m for m in (x_post.upload_media(s, b) for b in (pngs or [])[:4]) if m]
+    return x_post.post(s, text, mids or None)
 
 
 # ---------------------------------------------------------------- 見張り
@@ -448,9 +464,9 @@ def watch(until: str = "23:30", every: int = 60):
                     log("見送り(狙い目かも?なし)", f"{r['venue']}{r['rno']}R", "見立て" + ("あり" if out.get("late") else "間に合わず"))
                     mark(day, r["race_id"], done, "skip")
                     continue
-                png = render(out["card"])
+                pngs = [x for x in (render(h) for h in out["cards"]) if x]
                 try:
-                    tid = send(out["text"], png)
+                    tid = send(out["text"], pngs)
                     log("出しました" if tid else "下書きのみ", f"{r['venue']}{r['rno']}R 締切{r['deadline']} 残り{left:.0f}分", tid or "")
                 except BaseException as ex:  # noqa: BLE001  1本の失敗で見張りを止めない(二重に出さないよう、出したことにする)
                     log("投稿に失敗:", ex)
@@ -480,6 +496,10 @@ def demo(out_dir: pathlib.Path):
     o = build(race, info, now().date(), late=late, morning=morning, odds=odds, usual=usual, tags=tags)
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "tenji_demo.txt").write_text(o["text"], encoding="utf-8")
+    for i, h in enumerate(o["cards"], 1):
+        png_ = render(h)
+        if png_:
+            (out_dir / f"tenji_demo{i}.png").write_bytes(png_)
     png = render(o["card"])
     if png:
         (out_dir / "tenji_demo.png").write_bytes(png)

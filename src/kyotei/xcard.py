@@ -168,3 +168,31 @@ def tenji_card_html(day_label: str, race: str, deadline: str, race_type: str, ho
             + (f'<div class="dvl">{e(dev_line)}</div>' if dev_line else "")
             + (f'<div class="ngl{" ink" if hook_red else ""}">{e(nerai)}</div>' if nerai else "")
             + f'{_foot("見立て=AIの1着の見込み / 人気=締切前のオッズ / ↑↓=ふだんの展示順位より2つ以上上・下")}</div></body></html>')
+
+
+def myomi_card_html(day_label: str, race: str, deadline: str, race_type: str, lane: int, p: float, mkt: float,
+                    reasons: list[str]) -> str:
+    """展示速報の1枚目「狙い目かも?」: 人気(みんなの予想)とミカタの見立てを2本の棒で並べ、見立ての方が高い=人気の割に来そう(妙味)を見せる。
+    2026-10-07 ユーザー「人気8%が市場で予測は14%で妙味があるということを分かりやすく」「一枚に留める必要ない」。買い目(組)は出さない。"""
+    sub = " ・ ".join(x for x in (f"締切 {deadline}" if deadline else "", race_type or "") if x)
+    mx = max(p, mkt, 1e-6) * 1.1
+    ratio = p / mkt if mkt > 0 else 0
+    rs = "".join(f"<li>{e(x)}</li>" for x in reasons[:3])
+    css = BASE_CSS + f"""
+.top{{padding:30px 60px 26px}} .rc{{font:900 96px/1.05 {F};margin:6px 0 0}} .rs{{font:700 36px {F};color:#d9dde0;margin-top:6px}}
+.t{{margin:44px 60px 0;font:900 66px/1.2 {F};color:#c8141c;display:flex;align-items:center;gap:6px}} .t .ln{{width:70px;height:76px;font-size:50px;margin:0 6px}}
+.bars{{margin:34px 60px 0}} .br{{margin-bottom:20px}} .br b{{display:block;font:900 36px/1.3 {F};margin-bottom:6px}}
+.br .tr{{display:inline-block;width:680px;height:62px;background:#e3dcc6;vertical-align:middle}} .br .fl{{height:100%}}
+.br em{{display:inline-block;width:260px;text-align:right;font:900 76px/1 {F};font-style:normal;vertical-align:middle}}
+.ex{{margin:10px 60px 0;font:900 46px/1.45 {F}}} .ex em{{font-style:normal;color:#c8141c}}
+.why{{margin:22px 60px 0;padding:0;list-style:none}} .why li{{font:700 36px/1.5 {F};padding-left:1em;text-indent:-1em}} .why li::before{{content:"・"}}
+.nt{{margin:14px 60px 0;font:700 28px/1.45 {F};color:{MUTE}}}"""
+    return (f'<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>{css}</style></head><body><div class="c">'
+            f'<div class="top"><small>展示速報 ・ {e(day_label)}</small><div class="rc">{e(race)}</div><div class="rs">{e(sub)}</div>{_lanes_bar()}</div>'
+            f'<div class="t">狙い目かも?{lane_box(lane)}の1着</div>'
+            f'<div class="bars"><div class="br"><b>人気(みんなの予想)</b><span class="tr"><span class="fl" style="display:block;width:{mkt / mx * 100:.1f}%;background:#8a949c"></span></span><em>{round(mkt * 100)}%</em></div>'
+            f'<div class="br"><b>ミカタの見立て(展示込み)</b><span class="tr"><span class="fl" style="display:block;width:{p / mx * 100:.1f}%;background:#c8141c"></span></span><em style="color:#c8141c">{round(p * 100)}%</em></div></div>'
+            f'<div class="ex">見立てが人気の<em>{ratio:.1f}倍</em>。<br>人気の割に来そう=妙味あり</div>'
+            + (f'<ul class="why">{rs}</ul>' if rs else "")
+            + f'<div class="nt">人気=締切前のオッズから出した1着の確率。見立てはAIの計算で、当たりを約束するものではありません</div>'
+            f'{_foot("展示速報 ・ 6艇の展示と見立ては2枚目")}</div></body></html>')
