@@ -27,7 +27,7 @@ RULES = [
     (r"こういう選手は|な人がいる|な選手がいる", "「特定の1人」に読まれない書き方: 「〜なタイプ(条件)は」+割合"),
     (r"験担ぎ|験かつぎ", "表記は「ゲンかつぎ」"),
     (r"3着内(?!容)", "表記は「3着以内」"),
-    (r"織り込み済み", "人気の言葉で: 人気どおり(配当は安め)"),
+    (r"織り込み済み|織り込まれ", "人気の言葉で: 人気どおり(配当は安め)"),
     (r"信頼区間|有意差|有意に|ノイズ", "統計の言葉は読者に見せない(「ブレの幅」「たまたまでも出るくらいの幅」)"),
     (r"あてにならない|(?<!天)気のせい", "否定的な言い切りはしない(「ふだんと同じ(差は出なかった)」「参考程度」)"),
 ]
@@ -86,13 +86,30 @@ def check_file(path: pathlib.Path) -> list[str]:
     return sorted(set(found))
 
 
+def check_js(path: pathlib.Path) -> list[str]:
+    """アプリ(docs/*.js)の読者に見える文字。コメント(// の後ろ)は見ない。成績タブは中だけなので、外に出さない言葉は「儲か」だけ足して見る
+    (2026-10-07: 荒れそうなレースの説明に「オッズに織り込まれて」「儲かるわけでは」が残っていた)。"""
+    found = []
+    for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        code = re.sub(r"(^|[^:\\])//.*$", r"\1", line)
+        if not code.strip() or "wording: ok" in line:
+            continue
+        for msg in check_text(code, public=False) + (["「儲か」→ 外に出す文には出さない"] if "儲か" in code else []):
+            found.append(f"{path.relative_to(ROOT)}:{i}: {msg}")
+    return found
+
+
 def main(argv: list[str]) -> int:
     files = [pathlib.Path(a).resolve() for a in argv] if argv else \
         sorted(list((ROOT / "scripts").glob("*.py")) + list((ROOT / "src/kyotei").glob("*.py")))
     issues = []
+    if not argv:
+        files += sorted((ROOT / "docs").glob("*.js"))
     for f in files:
         if f.suffix == ".py" and f.name not in SKIP_FILES and f.exists():
             issues += check_file(f)
+        elif f.suffix == ".js" and f.exists():
+            issues += check_js(f)
     for x in issues:
         print(x)
     return 1 if issues else 0

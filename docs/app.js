@@ -220,7 +220,7 @@ function aiLine(r) {
 
 // スリットの目印(2026-10-04 の検証、直前予想・約15万レース):
 //   攻め = 3コース以遠で、内の艇より予想STが0.03以上速い → 1着率が1.6〜2.5倍(まくり・まくり差しが中心)。0.05以上は「強攻め」
-//   凹み = 両隣より0.04以上遅い → その艇の3着内率が13〜16ポイント下がり、外の艇の1着率が1.3〜1.7倍
+//   凹み = 両隣より0.04以上遅い → その艇の3着以内率が13〜16ポイント下がり、外の艇の1着率が1.3〜1.7倍
 //   どちらも AI の確率とオッズにはすでに織り込まれている(買い方の上積みにはならない)。見どころの表示用
 const ATK_TH = 0.03, ATK_STRONG = 0.05, DENT_TH = 0.04;
 function slitRows(r) {
@@ -258,7 +258,7 @@ function slitHTML(r) {
     return `<div class="sl"><span class="sc">${x.c}</span><span class="track"><span class="mk" style="left:calc(${pos}% - 13px)">${tile(x.b.lane)}</span></span>
       <span class="sv">${fmtST(x.st)}${note(x)}</span></div>`;
   }).join("") + `</div>` + (rows.some((x) => x.atk || x.dent)
-    ? `<p class="slitnote">攻め: 内の艇より0.03以上速い予想。過去約15万レースで1着率が1.6〜2.5倍(まくりが中心)。凹み: 両隣より0.04以上遅い予想。その艇の3着内率は13〜16ポイント下がり、外の艇の1着が増える。どちらもAIの確率には織り込み済み。</p>` : "");
+    ? `<p class="slitnote">攻め: 内の艇より0.03以上速い予想。過去約15万レースで1着率が1.6〜2.5倍(まくりが中心)。凹み: 両隣より0.04以上遅い予想。その艇の3着以内率は13〜16ポイント下がり、外の艇の1着が増える。どちらもミカタの確率に入れて計算ずみ。</p>` : "");
 }
 
 function tenkaiHTML(r) {
@@ -336,10 +336,10 @@ function cardHTML(c, race, lane) {
       <div class="cd-sub">${esc(c.class || "")} ・ ${esc(c.branch || "")} ・ ${c.age ?? "-"}歳 ・ 登番${c.id}</div></div>
       <button type="button" class="cd-x" aria-label="閉じる">×</button></div>
     <div class="cd-top">${radarSVG(c.radar, m.radar || Object.keys(c.radar))}
-      <div class="cd-kv"><div><span>1着率</span><b>${Math.round(c.win * 100)}%</b></div><div><span>3着内率</span><b>${Math.round(c.top3 * 100)}%</b></div>
+      <div class="cd-kv"><div><span>1着率</span><b>${Math.round(c.win * 100)}%</b></div><div><span>3着以内率</span><b>${Math.round(c.top3 * 100)}%</b></div>
         <div><span>勝率(点)</span><b>${c.pts?.toFixed(2) ?? "-"}</b></div><div><span>走数</span><b>${c.n}</b></div>
-        <p class="cd-note">チャートは${esc(g)}の中での位置(100がトップ)。安定感はコースの有利不利を差し引いた3着内率</p></div></div>
-    ${c.fafter ? `<p class="cd-f"><b>F後${c.fafter.since}走目</b>(最後のフライング ${esc(c.fafter.date)})。全選手の傾向では、この時期はスタートが平均${fmtST(c.fafter.st).replace(/^\./, "+.")}秒ほど遅くなり、3着内率は${Math.round(c.fafter.top3 * 100)}ポイント。40走ほどで戻る(どれだけ控えるかは毎回ちがう)</p>` : ""}
+        <p class="cd-note">チャートは${esc(g)}の中での位置(100がトップ)。安定感はコースの有利不利を差し引いた3着以内率</p></div></div>
+    ${c.fafter ? `<p class="cd-f"><b>F後${c.fafter.since}走目</b>(最後のフライング ${esc(c.fafter.date)})。全選手の傾向では、この時期はスタートが平均${fmtST(c.fafter.st).replace(/^\./, "+.")}秒ほど遅くなり、3着以内率は${Math.round(c.fafter.top3 * 100)}ポイント。40走ほどで戻る(どれだけ控えるかは毎回ちがう)</p>` : ""}
     ${tags ? `<h4>ひと言タグ</h4><ul class="cd-tags">${tags}</ul>` : `<p class="muted">目立つタグはありません(どの項目も同じ級別の中で平均的)</p>`}
     <h4>スタート</h4><table class="cd-t"><tr><th>平均ST</th><td>${c.st.avg == null ? "-" : fmtST(c.st.avg)}</td><td>${pctTop(c.st.grp)}</td></tr>
       <tr><th>展示とのずれ</th><td>平均 ${c.ex.mae == null ? "-" : c.ex.mae.toFixed(3)}秒</td><td>${c.ex.grp == null ? "" : pctTop(c.ex.grp) + "の小ささ"}</td></tr>
@@ -347,15 +347,15 @@ function cardHTML(c, race, lane) {
       <tr><th>フライング</th><td>${c.st.f}回</td><td><small>集計期間中</small></td></tr></table>
     <h4>決まり手</h4><table class="cd-t">${kimRow("逃げ(1コース)", k.nige, `逃げ率 ${Math.round(k.nige.w / Math.max(1, k.nige.n) * 100)}%`)}
       ${kimRow("差し", k.sashi, "2コース以遠")}${kimRow("まくり", k.makuri, "2コース以遠")}${kimRow("まくり差し", k.mz, "3コース以遠")}</table>
-    <h4>コース別</h4><table class="cd-t cd-c"><tr><th>コース</th><th>走数</th><th>1着</th><th>3着内</th><th>平均ST</th></tr>${crs}</table>
-    <h4>場ごとの成績<small>3着内率の普段との差。参考程度(時期で入れ替わりやすい)</small></h4><div class="vchips">${ven}</div>
+    <h4>コース別</h4><table class="cd-t cd-c"><tr><th>コース</th><th>走数</th><th>1着</th><th>3着以内</th><th>平均ST</th></tr>${crs}</table>
+    <h4>場ごとの成績<small>3着以内率の普段との差。参考程度(時期で入れ替わりやすい)</small></h4><div class="vchips">${ven}</div>
     <h4>こんなとき</h4><table class="cd-t">
       <tr><th>前づけ</th><td>${c.front.rate == null ? "-" : Math.round(c.front.rate * 100) + "%"}</td><td><small>2枠以上で枠より内へ(${c.front.n}走)</small></td></tr>
       <tr><th>荒れ水面</th><td>${pp(c.rough.res)}</td><td><small>波5cm・風5m以上(${c.rough.n}走)</small></td></tr>
       <tr><th>勝負駆け</th><td>${pp(c.kake.res)}</td><td><small>予選最終日(${c.kake.n}走)</small></td></tr>
       <tr><th>大一番</th><td>${pp(c.big.res)}</td><td><small>準優・優勝戦(${c.big.n}走、出場選手の平均 ${pp(c.big.pop)})</small></td></tr>
       <tr><th>展示が下位</th><td>${pp(c.exlate.res)}</td><td><small>展示タイム4位以下(${c.exlate.n}走、全選手の平均 ${pp(c.exlate.pop)})</small></td></tr></table>
-    <p class="cd-note">「こんなとき」の数字は、3着内率が本人の普段と比べて何ポイント上下するか(回数が少ないほど普段の値に寄せて計算)。前づけ・展示が下位は時期を変えても出やすい数字、荒れ水面・勝負駆け・大一番・場は時期で入れ替わりやすいので参考程度に</p>
+    <p class="cd-note">「こんなとき」の数字は、3着以内率が本人の普段と比べて何ポイント上下するか(回数が少ないほど普段の値に寄せて計算)。前づけ・展示が下位は時期を変えても出やすい数字、荒れ水面・勝負駆け・大一番・場は時期で入れ替わりやすいので参考程度に</p>
     <h4>最近の調子と今節</h4><table class="cd-t">
       <tr><th>勝率</th><td>${gr.prev ?? "-"} → <b>${gr.pts90 ?? "-"}</b></td><td><small>前の1年 → 直近90日(${gr.n90}走)</small></td></tr>
       ${gr.index != null ? `<tr><th>成長指数</th><td><b>${gr.index >= 0 ? "+" : "−"}${Math.abs(gr.index).toFixed(2)}</b></td><td><small>この先3か月の勝率の伸びの見込み(伸びの4割ほどが残る傾向から)</small></td></tr>` : ""}
@@ -758,11 +758,11 @@ function anaHTML() {
   const items = list.map((r) => {
     const why = anaReasons(r);
     return `<li><button type="button" class="ana-go" data-id="${r.race_id}"><span class="ana-vr"><b>${esc(r.venue)}</b> ${r.rno}R <small>${esc(r.deadline || "")}締切</small></span>
-      <span class="ana-p">1号艇が負ける<b>${Math.round(r.arashi.in_lose * 100)}%</b></span></button>
+      <span class="ana-p">1号艇以外が勝つ<b>${Math.round(r.arashi.in_lose * 100)}%</b></span></button>
       ${why.length ? `<p class="ana-why">${esc(why.join("。"))}</p>` : ""}</li>`;
   }).join("");
   return `<section class="box ana"><h3>今日の荒れそうなレース<small>締切前・AIの確率順</small></h3><ol>${items}</ol>
-    <p>荒れ度の一番上(5段階の5)は、過去に1号艇が74%負けました。ただ、荒れることもオッズに織り込まれているので、荒れそうなレースを買えば儲かるわけではありません。</p>
+    <p>荒れ度5(5段階のいちばん上)のレースは、これまで1号艇以外が勝ったのが74%。ただ、荒れそうなことは人気にも出ている(人気どおり)ので、配当は思ったより安めになりやすい。</p>
     <button type="button" class="ana-copy">Xの投稿文をコピー</button></section>`;
 }
 function setupAna(box) {
@@ -1094,7 +1094,7 @@ async function renderTrack() {
   if (!rep && repNote) html += `<div class="box"><p>${repNote}</p></div>`;
   if (rep) {
     const st = rep.stages.late || rep.stages.early;
-    const names = { baseline_lane: "枠番だけ(基準)", gbdt_win: "勾配ブースティング(1着)", gbdt_place: "勾配ブースティング(3着内)",
+    const names = { baseline_lane: "枠番だけ(基準)", gbdt_win: "勾配ブースティング(1着)", gbdt_place: "勾配ブースティング(3着以内)",
       rank: "ランキング学習", pl_logit: "条件付きロジット", rating: "レーティング", ensemble: "アンサンブル(本番)" };
     const rows = Object.entries(st.metrics).map(([k, m]) => `<tr class="${k === "ensemble" ? "best" : ""}">
       <td>${names[k] || k}</td><td>${m.win_logloss.toFixed(3)}</td><td>${pct1(m.win_hit)}%</td>

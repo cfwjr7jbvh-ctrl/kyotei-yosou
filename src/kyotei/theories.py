@@ -10,6 +10,8 @@
 """
 from __future__ import annotations
 
+import re
+
 import datetime as dt
 import json
 import math
@@ -59,10 +61,13 @@ def _pct(v):
 
 
 def _cnt(m, per=100):
-    """「23%(ふだん9.5%)」"""
+    """差の書き方の決まり(CLAUDE.md): 「ふだん51%→47%に下がる」。丸めて同じなら「ふだんと同じ51%」"""
     if not m:
         return ""
-    return f"{_pct(m['in1'])}(ふだん{_pct(m['in1_ref'])})"
+    a, b = _pct(m['in1_ref']), _pct(m['in1'])
+    if a == b:
+        return f"ふだんと同じ{b}"
+    return f"ふだん{a}→{b}に{'上がる' if (m['in1'] or 0) > (m['in1_ref'] or 0) else '下がる'}"
 
 
 def _badge(v, occult=False):
@@ -85,13 +90,46 @@ def _badge(v, occult=False):
     return "差は小さい", "info"
 
 
-def _note(tid, title, lanes, text, v=None, dir_=0, occult=False, gen=None, force=False):
-    """データで差が小さい理論は出さない(force=True の情報だけは出す)。"""
+def _note(tid, title, lanes, text, v=None, dir_=0, occult=False, gen=None, force=False, lab_title=None):
+    """データで差が小さい理論は出さない(force=True の情報だけは出す)。lab_title: 検証ラボの題が理論の見出しと合わないときの言い換え"""
     if v is not None and not v.get("real") and not occult and not force:
         return None
     b, k = _badge(v, occult)
     return {"id": tid, "title": title, "lanes": [int(x) for x in lanes], "text": text, "badge": b, "kind": k, "dir": int(dir_), "lab": tid,
-            "lab_title": _lab(tid).get("title"), "gen": gen}
+            "lab_title": lab_title or _lab(tid).get("title"), "gen": gen}
+
+
+_LANE_HEAD = re.compile(r"^([1-6])号艇(?: ([^\s。、]+?))?(?=は|の)")
+
+
+def _merge_same(notes: list[dict]) -> list[dict]:
+    """同じ理論が何艇にも当てはまったら1つにまとめる(「2・5・6号艇は今節2走続けて5・6着」)。
+    本文は艇番(と名前)の部分だけが違うときだけまとめる。違えばそのまま。"""
+    out, groups = [], {}
+    for n in notes:
+        groups.setdefault((n["id"], n["title"].split("号艇")[-1]), []).append(n)
+    done = set()
+    for n in notes:
+        key = (n["id"], n["title"].split("号艇")[-1])
+        g = groups[key]
+        if id(g) in done:
+            continue
+        done.add(id(g))
+        if len(g) == 1 or n["id"] == "name":
+            out += g
+            continue
+        heads = [_LANE_HEAD.match(x["text"]) for x in g]
+        rests = {x["text"][h.end():] if h else None for x, h in zip(g, heads)}
+        if None in rests or len(rests) != 1:
+            out += g
+            continue
+        names = [h.group(2) for h in heads]
+        lanes = sorted({int(l) for x in g for l in x["lanes"]})
+        head = ("・".join(f"{h.group(1)}号艇 {h.group(2)}" for h in heads) if all(names)
+                else "・".join(h.group(1) for h in heads) + "号艇")
+        dirs = {x["dir"] for x in g}
+        out.append({**g[0], "lanes": lanes, "text": head + rests.pop(), "dir": max(dirs, key=abs) if len(dirs) > 1 else g[0]["dir"]})
+    return out
 
 
 # ---------------------------------------------------------------- 日・場の情報
@@ -233,7 +271,8 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
             notes.append(_note("hot", "今節2連勝中", [lane], f"{who}は今節2連勝中。今節2連勝中の艇は3着以内が{_cnt(m)}", v, +1 if lane == 1 else 0))
         elif len(l2) == 2 and all(c in "56" for c in l2):
             m, v = _m("hot", 2)
-            notes.append(_note("hot", "2走続けて5・6着", [lane], f"{wl}は今節2走続けて5・6着。こういうときの次のレースは、3着以内が{_cnt(m)}", v, -1 if lane == 1 else 0))
+            notes.append(_note("hot", "2走続けて5・6着", [lane], f"{wl}は今節2走続けて5・6着。こういうときの次のレースは、3着以内が{_cnt(m)}", v, -1 if lane == 1 else 0,
+                               lab_title="今節2連勝中の選手は、次も来る?(2走続けて5・6着のときも数えた)"))
         fs = q.get("f_since")
         if fs == fs and fs is not None and fs <= 10:
             m, v = _m("flying", 0)
@@ -330,7 +369,7 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
         if abs(age - 14.77) <= 1.2:
             notes.append(_note("moon", "満月の日", [], "満月の日でも1号艇の強さも荒れ方もふだんと同じ。でも満月のナイターは特別な気分", None, 0, occult=True))
     order = {"edge": 0, "trial": 1, "real": 2, "known": 3, "info": 4, "occult": 5}
-    notes = [n for n in notes if n]
+    notes = _merge_same([n for n in notes if n])
     notes.sort(key=lambda n: (order.get(n["kind"], 9), n["id"]))
     return notes
 
