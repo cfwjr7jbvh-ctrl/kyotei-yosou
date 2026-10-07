@@ -23,7 +23,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 JST = dt.timezone(dt.timedelta(hours=9))
 # 決まった時間の投稿と、これより遅れたら出さない時刻
-LATE = {"theory": ("8:20", "12:00"), "morning": ("12:10", "14:30"), "neta": ("15:30", "19:00"), "hayami": ("18:00", "19:45"),
+LATE = {"theory": ("8:20", "12:00"), "morning": ("12:10", "14:30"), "noon": ("13:00", "15:00"), "neta": ("15:30", "19:00"), "hayami": ("18:00", "19:45"),
         "evening": ("20:00", "22:30"), "poll": ("21:30", "23:30")}
 EVENT_CUTOFF_MIN = 15
 

@@ -205,3 +205,26 @@ def myomi_card_html(day_label: str, race: str, deadline: str, race_type: str, la
             + f'<div class="nt">人気=締切前のオッズから出した1着の確率。見立てはAIの計算で、当たりを約束するものではありません</div>'
             + (f'<div class="gen">{gull_svg(84, bg="#ffffff", cls="g", who="gen")}<p><small>ゲンさん(ゲンかつぎ歴40年の大先輩)</small>{e(gen)}</p></div>' if gen else "")
             + f'{_foot("こういう見方もあるよ ・ 6艇の展示は2枚目")}</div></body></html>')
+
+
+def arashi_card_html(day_label: str, rows: list[dict]) -> str:
+    """12:10「今日の荒れそうなレース」(2026-10-07〜。文字だけの投稿を画像つきに)。
+    rows: [{"race": "桐生12R", "deadline": "20:45", "race_type": "ドリーム", "p": 0.62, "why": "4号艇はまくり型"}](3つまで)"""
+    css = BASE_CSS + f"""
+.ttl{{font:900 76px/1.15 {F};margin:8px 0 0}} .rs{{font:700 36px {F};color:#d9dde0;margin-top:10px}}
+.rw{{margin:22px 60px 0;background:#fffdf6;border-left:16px solid #c8141c;padding:18px 28px;display:flex;align-items:center;gap:22px}}
+.rk{{font:900 64px {F};color:#c8141c;width:64px}} .rm{{flex:1;min-width:0}}
+.rm b{{display:block;font:900 54px/1.15 {F};white-space:nowrap}} .rm small{{display:block;font:700 34px/1.35 {F};color:{MUTE};margin-top:4px}}
+.pc{{font:900 84px {F};white-space:nowrap}} .pc small{{font-size:40px}}
+.ask{{margin:28px 60px 0;font:900 52px/1.25 {F};color:#c8141c}}"""
+    body = ""
+    for i, r in enumerate(rows[:3]):
+        sub = " ・ ".join(x for x in (f"締切{r.get('deadline')}" if r.get("deadline") else "", r.get("why") or "") if x)
+        body += (f'<div class="rw"><div class="rk">{"①②③"[i]}</div><div class="rm"><b>{e(r["race"])}</b><small>{e(sub)}</small></div>'
+                 f'<div class="pc">{round(r["p"] * 100)}<small>%</small></div></div>')
+    return (f'<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>{css}</style></head><body><div class="c">'
+            f'<div class="top"><small>今日の荒れそうなレース ・ {e(day_label)}</small><div class="ttl">1号艇以外が勝つ見込み</div>'
+            f'<div class="rs">ミカタの見立て(朝の出走表から)</div>{_lanes_bar()}</div>'
+            f'{body}<div class="ask">どのレースが荒れると思う?</div>'
+            f'{_foot("荒れそうなレースほど、相手選びが腕の見せどころ")}'
+            f'</div></body></html>')

@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       what:
-        description: "theory / morning / neta / evening / poll / event / thread / test / stats / queue(今日の予定) / delete"
+        description: "theory / morning / noon(SG・G1の日の昼の注目選手) / neta / evening / poll / event / thread / test / stats / queue(今日の予定) / delete"
         default: "test"
       key:
         description: "thread: 場コード_初日(例 04_20261013) / delete: 投稿の番号,番号;出し直すラベル|ラベル"

@@ -23,6 +23,7 @@ import argparse
 import base64
 import datetime as dt
 import json
+import re
 import os
 import pathlib
 import subprocess
@@ -113,6 +114,20 @@ def reasons(r: dict) -> list[str]:
     return out[:3]
 
 
+def arashi_top(races: list[dict], now: dt.datetime, k: int = 3) -> list[dict]:
+    """これから締切のレースのうち、1号艇以外が勝つ見込みの高い順に k 個。"""
+    def mins_left(r):
+        try:
+            hh, mm = map(int, r["deadline"].split(":"))
+        except (KeyError, ValueError, AttributeError):
+            return None
+        return (now.replace(hour=hh, minute=mm, second=0) - now).total_seconds() / 60
+    up = [r for r in races if not r.get("result") and (r.get("arashi") or {}).get("in_lose") is not None
+          and (mins_left(r) is None or mins_left(r) > 0)]
+    up.sort(key=lambda r: -r["arashi"]["in_lose"])
+    return up[:k]
+
+
 def morning_text(races: list[dict], now: dt.datetime) -> str | None:
     def mins_left(r):
         try:
@@ -131,7 +146,7 @@ def morning_text(races: list[dict], now: dt.datetime) -> str | None:
     head = f"今日の荒れそうなレース🌊 {now:%-m/%-d}\n\n" + "\n".join(lines)
     for k in (3, 2, 1, 0):
         w = f"\n\n{top[0]['venue']}{top[0]['rno']}R:{'、'.join(why[:k])}" if why[:k] else ""
-        body = head + w + "\n\n荒れそう=当てやすい、ではないです。どのレースが荒れると思う?\n#競艇 #ボートレース"
+        body = head + w + "\n\n荒れそうなレースほど、相手選びが腕の見せどころ。どのレースが荒れると思う?\n#競艇 #ボートレース"
         if xlen(body) <= 280:
             return body
     return head + "\n\nどのレースが荒れると思う?\n#競艇 #ボートレース"
@@ -169,7 +184,7 @@ def evening_text(p: dict, card: dict | None) -> str:
     if xlen(body) > 280:
         body = f"{p['title']}({hd}〜)の注目選手📰\n\n{p['name']}「{tag}」\n{why}\n\n{q}\n{tg}"
     if xlen(body) > 280:
-        body = f"{p['name']}「{tag}」\n{why}\n\n{q}\n#ボートレース{p['venue']} #競艇"
+        body = f"{p['venue']} {hd}〜 注目選手📰\n{p['name']}「{tag}」\n{why}\n\n{q}\n#ボートレース{p['venue']} #競艇"
     return body
 
 
@@ -280,7 +295,7 @@ def flash_due(day: str, now: dt.datetime, posted: dict, races: list[dict]) -> li
 
 
 # ---------------------------------------------------------------- X API
-SLOTS = {"theory": "8:20", "morning": "12:10", "neta": "15:30", "hayami": "18:00", "evening": "20:00", "poll": "21:30"}   # hayami: 早見表(決まった日だけ)
+SLOTS = {"theory": "8:20", "morning": "12:10", "noon": "13:00", "neta": "15:30", "hayami": "18:00", "evening": "20:00", "poll": "21:30"}   # hayami: 早見表(決まった日だけ)。noon: SG・G1 の日だけ昼にも注目選手
 
 
 _XP: dict = {}
@@ -423,10 +438,34 @@ def delete_posts(key: str, day: str, posted: dict, live: bool, now: dt.datetime)
         print("台帳に削除の印をつけられませんでした:", ex)
 
 
+def _fp(text: str) -> str:
+    import hashlib
+    return hashlib.sha1(re.sub(r"\s+", "", text)[:120].encode("utf-8")).hexdigest()[:16]
+
+
+VENUE_RE = re.compile("桐生|戸田|江戸川|平和島|多摩川|浜名湖|蒲郡|常滑|津|三国|びわこ|住之江|尼崎|鳴門|丸亀|児島|宮島|徳山|下関|若松|芦屋|福岡|唐津|大村")
+NEED_IMAGE = {"event", "evening", "noon", "hayami"}   # 画像が主役の投稿
+
+
+def reader_problems(what: str, texts: list[str], media, posted: dict, day: str) -> list[str]:
+    """出す直前の「読み手の目」。引っかかったら出さない。"""
+    out = []
+    if not texts or not texts[0].strip():
+        return ["本文が空"]
+    first = texts[0].strip().split("\n")[0]
+    if not (re.search(r"\d", first) or VENUE_RE.search(first) or first.startswith("【")):   # 型の目安なので知らせるだけ(「昨日の投票の答え👇」など止めない)
+        print("読み手の目(知らせるだけ): 1行目に数字・場名・【】が無い")
+    if any(_fp(t) in set((posted.get("sent") or {}).get(day, [])) for t in texts):
+        out.append("今日すでに同じ文を出した")
+    if what in NEED_IMAGE and not media:
+        out.append("画像が主役の投稿なのに画像が無い")
+    return out
+
+
 # ---------------------------------------------------------------- 本体
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("what", choices=["theory", "morning", "neta", "hayami", "evening", "poll", "event", "thread", "test", "queue", "delete"])
+    ap.add_argument("what", choices=["theory", "morning", "noon", "neta", "hayami", "evening", "poll", "event", "thread", "test", "queue", "delete"])
     ap.add_argument("--key", default=None)
     ap.add_argument("--note-url", default=os.environ.get("NOTE_URL") or None)
     ap.add_argument("--dry", action="store_true")
@@ -468,7 +507,7 @@ def main():
         until = x_due.LATE.get(a.what, (None, None))[1]
         if until and now.hour * 60 + now.minute > hm(until):
             print(f"{a.what} は {until} を過ぎたので出しません"); return
-    qi = queue_item(day, a.what) if a.what in SLOTS else None
+    qi = queue_item(day, a.what) if a.what in SLOTS and a.what != "noon" else None
     if qi:
         texts, media, poll = [qi[0]], qi[1], qi[2]
     elif a.what in ("neta", "poll", "hayami"):
@@ -482,7 +521,9 @@ def main():
         if not t:
             print("今日の予想がまだ無いか、締切前のレースがありません"); return
         texts = [t]
-    elif a.what == "evening":
+    elif a.what in ("evening", "noon"):
+        if a.what == "noon" and not any(x.get("grade") in ("SG", "G1") for x in (xpost(day).get("series_today") or [])):
+            print("昼の注目選手は SG・G1 の日だけ"); return
         pk = evening_pick(ura_index(), posted)
         if not pk:
             print("出せるカードがありません(グレードレースの下書きが無い、または全員出した)"); return
@@ -496,14 +537,18 @@ def main():
             card = None
         texts = [evening_text(p, card)]
         media = base64.b64decode(img["png"])
-        tag = f"evening:{p['key']}:{p['id']}"
+        tag = f"{'evening' if a.what == 'evening' else 'noon'}:{p['key']}:{p['id']}"
     elif a.what == "thread":
         if not a.key:
             raise SystemExit("--key 場コード_初日 を指定")
         texts = thread_texts(a.key, a.note_url)
         tag = f"thread:{a.key}"
-    if posted.get(tag) == day or (a.what == "thread" and tag in posted):
+    if posted.get(tag) == day or (a.what == "thread" and tag in posted) or (a.what in ("evening", "noon") and posted.get(a.what) == day):
         print("今日はもう出しています:", tag); return
+    # 読み手の目の見張り(2026-10-07 ユーザー「質をあげつつ、量も上げる」): 同じ文を2回出さない/1行目に数字か場名か【】/画像が主役の投稿は画像なしで出さない
+    rp = reader_problems(a.what, texts, media, posted, day)
+    if rp:
+        print("読み手の目の見張りで止めました:", " / ".join(rp)); return
     # 下書きを残す。本文は公開リポジトリに平文で置かない(2026-10-07 ユーザー「検証データはぱくられない?」)→ 暗号化(鍵が無い手元は out/private)
     draft = save_private(DRAFTS / f"{day}_{a.what}.json", {"texts": texts, "images": (len(media) if isinstance(media, list) else 1) if media else 0,
                                                            "poll": poll["options"] if poll and not media else None})
@@ -521,8 +566,13 @@ def main():
         last = post(s, t, mid if not ids else None, last, poll if not ids else None)
         ids.append(last)
     posted[tag] = day if a.what != "thread" else {"day": day, "ids": ids}
-    if a.what == "evening" and ":" in tag:
+    if a.what in ("evening", "noon") and ":" in tag:
         posted.setdefault("evening_racers", []).append(tag.split(":", 1)[1])
+        posted[a.what] = day
+    sent = posted.setdefault("sent", {})
+    for k_ in [k_ for k_ in sent if k_ != day]:
+        sent.pop(k_)
+    sent.setdefault(day, []).extend(_fp(t) for t in texts)
     POSTED.write_text(json.dumps(posted, ensure_ascii=False, indent=1), encoding="utf-8")
     print("投稿しました:", ids)
     try:   # 出した記事の履歴(reports/published.json)にも残す

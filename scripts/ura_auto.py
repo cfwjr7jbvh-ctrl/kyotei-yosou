@@ -347,7 +347,7 @@ def series_name_tag(x: dict) -> tuple[str, str]:
     return nm, re.sub(r"[\s・･!！?？\-]", "", unicodedata.normalize("NFKC", nm))
 
 
-FIXED_SLOTS = ["8:20", "12:10", "15:30", "18:00", "18:30", "20:00", "21:30"]
+FIXED_SLOTS = ["8:20", "12:10", "13:00", "15:30", "18:00", "18:30", "20:00", "21:30"]
 
 
 # 締切の時間帯ごとの、出す時間の候補(先にあるほど優先)。予想する人がスマホを見る時間帯(朝の通勤・昼休み・夕方・帰り道)
@@ -583,12 +583,28 @@ def main():
                 items.insert(0, {"key": key, "title": t["title"], "grade": "毎日", "venue": "", "jcd": 0, "hd": today.strftime("%Y%m%d"), "n": 0, "picks": [], "images": 0})
                 print("theory daily:", t["n_races"], "races", t["n_conf"], "conflicts")
                 xq.append(("8:20", "今日の理論ぶつけ", x_first(t["x"]), x_image(out, key, t["card"], "01_理論ぶつけ.png", a.no_images) if t.get("card") else None))
-            try:   # 昼: 今日の荒れそうなレース(文字だけ)
+            try:   # 昼: 今日の荒れそうなレース(2026-10-07〜 画像つき。カードが見張りを通らなければ文字だけ)
                 import x_post
+                from kyotei.factcheck import text_problems as _tp
+                from kyotei.xcard import arashi_card_html
                 now = dt.datetime.now(JST).replace(hour=12, minute=10, second=0, microsecond=0)
-                at = x_post.morning_text(read_json(dp).get("races", []), now)
+                races_ = read_json(dp).get("races", [])
+                at = x_post.morning_text(races_, now)
+                img_a = None
+                top_ = x_post.arashi_top(races_, now)
+                if at and top_:
+                    rows_ = [{"race": f"{r['venue']}{r['rno']}R", "deadline": r.get("deadline"), "p": r["arashi"]["in_lose"],
+                              "why": next((w for w in x_post.reasons(r) if len(w) <= 16), "")} for r in top_]   # 途中で切れる理由は出さない
+                    h_ = arashi_card_html(f"{today.month}/{today.day}", rows_)
+                    ims_ = card_images(out, f"arashi_{today:%Y%m%d}", [h_], a.no_images, "荒れそうなレース")
+                    from kyotei.factcheck import visible_text as _vt
+                    bad_ = _tp(_vt(h_), {}) + (overflowed(ims_) if ims_ else [])
+                    if bad_:
+                        print(f"::warning::出す前の見張り: 12:10 のカードは使いません({' / '.join(bad_)})")
+                    elif ims_:
+                        img_a = ims_[0]
                 if at:
-                    xq.append(("12:10", "今日の荒れそうなレース", at, None))
+                    xq.append(("12:10", "今日の荒れそうなレース", at, img_a))
             except Exception as ex:  # noqa: BLE001
                 print("x arashi failed:", ex)
     except Exception as ex:  # noqa: BLE001  毎日の記事の失敗で、ほかの記事を止めない
@@ -669,7 +685,8 @@ def main():
             if not series:
                 d = rc.load_table()
                 cards, meta = rc.build(d)
-            for at, lbl, body, dl, sc, rr, x, nm in news_posts(live, races, today, cards=cards):
+            big_day = any(x_.get("grade") in ("SG", "G1") for x_ in live)   # SG・G1 の日は新聞を6本に(2026-10-07 ユーザー「質をあげつつ量も」)
+            for at, lbl, body, dl, sc, rr, x, nm in news_posts(live, races, today, top=6 if big_day else 4, cards=cards):
                 img = None
                 stop = []   # 出す前の見張り(kyotei.factcheck)。1つでも引っかかったら X には出さない
                 try:
@@ -739,6 +756,9 @@ def main():
                 xq.append(("18:30", f"明日から: {nm}", body, img))
     except Exception as ex:  # noqa: BLE001
         print("x series failed:", ex)
+    # SG・G1 の日は、昼(13:00)にも注目選手のカード(x_post.py の noon。カードは20:00と同じ並びから、まだ出していない選手)
+    if any(x_.get("grade") in ("SG", "G1") for x_ in series_today):
+        xq.append(("13:00", "注目選手(昼・SG/G1の日)", "SG・G1 の日は、昼にも注目選手のカードを出します(13:00、20:00 と同じ並びから、まだ出していない選手)", None))
     # 早見表(2026-10-07 ユーザー「みんなが欲しがる情報まとめシート」「めちゃくちゃいいの作り込んで」「1番いい方法で進めて」)
     # 記事タブにいつも「早見表」(場を選べるページ・note の本文・カード)を置き、X には 18:00 に決まった日だけ出す。
     # SG・G1 の前の日は、その場の特化版(3枚)を自動で。数字は scripts/hayami.py(毎日数え直す。1分ほど)
