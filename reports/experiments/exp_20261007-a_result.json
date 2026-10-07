@@ -1,0 +1,55 @@
+{
+ "adopt": false,
+ "delta": {
+  "early.win_logloss": 0.0,
+  "early.tri_logloss": 0.0,
+  "late.win_logloss": -0.0004,
+  "late.tri_logloss": -0.0004
+ },
+ "per_race_ci90": {
+  "early.win_logloss": {
+   "races": 33828,
+   "mean": 0.0,
+   "lo90": 0.0,
+   "hi90": 0.0
+  },
+  "early.tri_logloss": {
+   "races": 33828,
+   "mean": 0.0,
+   "lo90": 0.0,
+   "hi90": 0.0
+  },
+  "late.win_logloss": {
+   "races": 33828,
+   "mean": -0.00041,
+   "lo90": -0.00103,
+   "hi90": 0.00021
+  },
+  "late.tri_logloss": {
+   "races": 33828,
+   "mean": -0.00045,
+   "lo90": -0.00161,
+   "hi90": 0.0007
+  }
+ },
+ "ev_roi_lo90": {
+  "base": 0.3177,
+  "candidate": 0.286,
+  "row": "ev_filtered@1.0"
+ },
+ "blend_tri_logloss": {
+  "base": 3.6888318119691452,
+  "candidate": 3.6881693143812377
+ },
+ "market_gap_tri": {
+  "base": [
+   3.6888318119691452,
+   3.698347811060747
+  ],
+  "candidate": [
+   3.6881693143812377,
+   3.698347811060747
+  ]
+ },
+ "reason": "不採用: 改善幅が基準未満"
+}
