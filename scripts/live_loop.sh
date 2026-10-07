@@ -135,7 +135,16 @@ while [ "$(date +%s)" -lt "$END" ]; do
   fi
 
   WAIT=$(( INTERVAL - ($(date +%s) - T0) ))
-  [ "$WAIT" -gt 0 ] && [ $(( $(date +%s) + WAIT )) -lt "$END" ] && sleep "$WAIT"
+  if [ "$WAIT" -gt 0 ] && [ $(( $(date +%s) + WAIT )) -lt "$END" ]; then
+    # 展示速報(tenji_flash.py)が展示を見つけたら kick を置く → 待たずに次の更新へ(展示を入れた見立てを早く出す)
+    S=0
+    while [ "$S" -lt "$WAIT" ]; do
+      if [ -n "${TENJI_DIR:-}" ] && [ -f "$TENJI_DIR/kick" ]; then
+        echo "展示速報のため早めに更新: $(cat "$TENJI_DIR/kick")"; rm -f "$TENJI_DIR/kick"; break
+      fi
+      sleep 5; S=$(( S + 5 ))
+    done
+  fi
 done
 
 # 最後に日ごとのデータを main に保存
