@@ -523,7 +523,36 @@ def exp_kado(df):
     return compare("kado_gap", df, base, base + ["kado_gap", "kado_self"], "カド(4号艇)のふだんのSTと内3艇の最速の差を足す(J16)")
 
 
-EXPERIMENTS = {"accident": exp_accident, "kado": exp_kado, "body_exst": exp_body_exst, "exst": exp_exst, "wx": exp_wx, "body": exp_body, "wx_body": exp_wx_body, "rl_variants": exp_race_level_variants, "embed_asof": exp_embed_asof, "recent": exp_recent, "pairwise": exp_pairwise, "formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
+def exp_venue(df):
+    """場ごとの専用モデル(2026-10-07 ユーザー「場ごとに専用の予測モデルが必要になる説は?」・改良案 D10)。
+    (1) 24場それぞれで別のモデルを学ぶ (2) 全体のモデルと場のモデルの点数を半分ずつ混ぜる。全体のモデル(場の特徴量入り)と比べる。"""
+    base = base_feats(df)
+    te, pb = base_predict(df, base)
+    lb = win_logloss_per_race(te, pb)
+    # 全体のモデルの点数: レースの中で確率に直すので log(確率) でも同じ(レースごとの定数は消える)
+    s_all = pd.Series(np.log(np.clip(pb, 1e-9, 1)), index=te.index)
+    s_v = pd.Series(np.nan, index=te.index)
+    for j, g in df.groupby("jcd"):
+        trj, tej = g[g["split"] != "test"], g[g["split"] == "test"]
+        if tej.empty:
+            continue
+        mj = gbdt(0, min_samples_leaf=40).fit(trj[base], trj["win"])
+        s_v.loc[tej.index] = mj.decision_function(tej[base])
+    p_v = race_probs(te, s_v.values)
+    p_mix = race_probs(te, 0.5 * s_all.values + 0.5 * s_v.values)
+    r1 = summarize("venue_only", te, lb, win_logloss_per_race(te, p_v), "24場それぞれで別のモデル(1着の対数損失、全体のモデルと比べる)")
+    r2 = summarize("venue_mix", te, lb, win_logloss_per_race(te, p_mix), "全体のモデルと場のモデルの点数を半分ずつ")
+    # 場ごとの差(どの場で良く・悪くなるか)
+    jc = te.groupby("race_id")["jcd"].first()
+    dv = (win_logloss_per_race(te, p_v) - lb).groupby(jc.reindex(lb.index).values).mean().round(4).to_dict()
+    dm = (win_logloss_per_race(te, p_mix) - lb).groupby(jc.reindex(lb.index).values).mean().round(4).to_dict()
+    (OUT / "venue_by_jcd.json").write_text(json.dumps({"venue_only": dv, "venue_mix": dm}, ensure_ascii=False, indent=1), encoding="utf-8")
+    log("by jcd only:", dv)
+    log("by jcd mix:", dm)
+    return r1, r2
+
+
+EXPERIMENTS = {"venue": exp_venue, "accident": exp_accident, "kado": exp_kado, "body_exst": exp_body_exst, "exst": exp_exst, "wx": exp_wx, "body": exp_body, "wx_body": exp_wx_body, "rl_variants": exp_race_level_variants, "embed_asof": exp_embed_asof, "recent": exp_recent, "pairwise": exp_pairwise, "formation": exp_formation, "st_reg": exp_st_reg, "bangumi": exp_bangumi, "embed": exp_embed,
                "drop_noise": exp_drop_noise, "race_level": exp_race_level}
 
 
