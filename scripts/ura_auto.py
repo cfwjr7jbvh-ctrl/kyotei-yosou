@@ -259,6 +259,12 @@ html,body{{margin:0}} .c{{width:1080px;height:1350px;background:#f4efdf;font-fam
 <div class="ft">{gull_svg(80, bg="#ffffff", cls="f")}<div>17万レースで数えた<small>公式の成績データ(2023年10月〜)を独自に集計</small></div><div class="at">@mikata_kyotei</div></div></div></body></html>"""
 
 
+# いつもと違う見た目の投稿は、ユーザーが OK するまで出さない(2026-10-08 ユーザー「いつもと違う感じの投稿する前には私の検閲通して」)。
+# OK が出たら True に。見本はユーザーに見せて確かめてもらう
+REVIEW_OK = {"neta_chart": False,    # 15:30 1枚1ネタのグラフのカードと動画、「調べてみました」の文
+             "arashi_card": False}   # 12:10 荒れそうなレースの画像
+
+
 def neta_image(out: pathlib.Path, r: dict, no_images: bool) -> dict | None:
     """15:30 1枚1ネタのカード(2026-10-07〜 伸びている人の型: 問いのタイトル+棒グラフ+大きな数字+数えた数)。
     静止画と、棒が伸びる5秒の動画(作れなければ静止画だけ)。はみ出したら古いカードに戻す。"""
@@ -266,6 +272,8 @@ def neta_image(out: pathlib.Path, r: dict, no_images: bool) -> dict | None:
         return None
     key = "neta_" + r["id"].replace(":", "_")
     try:
+        if not REVIEW_OK["neta_chart"]:
+            raise RuntimeError("新しいカードはユーザーの確認待ち")
         from kyotei import xanim
         from kyotei.factcheck import text_problems, visible_text
         sp = xanim.neta_spec(r, r.get("n"))
@@ -611,7 +619,7 @@ def main():
                 at = x_post.morning_text(races_, now)
                 img_a = None
                 top_ = x_post.arashi_top(races_, now)
-                if at and top_:
+                if at and top_ and REVIEW_OK["arashi_card"]:   # 画像はユーザーの確認待ち
                     rows_ = [{"race": f"{r['venue']}{r['rno']}R", "deadline": r.get("deadline"), "p": r["arashi"]["in_lose"],
                               "why": next((w for w in x_post.reasons(r) if len(w) <= 16), "")} for r in top_]   # 途中で切れる理由は出さない
                     h_ = arashi_card_html(f"{today.month}/{today.day}", rows_)
@@ -679,7 +687,11 @@ def main():
             k = (today - NETA_START).days
             if k >= 0:
                 r_ = rows[k % len(rows)]
-                xq.append(("15:30", "1枚1ネタ", labmod.neta_text(r_, from_poll=polled_yesterday(today), hits=theory_hits(today, r_["lab"])),   # タグなし(人気投稿の分析)
+                if REVIEW_OK["neta_chart"]:
+                    t_neta = labmod.neta_text(r_, from_poll=polled_yesterday(today), hits=theory_hits(today, r_["lab"]))   # タグなし(人気投稿の分析)
+                else:   # ユーザーの確認待ちのあいだは、いつもの文
+                    t_neta = seo.with_tags(labmod.neta_text_old(r_, from_poll=polled_yesterday(today), hits=theory_hits(today, r_["lab"])), day_tags)
+                xq.append(("15:30", "1枚1ネタ", t_neta,
                            neta_image(out, r_, a.no_images)))
             r2 = rows[(k + 1) % len(rows)]
             pq = labmod.neta_poll(r2)
