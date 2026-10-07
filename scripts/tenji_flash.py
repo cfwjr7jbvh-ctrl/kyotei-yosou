@@ -115,6 +115,50 @@ def course_line(info: dict) -> str:
     return f"展示の進入は {order}" + (f"({'・'.join(f'{l}号艇' for l in inward[:2])}が内へ)" if inward else "")
 
 
+def usual_exrank(day: dt.date) -> dict[int, tuple[float, int]]:
+    """選手ごとの「ふだんの展示順位」(前の日までの180日、レース内の展示タイムの順位の平均, 回数)。10回以上の選手だけ。
+    2026-10-07 ユーザー「展示が結果に響く選手かどうかも関係する?」→ 検証ラボ(tenji): 効くのは今日の順位が本人のふだんとどれだけ違うか。"""
+    import glob
+    import pandas as pd
+    base = pathlib.Path(os.environ.get("GITHUB_WORKSPACE") or ROOT) / "data/history"
+    since = day - dt.timedelta(days=180)
+    months = {(since + dt.timedelta(days=30 * i)).strftime("%Y%m") for i in range(8)} | {day.strftime("%Y%m")}
+    fs = [f for f in sorted(glob.glob(str(base / "entries_*.csv.gz"))) if f[-13:-7] in months]
+    if not fs:
+        return {}
+    e = pd.concat([pd.read_csv(f, usecols=["race_id", "date", "racer_id", "exhibit_time"]) for f in fs])
+    e["date"] = pd.to_datetime(e["date"]).dt.date
+    e = e[(e["date"] >= since) & (e["date"] < day) & e["exhibit_time"].notna()]
+    e["r"] = e.groupby("race_id")["exhibit_time"].rank(method="min")
+    g = e.groupby("racer_id")["r"].agg(["mean", "size"])
+    g = g[g["size"] >= 10]
+    return {int(i): (float(m), int(n)) for i, (m, n) in g.iterrows()}
+
+
+def racer_tags(rid: int) -> list[str]:
+    """選手カードの型(よい面だけのタグ)。"""
+    try:
+        b = gh_json(f"cards/b{rid % 50:02d}.json", "cards") or {}
+        return [t.get("t") for t in ((b.get("cards") or {}).get(str(rid)) or {}).get("tags", [])]
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def lab_dev() -> tuple[str, str, str]:
+    """検証ラボ tenji: 展示の順位が本人のふだんより2つ以上上 / 下 の3着以内(ふだん, 上, 下)。"""
+    a, up, dn = 0.512, 0.603, 0.399
+    try:
+        from kyotei.publish import load_private
+        t = load_private(ROOT / "reports/lab/tenji.json") or {}
+        ms = {n: m for n, m, _ in t.get("measures") or []}
+        up = float(ms["展示の順位が、本人のふだんより2つ以上上"]["in1"])
+        dn = float(ms["本人のふだんより2つ以上下"]["in1"])
+        a = float(ms["展示の順位が、本人のふだんより2つ以上上"]["in1_ref"])
+    except Exception:  # noqa: BLE001
+        pass
+    return f"{round(a * 100)}%", f"{round(up * 100)}%", f"{round(dn * 100)}%"
+
+
 def late_ready(race: dict | None) -> bool:
     """直前予想に展示が入ったか(展示タイムが5艇以上入った直前予想)。"""
     boats = (race or {}).get("boats") or []
@@ -143,7 +187,7 @@ def _chg(a: float | None, b: float | None) -> str:
 
 
 def build(race: dict, info: dict, day: dt.date, late: dict | None = None, morning: dict | None = None,
-          odds: dict[str, float] | None = None) -> dict | None:
+          odds: dict[str, float] | None = None, usual: dict | None = None, tags: dict | None = None) -> dict | None:
     """展示速報の本文と画像。late=展示を入れた直前予想(無ければ展示の事実だけ)、morning=朝の予想、odds=締切前の3連単オッズ。"""
     from kyotei import seo
     from kyotei.xcard import tenji_card_html
@@ -173,26 +217,45 @@ def build(race: dict, info: dict, day: dt.date, late: dict | None = None, mornin
         cands = [(pw[l] / mk[l], l) for l in pw if mk.get(l, 0) > 0.005 and pw[l] >= 0.08 and pw[l] / mk[l] >= 1.3]
         if cands:
             ratio, nl = max(cands)
-            nerai = f"狙い目かも? {nl}号艇の1着 見立て{round(pw[nl] * 100)}%(人気から考えると{round(mk[nl] * 100)}%、{ratio:.1f}倍)"
+            nerai = f"狙い目かも? {nl}号艇の1着(見立て{round(pw[nl] * 100)}%、人気から考えると{round(mk[nl] * 100)}%)"
         else:
             nerai = "狙い目かも? 今回は見立てと人気がほぼ同じ(人気どおり)"
+    # 今日の展示順位と、その選手のふだんの展示順位の差(+ はふだんより上)。2つ以上の差がある艇を1つ取り上げる
+    rid = {int(b["lane"]): int(b["racer_id"]) for b in (late or morning or race).get("boats") or [] if b.get("racer_id")}
+    dev = {l: (usual or {})[rid[l]][0] - rank[l] for l in ts if l in rid and rid[l] in (usual or {})}
+    dv = lab_dev()
+    dev_line = ""
+    big = sorted([l for l in dev if abs(dev[l]) >= 2], key=lambda l: (-(dev[l] >= 2), l != 1, -abs(dev[l])))
+    if big:
+        l = big[0]
+        u = (usual or {})[rid[l]][0]
+        dev_line = (f"{l}号艇は展示{rank[l]}位(ふだん{u:.0f}位前後)。ふだんより2つ以上上の艇は3着以内{dv[0]}→{dv[1]}" if dev[l] > 0
+                    else f"{l}号艇は展示{rank[l]}位(ふだん{u:.0f}位前後)。ふだんより2つ以上下だと3着以内{dv[0]}→{dv[2]}")
+    # 型: 展示が悪くても本番で崩れにくいタイプ(選手カードの「展示は控えめ、本番で化ける」。時期を変えても少しは重なる程度の型)
+    type_line = ""
+    for l in sorted(ts, key=lambda x: -rank[x]):
+        if rank[l] >= 4 and "展示は控えめ、本番で化ける" in ((tags or {}).get(l) or []):
+            type_line = f"{l}号艇は展示{rank[l]}位。でも展示が悪くても本番で崩れにくいタイプ"
+            break
     cl = course_line(info)
     rows = [{"lane": l, "time": ts[l], "rank": rank[l], "p": pw.get(l, p0.get(l)), "mkt": mk.get(l),
+             "dev": (1 if dev.get(l, 0) >= 2 else -1 if dev.get(l, 0) <= -2 else 0),
              "course": (f"進入{int(bx[l]['ex_course'])}" if bx.get(l, {}).get("ex_course") and int(bx[l]["ex_course"]) != l else ""),
              "nerai": l == nl} for l in sorted(ts)]
     rt = str(race.get("race_type") or "")
     head = f"【展示】{race['venue']}{race['rno']}R{(' ' + rt) if rt else ''}(締切{race['deadline']})"
     f_ = f"→ 展示1位の艇の3着以内は{fact[1]}→{fact[2]}に上がる"
-    tail = f"\n\n展示を見て、あなたの予想は変わった?\n{seo.x_tags(race['venue'])}"
+    tail = f"\n\n展示を見て、予想は変わった?\n{seo.x_tags(race['venue'])}"
     text = ""
-    for parts in ([head, hook, f_, cl, nerai], [head, hook, f_, nerai], [head, hook, nerai], [head, hook, f_, cl], [head, hook, f_], [head, hook]):
+    for parts in ([head, hook, dev_line, type_line, nerai], [head, hook, dev_line, nerai], [head, hook, f_, cl, nerai], [head, hook, f_, nerai],
+                  [head, hook, type_line, nerai], [head, hook, nerai], [head, hook, dev_line], [head, hook, f_], [head, hook]):
         t = "\n".join(x for x in parts if x) + tail
         if xlen(t) <= 280:
             text = t
             break
     hook_card = re.sub(r"に(上がる|下がる)$", "", hook)   # 画像は矢印で向きが分かるので短く(2行に折れないように)
     card = tenji_card_html(f"{day.month}/{day.day}({WEEK[day.weekday()]})", f"{race['venue']}{race['rno']}R", race["deadline"], rt, hook_card, rows,
-                           "見立て(展示込み)" if pw else "見立て(朝)", cl or "進入は展示の情報なし", fact,
+                           "見立て(展示込み)" if pw else "見立て(朝)", cl or "進入は展示の情報なし", fact, dev_line or type_line,
                            (f"狙い目かも? {nl}号艇の1着 見立て{round(pw[nl] * 100)}% / 人気{round(mk[nl] * 100)}%" if nl else nerai))
     return {"text": text or (head + tail), "card": card, "late": bool(pw)}
 
@@ -308,7 +371,7 @@ def self_update(shas: dict) -> bool:
 
 def watch(until: str = "23:30", every: int = 60):
     from kyotei.scrape import fetch, parse_beforeinfo, parse_odds3t
-    day, done, tg, races, t_load, morning = None, set(), [], [], 0.0, {}
+    day, done, tg, races, t_load, morning, usual = None, set(), [], [], 0.0, {}, {}
     shas: dict = {}
     t_upd = 0.0
     while now().strftime("%H:%M") < until:
@@ -321,10 +384,16 @@ def watch(until: str = "23:30", every: int = 60):
         try:
             if day != now().date():
                 day = now().date()
-                done, t_load = load_state(day), 0.0
+                done, t_load, usual = load_state(day), 0.0, {}
             if time.time() - t_load > 300:   # 対象と見立ては5分ごとに読み直す(朝の記事タブ・直前予想の更新を取り込む)
                 races = today_races(day)
                 tg = targets(day, races)
+                if not usual:
+                    try:
+                        usual = usual_exrank(day)
+                        log("ふだんの展示順位:", len(usual), "人")
+                    except Exception as ex:  # noqa: BLE001
+                        log("ふだんの展示順位を作れませんでした:", ex)
                 mday = gh_json(f"docs/data/days/{day.isoformat()}.json", "main") or {}   # 朝の予想(「朝→展示込み」の変化用)
                 morning = {x["race_id"]: x for x in mday.get("races", [])}
                 t_load = time.time()
@@ -344,7 +413,8 @@ def watch(until: str = "23:30", every: int = 60):
                 late = wait_late(day, r, left)
                 oh = fetch("odds3t", r["jcd"], r["rno"], hd)
                 odds = parse_odds3t(oh) if oh else {}
-                out = build(r, info, day, late=late, morning=morning.get(r["race_id"]), odds=odds)
+                tags = {int(b["lane"]): racer_tags(int(b["racer_id"])) for b in r.get("boats") or [] if b.get("racer_id")}
+                out = build(r, info, day, late=late, morning=morning.get(r["race_id"]), odds=odds, usual=usual, tags=tags)
                 if not out:
                     continue
                 png = render(out["card"])
@@ -365,7 +435,7 @@ def demo(out_dir: pathlib.Path):
     from kyotei.betting import COMBOS
     race = {"race_id": "demo", "venue": "住之江", "rno": 12, "deadline": "20:45", "race_type": "準優勝戦"}
     pl, pm0 = (.50, .13, .12, .14, .06, .05), (.55, .14, .12, .09, .06, .04)
-    late = {**race, "stage": "late", "boats": [{"lane": i, "exhibit_time": 6.7, "p_win": p} for i, p in zip(range(1, 7), pl)]}
+    late = {**race, "stage": "late", "boats": [{"lane": i, "racer_id": 1000 + i, "exhibit_time": 6.7, "p_win": p} for i, p in zip(range(1, 7), pl)]}
     morning = {**race, "boats": [{"lane": i, "p_win": p} for i, p in zip(range(1, 7), pm0)]}
     mw = np.array([.60, .13, .11, .08, .05, .03])
     def pl(c):   # 人気の3連単確率(1着→2着→3着の順に、残りの中で選ばれる)
@@ -374,7 +444,9 @@ def demo(out_dir: pathlib.Path):
     odds = {c: round(0.75 / pl(c), 1) for c in COMBOS}
     info = {"boats": {1: {"exhibit_time": 6.74, "ex_course": 1}, 2: {"exhibit_time": 6.71, "ex_course": 2}, 3: {"exhibit_time": 6.70, "ex_course": 3},
                       4: {"exhibit_time": 6.62, "ex_course": 4}, 5: {"exhibit_time": 6.77, "ex_course": 5}, 6: {"exhibit_time": 6.71, "ex_course": 6}}}
-    o = build(race, info, now().date(), late=late, morning=morning, odds=odds)
+    usual = {1001: (2.1, 40), 1002: (3.5, 30), 1003: (3.2, 33), 1004: (4.3, 25), 1005: (3.8, 20), 1006: (4.0, 22)}
+    tags = {5: ["展示は控えめ、本番で化ける"]}
+    o = build(race, info, now().date(), late=late, morning=morning, odds=odds, usual=usual, tags=tags)
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "tenji_demo.txt").write_text(o["text"], encoding="utf-8")
     png = render(o["card"])

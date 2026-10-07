@@ -126,7 +126,7 @@ def lab_card_html(title: str, verdict: str, real: bool, cond: str, sv: str,
 
 
 def tenji_card_html(day_label: str, race: str, deadline: str, race_type: str, hook: str, rows: list[dict],
-                    view_label: str, course_line: str, fact: tuple[str, str, str] | None, nerai: str = "") -> str:
+                    view_label: str, course_line: str, fact: tuple[str, str, str] | None, dev_line: str = "", nerai: str = "") -> str:
     """展示速報(展示が出たらすぐ。2026-10-07 ユーザー「情報量ふやして、読み手の予測がワクワクする感じで」「狙い目かも?をオッズから逆算」)。
     hook: いちばん大きく見せる1行(「1号艇は展示2位。逃げの見込み 52%→58%」)
     rows: 艇番順 [{"lane", "time", "rank", "course", "p", "p0", "mkt", "nerai"}](p=展示込みの1着の見込み、p0=朝の見立て、mkt=人気から考えた1着の確率)
@@ -138,7 +138,8 @@ def tenji_card_html(day_label: str, race: str, deadline: str, race_type: str, ho
         cls = " r1" if r.get("rank") == 1 else ""
         tag = '<i class="ng">狙い目かも?</i>' if r.get("nerai") else (f'<i class="cs">{e(r["course"])}</i>' if r.get("course") else "")
         bar = f'<span class="bar"><span style="width:{min(100, (r.get("p") or 0) * 100 / 0.7):.0f}%"></span></span>' if r.get("p") is not None else ""
-        trs += (f'<div class="tr{cls}">{lane_box(r["lane"])}<b class="rk">{r["rank"]}位</b><span class="tm">{r["time"]:.2f}</span>'
+        arw = '<sup class="up">↑</sup>' if r.get("dev", 0) > 0 else '<sup class="dn">↓</sup>' if r.get("dev", 0) < 0 else ""
+        trs += (f'<div class="tr{cls}">{lane_box(r["lane"])}<b class="rk">{r["rank"]}位{arw}</b><span class="tm">{r["time"]:.2f}</span>'
                 f'<span class="pw">{pc(r.get("p"))}{bar}</span><span class="mk">{pc(r.get("mkt"))}</span>{tag}</div>')
     fh = f'<div class="fact">{e(fact[0])} <b>{e(fact[1])} → <em>{e(fact[2])}</em></b></div>' if fact else ""
     css = BASE_CSS + f"""
@@ -155,11 +156,14 @@ def tenji_card_html(day_label: str, race: str, deadline: str, race_type: str, ho
 .tr.r1{{background:#fff3c4}} .tr.r1 .rk,.tr.r1 .tm{{color:#c8141c}}
 .cl{{margin:14px 60px 0;font:900 34px/1.35 {F}}}
 .fact{{margin:8px 60px 0;font:700 34px/1.4 {F};color:{MUTE}}} .fact b{{font:900 44px {F};color:{INK}}} .fact em{{font-style:normal;color:#c8141c}}
-.ngl{{margin:8px 60px 0;font:900 34px/1.4 {F};color:#c8141c}}"""
+.ngl{{margin:8px 60px 0;font:900 34px/1.4 {F};color:#c8141c}}
+.tr .rk sup{{font-size:30px;margin-left:2px}} .tr .rk .up{{color:#1e6b3f}} .tr .rk .dn{{color:#0b5fb4}}
+.dvl{{margin:8px 60px 0;font:700 32px/1.4 {F};color:{INK}}}"""
     return (f'<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>{css}</style></head><body><div class="c">'
             f'<div class="top"><small>展示が出た ・ {e(day_label)}</small><div class="rc">{e(race)}</div><div class="rs">{e(sub)}</div>{_lanes_bar()}</div>'
             f'<div class="hk">{e(hook)}</div>'
             f'<div class="hd"><span>艇・展示</span><span>タイム</span><span>{e(view_label)}</span><span>人気</span></div>'
             f'<div class="lst">{trs}</div><div class="cl">{e(course_line)}</div>{fh}'
+            + (f'<div class="dvl">{e(dev_line)}</div>' if dev_line else "")
             + (f'<div class="ngl">{e(nerai)}</div>' if nerai else "")
-            + f'{_foot("見立て=AIの1着の見込み / 人気=締切前のオッズ")}</div></body></html>')
+            + f'{_foot("見立て=AIの1着の見込み / 人気=締切前のオッズ / ↑↓=ふだんの展示順位より2つ以上上・下")}</div></body></html>')
