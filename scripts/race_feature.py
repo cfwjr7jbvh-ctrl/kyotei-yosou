@@ -360,6 +360,8 @@ def story(rr: dict, cards: dict | None) -> dict:
     occ = [x for x in rr.get("theories") or [] if x.get("kind") == "occult"]
     gen = ((occ[0].get("gen") or f"{occ[0]['title']}か。関係ねえのは分かってる。でもワンチャン、あるだろ?") if occ
            else "理論もいいが、最後は展示だ。ピットを出ていく顔つきを見とけよ")   # その理論のひと言(実際の字・艇番に合わせたもの)を使う
+    if occ and occ[0].get("gen") and "号艇" not in gen:   # だれの話か分かるように(「1号艇の名前に『竜』。…」)
+        gen = f"{occ[0]['title']}。{gen}"
     who = n or h
     short = [f"展示タイムで{who['lane']}号艇がいちばん速いか"]
     if any(c.startswith("4号艇のスタートが内の3人より速い") for c in checks):
@@ -437,8 +439,8 @@ def x_cards(series_name: str, grade: str, rr: dict, cards: dict | None, day: dt.
     out.append(_card(small, h1, sub + " ・ 2/2", body2))
     # 3枚目: 当てはまる理論(札と、何を見てどれくらい違うかの1行)と、ことばの説明
     th = theory_lines(rr, 4)
-    if th and gen_html and any(x["cls"] == "o" for x in th):   # オカルト枠はゲンさんのひと言と同じ話なので、ひと言のほうに任せる
-        th = [x for x in th if x["cls"] != "o"]
+    if th and gen_html and any(x.get("occ") for x in th):   # オカルト枠はゲンさんのひと言と同じ話なので、ひと言のほうに任せる(どちらでもない理論は残す)
+        th = [x for x in th if not x.get("occ")]
     th = th[:4]
     # はみ出さないように、見込みの高さ(見出し1行+本文の行数)で数を決める(本文は1行に約36字)
     budget, used, keep = (560 if gen_html else 760), 0, []
@@ -491,7 +493,8 @@ def theory_lines(rr: dict, k: int = 3) -> list[dict]:
         d = n.get("dir") or 0
         badge = str(n.get("badge") or "")
         out.append({"title": n.get("title", ""), "badge": BADGE_NOTE.get(badge, badge), "bcls": BADGE_CLS.get(badge, ""),
-                    "text": first if len(first) <= 110 else first[:108] + "…", "cls": "p" if d > 0 else ("m" if d < 0 else "o")})
+                    "text": first if len(first) <= 110 else first[:108] + "…", "cls": "p" if d > 0 else ("m" if d < 0 else "o"),
+                    "occ": n.get("kind") == "occult"})
     return out
 
 
