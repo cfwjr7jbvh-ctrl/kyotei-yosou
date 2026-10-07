@@ -161,13 +161,13 @@ const betRows = (list, label = "期待値") => list.map((b) => `
       <div class="e${b.ev >= 1.2 ? " strong" : ""}">${Math.round(b.ev * 100)}<small>%</small><span>${label}</span></div></div>`).join("");
 function evHTML(r) {
   if (!r.bets || !r.bets.length) return "";
-  return `<div class="ev"><h3>期待値のある買い目</h3>${betRows(r.bets)}</div>`;
+  return `<div class="ev"><h3>期待値のある買い目</h3><p class="cap">AIの確率と人気(オッズ)の確率をまぜて計算し直しても、確率×オッズが100%以上の組。めったに出ない、本番の候補</p>${betRows(r.bets)}</div>`;
 }
 // AIの狙い目(参考): モデルの確率×オッズが100%以上の組(期待値の高い順に3点まで)
 function pickHTML(r) {
   if (!r.pick || !r.pick.length) return "";
   return `<div class="ev pick"><h3>AIの狙い目<em>参考</em></h3>
-    <p class="cap">モデルの確率×オッズが100%以上の組(期待値の高い順に3点まで)。オッズと合わせた本当の期待値ではなく、過去の検証では回収率80%前後と100%に届いていません。実際の成績は成績タブで集計しています。</p>
+    <p class="cap">AIの確率×オッズが100%以上の組を、高い順に3点まで。人気がないのにAIは来るとみた穴が多い。AIだけの見立てなので、過去の答え合わせでは回収率80%前後(参考)。くわしくは買い目タブ・成績タブの「見方」</p>
     ${betRows(r.pick, "AIの見積もり")}</div>`;
 }
 
@@ -804,8 +804,17 @@ function renderBets() {
   const box = $("#tab-bets");
   const races = visibleRaces().filter((r) => (r.bets && r.bets.length) || (r.pick && r.pick.length));
   const late = state.data.races.filter((r) => r.stage === "late").length;
-  let html = `<p class="note">締切の約30分前から、展示とオッズを取り込んで5分ごとに更新します。確率×オッズ(期待値)が100%以上の組を出します。120%以上は赤で強調。直前予想 ${late} / ${state.data.races.length} レース</p>
-    <p class="note">「期待値のある買い目」(赤枠)はモデルとオッズを合わせた確率で計算するので、めったに出ません(出たらLINEで通知)。「AIの狙い目」はモデルの確率だけで計算した参考の組で、まだ勝てる根拠はありません。</p>`;
+  if (state.evc === undefined) {  // 過去の答え合わせ(なぜ3点まで?)は一度だけ読む
+    state.evc = null;
+    getJSON("api/data/ev_check.json").then((d) => { state.evc = d; if (state.tab === "bets") renderBets(); }).catch(() => { });
+  }
+  let html = `<div class="box intro"><h3>買い目タブの見方</h3>
+    <p>締切の約30分前から、展示とオッズを取り込んで5分ごとに更新し、AIが選んだ組を出します。このサイトはお金を使って買っていません(成績タブで「1点100円で買ったとしたら」の答え合わせをしています)。</p>
+    <ul class="kinds"><li><b>本命</b>: AIがいちばん来やすいとみた組(1レース1点)</li>
+    <li><b>AIの狙い目</b>: 確率×オッズが100%以上の組(3点まで。人気のない穴が多い)</li>
+    <li><b>期待値のある買い目</b>(赤枠): 人気の見方もまぜて計算し直しても100%以上の組(めったに出ない、本番の候補)</li></ul>
+    <details class="gloss"><summary>例で見る・なぜ3点まで?</summary>${KINDS_HTML}${whyThree(state.evc)}</details>
+    <p class="tbn">期待値が120%以上の組は赤で強調。「期待値のある買い目」(赤枠)が出たら LINE で知らせます。直前予想 ${late} / ${state.data.races.length} レース</p></div>`;
   if (!races.length) {
     box.innerHTML = html + `<div class="empty">今のところ期待値の高い買い目はありません。締切が近づくと出てきます。</div>`;
     return;
@@ -838,6 +847,26 @@ const GLOSSARY = `<details class="gloss"><summary>言葉の意味</summary><dl>
   <dt>見込める的中</dt><dd>確率を全部足した本数。AIの確率が正しければ、このくらい当たるはず。実際の的中より多ければ、AIが強気すぎ。</dd>
   <dt>回収率・収支</dt><dd>1点100円で買ったとしたときの、払戻÷買った額と、払戻−買った額。</dd>
 </dl></details>`;
+// 本命・AIの狙い目・期待値のある買い目のちがい(成績タブと買い目タブで同じ説明。2026-10-07 ユーザー「買い目の意味とかは分かりやすくサイトに」)
+const KINDS_HTML = `<div class="ex"><b>3つのちがい(例)</b>あるレースで、AIが「1-2-3」の来る確率を11%(オッズ8.4倍)、「4-1-2」を3%(オッズ60倍)とみたとき
+    <ul><li><b>本命</b>: いちばん来やすい「1-2-3」を1点。どのレースでも1点。期待値は 11%×8.4倍=92%</li>
+    <li><b>AIの狙い目</b>: 確率×オッズが100%以上の組。「4-1-2」は 3%×60倍=180% なので入る(1レース3点まで。人気がないのに、AIは来るとみた組=穴が多い)</li>
+    <li><b>期待値のある買い目</b>: AIの確率と人気(オッズ)の確率をまぜて計算し直しても100%以上の組。「4-1-2」はまぜると1.5%×60倍=90% なので入らない。だからめったに出ない(まぜる割合は、過去のレースでいちばん当たる割合)</li></ul></div>`;
+// なぜ3点まで? 過去の答え合わせ(docs/data/ev_check.json。各レースより前のデータだけで予想し直し、確定オッズで1点100円)
+function whyThree(evc) {
+  const a = evc && evc.all;
+  if (!a || !a.pick_rule || !a.all_ev100) return "";
+  const r = (x) => Math.round(x * 100) + "%";
+  const per = (x) => (x.bets / Math.max(1, x.races)).toFixed(1);
+  const bl = a.blend_ev100;
+  const n = (a.races / 10000).toFixed(1);
+  return `<details class="gloss why"><summary>なぜ3点まで? 過去の答え合わせ</summary>
+    <p>${ymd(a.period[0])}〜${ymd(a.period[1])} の約${n}万レースを、そのレースより前のデータだけで予想し直して確かめた結果(1点100円)。</p>
+    <ul><li>確率×オッズが100%以上の組を<b>全部</b>買う(1レース平均${per(a.all_ev100)}点): 回収率 <b>${r(a.all_ev100.roi)}</b></li>
+    <li>高い順に<b>3点まで</b>(AIの狙い目): 回収率 <b>${r(a.pick_rule.roi)}</b></li>
+    ${bl ? `<li><b>期待値のある買い目</b>(${bl.bets.toLocaleString()}点): 回収率 <b>${r(bl.roi)}</b>(ブレの幅 ${ci0(bl.roi_ci90)})</li>` : ""}</ul>
+    <p>全部買っても3点にしぼっても回収率はほぼ同じで、3点なら点数が少なくてすむ。だから3点まで。どれもまだ100%に届いていない(合格はブレの幅の下の端が100%を超えたとき)ので、今は参考として見てください。</p></details>`;
+}
 const catAcc = () => ({ races: 0, bets: 0, hits: 0, ret: 0, prob_sum: 0, ev_sum: 0, odds_n: 0, list: [] });
 const plYen = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toLocaleString();
 const catBets = (r, k) => k === "top" ? (r.top && r.top[0] ? [r.top[0]] : []) : ((k === "ev" ? r.bets : r.pick) || []);
@@ -1048,10 +1077,7 @@ async function renderTrack() {
   }
   for (const k of CAT_KEYS) tot[k].list.reverse();  // 新しい順
   let html = `<div class="box intro"><h3>この画面の見方</h3><p>AIの予想を「1点100円で買ったとしたら」で答え合わせしています(実際には買っていません)。上が表示中の日の途中経過、下が予想を始めてからの合計。それぞれ、本命・AIの狙い目・期待値のある買い目の3つに分けています。</p>
-    <div class="ex"><b>3つのちがい(例)</b>あるレースで、AIが「1-2-3」の来る確率を11%(オッズ8.4倍)、「4-1-2」を3%(オッズ60倍)とみたとき
-    <ul><li><b>本命</b>: いちばん来やすい「1-2-3」を1点。どのレースでも1点。期待値は 11%×8.4倍=92%</li>
-    <li><b>AIの狙い目</b>: 確率×オッズが100%以上の組。「4-1-2」は 3%×60倍=180% なので入る(1レース3点まで。人気がないのに、AIは来るとみた組=穴が多い)</li>
-    <li><b>期待値のある買い目</b>: AIの確率と人気(オッズ)の確率をまぜて計算し直しても100%以上の組。「4-1-2」はまぜると1.5%×60倍=90% なので入らない。だからめったに出ない(まぜる割合は、過去のレースでいちばん当たる割合)</li></ul></div>${GLOSSARY}</div>`;
+    ${KINDS_HTML}${whyThree(evc)}${GLOSSARY}</div>`;
   html += todayBox();
   html += `<div class="box"><h3>実際の成績<small>予想を始めてからの合計</small></h3>`;
   if (days.length) {
