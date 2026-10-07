@@ -23,7 +23,8 @@ BASE_CSS = f"""html,body{{margin:0}} .c{{width:1080px;height:1350px;background:{
 .lb{{position:absolute;left:0;right:0;bottom:-18px;height:18px;display:flex;gap:4px;padding:4px 0;background:{PAPER}}} .lb i{{flex:1}}
 .ln{{display:inline-flex;align-items:center;justify-content:center;width:52px;height:56px;font:900 38px {F};border:3px solid #111;margin-left:10px;vertical-align:middle}}
 .ft{{position:absolute;left:60px;right:60px;bottom:40px;display:flex;align-items:center;gap:18px;font:900 30px/1.3 {F}}}
-.ft small{{display:block;font:700 24px {F};color:{MUTE}}} .ft .at{{margin-left:auto;color:#c8141c;font:900 34px {F}}}"""
+.ft small{{display:block;font:700 24px {F};color:{MUTE}}} .ft .at{{margin-left:auto;color:#c8141c;font:900 34px {F}}}
+.ft .mt{{font:700 24px {F};font-style:normal;color:#c8141c;margin-left:12px}}"""
 
 
 def _lanes_bar() -> str:
@@ -34,8 +35,12 @@ def lane_box(n: int) -> str:
     return f'<span class="ln" style="background:{LANE_BG[n - 1]};color:{LANE_FG[n - 1]}">{n}</span>'
 
 
+# 名前の由来(2026-10-07 ユーザー「いつもあなたの味方ですとか由来もいれちゃう?」): いろんな「見方」+ 予想するあなたの「味方」。全部のカードの足に
+MOTTO = "いろんな見方で、予想するあなたの味方"
+
+
 def _foot(sub: str) -> str:
-    return (f'<div class="ft">{gull_svg(84, bg="#ffffff", cls="f")}<div>ミカタ<small>{e(sub)}</small></div>'
+    return (f'<div class="ft">{gull_svg(84, bg="#ffffff", cls="f")}<div>ミカタ<i class="mt">{e(MOTTO)}</i><small>{e(sub)}</small></div>'
             f'<div class="at">@mikata_kyotei</div></div>')
 
 

@@ -3786,10 +3786,10 @@ def x_card(t: dict) -> str:
     if real and not t.get("no_market") and m.get("market_ratio") and m["market_ratio"] == m["market_ratio"]:
         market = odds_words(m)
     gen = (t.get("gen") or "").strip()
-    if len(gen) > 75:   # 吹き出しは3行まで(36px で1行25字)。長いときは文の切れ目で、入るところまで
+    if len(gen) > 50:   # 吹き出しは2行まで(36px で1行25字。足にミカタの由来を入れたぶん詰める)。長いときは文の切れ目で、入るところまで
         out_ = ""
         for sen in [x + "。" for x in gen.split("。") if x]:
-            if len(out_ + sen) > 75:
+            if len(out_ + sen) > 50:
                 break
             out_ += sen
         gen = out_ or gen[:74] + "…"
