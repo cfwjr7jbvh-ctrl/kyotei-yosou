@@ -1162,21 +1162,65 @@ async function xStatsHTML() {
   return html;
 }
 
+// ひと言リプの下書き(手で返す用。2026-10-07 ユーザー「どこになにを書けばいい?」「つくって」)
+// 今日これから締切の、見る人が多そうなレース(優勝戦・準優・ドリーム・選抜・11R/12R)に、理論ぶつけのうち
+// データで差が出たもの(ゲンかつぎ枠を除く)から下書きを作る。リンク・タグ・宣伝なし。買い目・的中は書かない
+const xw = (t) => [...t].reduce((n, c) => n + (c.codePointAt(0) <= 0x10ff ? 1 : 2), 0);
+function fitX(t, max = 270) {
+  if (xw(t) <= max) return t;
+  const parts = t.split("。");
+  let out = "";
+  for (const p of parts) { const nx = out + p + "。"; if (xw(nx) > max) break; out = nx; }
+  return out || [...t].slice(0, 130).join("") + "…";
+}
+const REPLY_TYPES = [["優勝戦", 5], ["準優", 4], ["ドリーム", 3], ["選抜", 2], ["特選", 2]];
+function replyRank(r) {
+  const rt = r.race_type || "";
+  const t = REPLY_TYPES.find(([k]) => rt.includes(k) && !(k === "優勝戦" && rt.includes("準")));
+  return (t ? t[1] : 0) + (r.rno === 12 ? 1.5 : r.rno === 11 ? 1 : 0);
+}
+async function replyIdeasHTML() {
+  const t = jst();
+  let d = state.day === t.date && state.data && state.data.races ? state.data : null;
+  if (!d) { try { d = await getJSON(`api/data/days/${t.date}.json`); } catch (e) { return ""; } }
+  const left = (r) => { if (!r.deadline) return -1; const [h, m] = r.deadline.split(":").map(Number); return h * 60 + m - t.min; };
+  const races = (d.races || []).filter((r) => !r.result && left(r) > 5 && (r.theories || []).some((n) => n.kind !== "occult"))
+    .sort((a, b) => (replyRank(b) - replyRank(a)) || (left(a) - left(b))).slice(0, 8)
+    .sort((a, b) => left(a) - left(b));
+  if (!races.length) return "";
+  const posts = races.map((r) => {
+    const ns = (r.theories || []).filter((n) => n.kind !== "occult").sort((a, b) => Math.abs(b.dir || 0) - Math.abs(a.dir || 0)).slice(0, 2);
+    const q = `${r.venue}${r.rno}R`;
+    const head = `${esc(q)} ${esc(r.race_type || "")} ${esc(r.deadline || "")}締切`;
+    return ns.map((n, i) => {
+      const body = fitX(`${q}、${n.text}`);
+      return `<div class="ura-post"><div class="n"><span>${i ? "もう1つ: " : head}${i ? esc(n.title) : (n.title === r.race_type ? "" : " ・ " + esc(n.title))}</span>
+        <span class="acts">${i ? "" : `<a class="btn-link" href="https://x.com/search?q=${encodeURIComponent(q)}&f=live" target="_blank" rel="noopener">Xで探す</a> `}<button data-copy="${esc(body)}">コピー</button></span></div>${esc(body)}</div>`;
+    }).join("");
+  }).join("");
+  return `<div class="ura-sec"><h3>ひと言リプの下書き<small> 今日これからの${races.length}レース</small></h3>
+    <p class="ura-note">「Xで探す」でそのレースの投稿を開き、合うものに返信で貼る。1日5件まで。リンク・ハッシュタグ・宣伝は入れない。同じ文を何回も貼らない。買い目・的中・回収率は書かない。</p>${posts}</div>`;
+}
+
 async function renderUra() {
   const box = $("#tab-ura");
   if (URA.open) return renderUraOne(box, URA.open);
   box.innerHTML = `<div class="empty">読み込み中…</div>`;
+  const rep = await replyIdeasHTML();
+  const bindCopy = () => $$("[data-copy]", box).forEach((b) => b.onclick = () => copyText(b.dataset.copy, b));
   try { URA.index = await getJSON("api/data/ura/index.json"); } catch (e) {
-    box.innerHTML = `<div class="empty">${e instanceof Locked ? "記事の下書きは作り直し中です。しばらくすると見られます。" : "グレードレース(SG・G1)の初日が近づくと、ここに下書きが出ます。"}</div>`;
+    box.innerHTML = rep + `<div class="empty">${e instanceof Locked ? "記事の下書きは作り直し中です。しばらくすると見られます。" : "グレードレース(SG・G1)の初日が近づくと、ここに下書きが出ます。"}</div>`;
+    bindCopy();
     return;
   }
   const items = URA.index.items || [];
-  let html = await xStatsHTML();
+  let html = rep + await xStatsHTML();
   html += `<p class="ura-note">SG・G1 の初日の${URA.index.days_before}日前から、毎朝作り直します(${esc(URA.index.asof)})。note の本文、X の投稿、選手カードの画像をここからコピー・保存できます。</p>`;
   html += items.length ? `<div class="ura-list">` + items.map((it) =>
     `<button class="ura-item" data-key="${esc(it.key)}"><span class="g">${esc(it.grade)}</span><span class="t">${esc(it.title)}</span><span class="m">${uraMeta(it)}</span></button>`).join("") + `</div>`
     : `<div class="empty">いま対象の節はありません。</div>`;
   box.innerHTML = html;
+  bindCopy();
   $$(".ura-item", box).forEach((b) => b.onclick = () => { URA.open = b.dataset.key; renderUra(); window.scrollTo({ top: 0 }); });
 }
 async function renderUraOne(box, key) {

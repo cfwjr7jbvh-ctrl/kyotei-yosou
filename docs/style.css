@@ -464,6 +464,7 @@ details.row[open]>summary{border-bottom:1px solid var(--rule)}
   .theories .th.real .th-b,.theories .th.known .th-b,.theories .th.trial .th-b{background:#123322;color:#7fd6a4}
   .theories .th.occult .th-b{background:#2a1f3d;color:#c7a6ef}
 }
+.ura-post .n .acts{display:flex;gap:6px;align-items:center;flex-shrink:0;margin-left:6px}
 .ura-post .n a.btn-link{margin-left:6px;border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:700;text-decoration:none;background:var(--soft);color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)}
 
 .ura-stars{color:#c8141c;font-weight:700}
