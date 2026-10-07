@@ -1,0 +1,27 @@
+name: データ台帳
+
+# 何のデータをいつからいつまで持っているか、データ待ちのアイデアがそろったかを reports/data_catalog.md に(scripts/data_catalog.py)。
+# 毎朝の改善サイクルがこれを読み、そろったアイデアから検証する
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "35 20 * * 0"   # 毎週月曜 5:35 JST
+
+permissions:
+  contents: write
+
+jobs:
+  catalog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python scripts/data_catalog.py
+      - name: コミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          bash scripts/commit_files.sh "[CI Skip] report: データ台帳" reports/data_catalog.md reports/data_catalog.json
