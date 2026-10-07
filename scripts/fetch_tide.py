@@ -96,7 +96,7 @@ def km(a, b) -> float:
 
 def parse_txt(text: str) -> list[dict]:
     """1日1行(固定幅)。1〜72桁: 0〜23時の潮位(3桁×24、cm)、73〜78: 年月日(YYMMDD)、79〜80: 地点記号、
-    81〜108: 満潮(時刻4桁+潮位3桁)×4、109〜136: 干潮×4。予測が無い所は 9999 / 999。"""
+    81〜108: 満潮(時刻4桁=時2桁+分2桁、空白うめ+潮位3桁)×4、109〜136: 干潮×4。予測が無い所は 9999 / 999。"""
     rows = []
     for ln in text.splitlines():
         if len(ln) < 80:
@@ -112,9 +112,10 @@ def parse_txt(text: str) -> list[dict]:
         for kind, off in (("hi", 80), ("lo", 108)):
             for k in range(4):
                 seg = ln[off + k * 7: off + (k + 1) * 7]
-                t, h = seg[:4].strip(), seg[4:7].strip()
-                ok = t.isdigit() and t != "9999" and h.lstrip("-").isdigit() and h != "999"
-                rec[f"{kind}{k + 1}_t"] = f"{int(t) // 100:02d}:{int(t) % 100:02d}" if ok else None
+                # 時刻は「時2桁+分2桁」で、それぞれ空白うめ(9時9分は " 9 9")。まとめて数字にすると読めない
+                hh_, mm_, h = seg[0:2].strip(), seg[2:4].strip(), seg[4:7].strip()
+                ok = hh_.isdigit() and mm_.isdigit() and seg[:4] != "9999" and h.lstrip("-").isdigit() and h != "999"
+                rec[f"{kind}{k + 1}_t"] = f"{int(hh_):02d}:{int(mm_):02d}" if ok else None
                 rec[f"{kind}{k + 1}_cm"] = int(h) if ok else None
         rows.append(rec)
     return rows
