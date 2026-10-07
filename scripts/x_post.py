@@ -233,7 +233,7 @@ def day_text(sr: dict, rs: list[dict], now: dt.datetime) -> str:
     else:
         head, q = f"今日の{sr['venue']}まとめ📊", "明日、気になる選手は?"
     lines = [f"【{sr['name']}】{now.month}/{now.day} {head}", "",
-             f"1号艇の1着: {n}レース中{w1}回" + (f"(ふだんの{sr['venue']}なら{ex}回くらい)" if ex is not None else "")]
+             f"1号艇の1着: {round(w1 / n * 100) if n else 0}%({n}レース中{w1}レース)" + (f"。ふだんの{sr['venue']}は{round(sr['in1'])}%" if ex is not None else "")]
     lw = Counter(int((_winner(r) or {}).get("lane") or 0) for r in done)
     lines.append("1着の枠: " + " ".join(f"{'①②③④⑤⑥'[k - 1]}{lw.get(k, 0)}" for k in range(1, 7)))
     outs = []

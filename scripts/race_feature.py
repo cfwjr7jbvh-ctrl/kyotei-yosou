@@ -272,18 +272,18 @@ def story(rr: dict, cards: dict | None) -> dict:
     tj = _lab_pair("tenji", "展示タイム1位")
     if tj:
         who = n or h
-        checks.append(f"展示タイムで{who['lane']}号艇がいちばん速いか。展示タイム1位の選手は、3着以内が100回中{tj[0]:.0f}回(ふつうは{tj[1]:.0f}回)")
+        checks.append(f"展示タイムで{who['lane']}号艇がいちばん速いか。展示タイム1位の艇は、3着以内が{tj[1]:.0f}%→{tj[0]:.0f}%に上がる")
     st = {int(b["lane"]): (b.get("traits") or {}).get("st") for b in boats}
     if all(st.get(k) is not None for k in (1, 2, 3, 4)) and st[4] <= min(st[1], st[2], st[3]) - 0.02:
         kd = _lab_pair("slowdash", "0.02秒以上速い")
         if kd:
-            checks.insert(0, f"4号艇のスタートが内の3人より速い。こういうレースは4号艇の1着が100回中{kd[0]:.0f}回(ふつうは{kd[1]:.0f}回)")
+            checks.insert(0, f"4号艇のスタートが内の3人より速い。こういうレースは4号艇の1着が{kd[1]:.0f}%→{kd[0]:.0f}%に上がる")
     hot = [x for x in rr.get("theories") or [] if x.get("id") == "hot" and "連勝" in x.get("title", "")]
     if hot:
         hp = _lab_pair("hot", "今節、2連勝中")
         ln = "・".join(f"{l}号艇" for x in hot for l in x.get("lanes") or [])
         if ln and hp:
-            checks.append(f"{ln}は今節2連勝中。こういう選手は3着以内が100回中{hp[0]:.0f}回(いつもは{hp[1]:.0f}回)")
+            checks.append(f"{ln}は今節2連勝中。今節2連勝中の艇は、3着以内が{hp[1]:.0f}%→{hp[0]:.0f}%に上がる")
     if not n:
         checks.append("1号艇の展示タイムが4位以下なら、本命を疑う(展示の順位が下がるほど、勝つ見込みも下がる)")
     occ = [x for x in rr.get("theories") or [] if x.get("kind") == "occult"]
@@ -345,7 +345,7 @@ def x_cards(series_name: str, grade: str, rr: dict, cards: dict | None, day: dt.
                  f'<div class="p">{_pct(b.get("p_win"))}<small>%</small></div></div>')
     il = (rr.get("arashi") or {}).get("in_lose")
     body2 = (f'<div class="sec"><p class="h">6人の勝つ見込み<span class="key">スタートは平均の速さ ・ 赤字はその人の得意な型</span></p>{rows}</div>'
-             + (f'<div class="sec"><p class="h">荒れそう度</p><ul class="lines"><li class="m">1号艇以外が勝つ見込み {_pct(il)}%<small>いつもは45%</small></li></ul></div>' if il is not None else "")
+             + (f'<div class="sec"><p class="h">荒れそう度</p><ul class="lines"><li class="m">1号艇以外が勝つ見込み {_pct(il)}%<small>ふだんは45%</small></li></ul></div>' if il is not None else "")
              + (f'<div class="sec gen"><div class="gw"><span>ゲンさん</span><small>ゲンかつぎ歴40年の大先輩</small></div><p>{e(st_["gen"])}</p></div>' if st_ else ""))
     out.append(_card(small, h1, sub + " ・ 2/2", body2))
     # 3枚目: 当てはまる理論(札と、何を見てどれくらい違うかの1行)と、ことばの説明

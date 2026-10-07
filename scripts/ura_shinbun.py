@@ -56,7 +56,7 @@ def headlines(c: dict, t: dict) -> list[str]:
     if cat == "nige":
         x = k["nige"]
         return [f"インに入れば鉄板級 {n}の逃げ率{x['w'] / x['n']:.0%}",
-                f"{n}、1コース{x['n']}走で{x['w']}回逃げ切り"]
+                f"{n}、1コースの逃げ切り率{x['w'] / x['n']:.0%}({x['n']}走)"]
     if cat == "sashi":
         x = k["sashi"]
         return [f"差しのスペシャリスト{n} 2コース以遠から差し{x['w']}勝",

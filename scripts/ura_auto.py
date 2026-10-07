@@ -209,7 +209,7 @@ def neta_card_html(r: dict) -> str:
     col = {"多い": "#c8141c", "少ない": "#1f6fd1", "ほぼ同じ": "#6b7680"}[r["answer"]]
     v = {"多い": "ふだんより多い", "少ない": "ふだんより少ない", "ほぼ同じ": "ふだんとほぼ同じ"}[r["answer"]]
     bars = ""
-    sub = r["line"].split("のは")[0] + "回数" if r.get("a") is not None and "のは" in r["line"] else r["line"]
+    sub = r["line"].split("のは")[0] + "割合" if r.get("a") is not None and "のは" in r["line"] else r["line"]
     note = ""
     if r["answer"] == "ほぼ同じ" and r.get("a") is not None and abs(r["a"] - r["b"]) >= 0.5:
         note = '<div class="nt">この差は、たまたまでも出るくらいの幅です</div>'
@@ -217,8 +217,8 @@ def neta_card_html(r: dict) -> str:
         mx = max(r["a"], r["b"], 1) * 1.08
         fmt = lambda v: f"{v:.1f}".rstrip("0").rstrip(".") if v != int(v) else f"{int(v)}"  # noqa: E731
         bars = ('<div class="bars">'
-                f'<div class="br"><b>この条件</b><div class="tr"><div class="fl" style="width:{r["a"] / mx * 100:.1f}%;background:{col}"></div></div><em>{fmt(r["a"])}回</em></div>'
-                f'<div class="br"><b>{e_(r.get("refl") or "ふだん")}</b><div class="tr"><div class="fl" style="width:{r["b"] / mx * 100:.1f}%;background:#8a949c"></div></div><em>{fmt(r["b"])}回</em></div></div>')
+                f'<div class="br"><b>この条件</b><div class="tr"><div class="fl" style="width:{r["a"] / mx * 100:.1f}%;background:{col}"></div></div><em>{fmt(r["a"])}%</em></div>'
+                f'<div class="br"><b>{e_(r.get("refl") or "ふだん")}</b><div class="tr"><div class="fl" style="width:{r["b"] / mx * 100:.1f}%;background:#8a949c"></div></div><em>{fmt(r["b"])}%</em></div></div>')
     lanes = "".join(f'<i style="background:{c}"></i>' for c in LANE_BG)
     return f"""<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>
 html,body{{margin:0}} .c{{width:1080px;height:1350px;background:#f4efdf;font-family:{F};color:#14212c;position:relative;overflow:hidden}}
