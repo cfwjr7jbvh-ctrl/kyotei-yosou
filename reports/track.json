@@ -15,7 +15,36 @@
    "pick_races": 17,
    "pick_bets": 49,
    "pick_hits": 1,
-   "pick_return": 1970
+   "pick_return": 1970,
+   "cat": {
+    "top": {
+     "races": 156,
+     "bets": 156,
+     "hits": 19,
+     "ret": 11330,
+     "prob_sum": 16.8925,
+     "ev_sum": 100.5605,
+     "odds_n": 127
+    },
+    "pick": {
+     "races": 17,
+     "bets": 49,
+     "hits": 1,
+     "ret": 1970,
+     "prob_sum": 1.45,
+     "ev_sum": 92.5249,
+     "odds_n": 49
+    },
+    "ev": {
+     "races": 0,
+     "bets": 0,
+     "hits": 0,
+     "ret": 0,
+     "prob_sum": 0.0,
+     "ev_sum": 0.0,
+     "odds_n": 0
+    }
+   }
   },
   {
    "date": "2026-10-05",
@@ -32,7 +61,36 @@
    "pick_races": 143,
    "pick_bets": 424,
    "pick_hits": 14,
-   "pick_return": 41630
+   "pick_return": 41630,
+   "cat": {
+    "top": {
+     "races": 144,
+     "bets": 144,
+     "hits": 14,
+     "ret": 7500,
+     "prob_sum": 17.7752,
+     "ev_sum": 120.1804,
+     "odds_n": 144
+    },
+    "pick": {
+     "races": 143,
+     "bets": 424,
+     "hits": 14,
+     "ret": 41630,
+     "prob_sum": 11.9935,
+     "ev_sum": 695.3581,
+     "odds_n": 424
+    },
+    "ev": {
+     "races": 1,
+     "bets": 1,
+     "hits": 1,
+     "ret": 990,
+     "prob_sum": 0.0493,
+     "ev_sum": 1.0106,
+     "odds_n": 1
+    }
+   }
   },
   {
    "date": "2026-10-06",
@@ -49,7 +107,36 @@
    "pick_races": 155,
    "pick_bets": 455,
    "pick_hits": 18,
-   "pick_return": 100080
+   "pick_return": 100080,
+   "cat": {
+    "top": {
+     "races": 156,
+     "bets": 156,
+     "hits": 20,
+     "ret": 14080,
+     "prob_sum": 18.1012,
+     "ev_sum": 134.707,
+     "odds_n": 156
+    },
+    "pick": {
+     "races": 155,
+     "bets": 455,
+     "hits": 18,
+     "ret": 100080,
+     "prob_sum": 13.8131,
+     "ev_sum": 718.9464,
+     "odds_n": 455
+    },
+    "ev": {
+     "races": 5,
+     "bets": 7,
+     "hits": 2,
+     "ret": 1940,
+     "prob_sum": 0.2928,
+     "ev_sum": 7.1802,
+     "odds_n": 7
+    }
+   }
   }
  ]
 }
