@@ -31,7 +31,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from kyotei.xtext import xlen  # noqa: E402
-from kyotei.publish import read_json  # noqa: E402
+from kyotei.publish import read_json, save_private  # noqa: E402
 
 JST = dt.timezone(dt.timedelta(hours=9))
 DRAFTS = ROOT / "reports/x_drafts"
@@ -456,12 +456,12 @@ def main():
         tag = f"thread:{a.key}"
     if posted.get(tag) == day or (a.what == "thread" and tag in posted):
         print("今日はもう出しています:", tag); return
-    # 下書きを残す
-    draft = DRAFTS / f"{day}_{a.what}.txt"
-    draft.write_text("\n\n---\n\n".join(texts) + ((f"\n\n(画像{len(media)}枚)" if isinstance(media, list) else "\n\n(画像つき)") if media else "")
-                     + (f"\n\n(投票: {' / '.join(poll['options'])})" if poll and not media else ""), encoding="utf-8")
+    # 下書きを残す。本文は公開リポジトリに平文で置かない(2026-10-07 ユーザー「検証データはぱくられない?」)→ 暗号化(鍵が無い手元は out/private)
+    draft = save_private(DRAFTS / f"{day}_{a.what}.json", {"texts": texts, "images": (len(media) if isinstance(media, list) else 1) if media else 0,
+                                                           "poll": poll["options"] if poll and not media else None})
+    in_ci = bool(os.environ.get("GITHUB_ACTIONS"))   # 公開リポジトリの Actions のログはだれでも読めるので、本文は出さない
     for i, t in enumerate(texts, 1):
-        print(f"--- {i} ({xlen(t)}/280) ---\n{t}\n")
+        print(f"--- {i} ({xlen(t)}/280) ---" + ("" if in_ci else f"\n{t}\n"))
     if not live:
         print("下書き:", draft); return
     s = session()

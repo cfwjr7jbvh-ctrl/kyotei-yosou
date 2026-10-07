@@ -344,7 +344,8 @@ def render(html: str) -> bytes | None:
 def send(text: str, pngs: list[bytes] | bytes | None) -> str | None:
     import x_post
     if not x_post.creds() or os.environ.get("X_AUTOPOST") != "1":
-        log("下書き(鍵か X_AUTOPOST が無い):\n" + text)
+        # ログは live ブランチ(公開)に載るので、本文は Actions では出さない
+        log("下書き(鍵か X_AUTOPOST が無い)" + (f": {len(text)}字" if os.environ.get("GITHUB_ACTIONS") else ":\n" + text))
         return None
     if isinstance(pngs, (bytes, bytearray)):
         pngs = [pngs]
