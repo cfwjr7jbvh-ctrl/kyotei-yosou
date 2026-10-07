@@ -172,8 +172,9 @@ CARD_CSS = f"""html,body{{margin:0}} .c{{width:1080px;height:1350px;background:#
 .v .k{{font:900 30px {F};padding:6px 14px;color:#fff;background:#14212c;white-space:nowrap}} .v.n .k{{background:#c8141c}}
 .v b{{font:900 40px/1.25 {F}}} .v small{{display:block;font:700 26px/1.4 {F};color:#56636e;margin-top:4px}}
 .lt{{display:inline-grid;place-items:center;width:52px;height:52px;font:900 34px {F};border:2px solid #111;flex:0 0 52px}}
-.row{{display:flex;align-items:center;gap:16px;padding:7px 0;border-bottom:2px solid #d8d0b8}}
+.row{{display:flex;align-items:center;gap:16px;padding:5px 0;border-bottom:2px solid #d8d0b8}}
 .row .nm{{flex:1;font:900 36px/1.15 {F}}} .row .nm small{{display:block;font:700 24px {F};color:#56636e;margin-top:4px}}
+.row.r1 .nm{{display:flex;align-items:baseline;gap:14px;white-space:nowrap}} .row.r1 .nm small{{display:inline;margin:0;font:700 28px {F}}}
 .bar{{width:250px;height:26px;background:#e3dcc6;position:relative}} .bar i{{position:absolute;left:0;top:0;bottom:0;background:#14212c}} .bar.n i{{background:#c8141c}}
 .row .p{{width:110px;text-align:right;font:900 40px {F}}} .row .p small{{font-size:24px}}
 .kim{{display:flex;gap:10px}} .kim div{{flex:1;background:#fff;border:2px solid #14212c;padding:10px 6px;text-align:center;font:700 26px {F}}}
@@ -195,6 +196,10 @@ CARD_CSS = f"""html,body{{margin:0}} .c{{width:1080px;height:1350px;background:#
 .ths .bd.real{{background:#2e8b57;color:#fff}} .ths .bd.edge{{background:#c8141c;color:#fff}} .ths .bd.known{{background:#14212c;color:#fff}}
 .ths li p{{margin:6px 0 0;font:700 26px/1.45 {F}}}
 .words{{list-style:none;margin:0;padding:0;display:grid;gap:8px}} .words li{{display:flex;gap:14px;align-items:flex-start;font:700 25px/1.45 {F}}} .words li b{{flex:0 0 150px;padding:2px 10px;background:#14212c;color:#ffe100;font:900 24px/1.45 {F};text-align:center}}
+.bk{{display:flex;align-items:center;gap:16px;background:#fff;border:3px solid #c8141c;padding:8px 16px;margin-bottom:8px}}
+.bk .bm{{flex:1}} .bk .bm b{{font:900 34px/1.2 {F}}} .bk .bm small{{display:block;font:700 26px/1.35 {F};color:#14212c;margin-top:2px}}
+.bk .pc{{font:900 46px {F};white-space:nowrap}} .bk .pc small{{font-size:24px}} .bk .lt{{width:44px;height:44px;flex:0 0 44px;font-size:28px}}
+.wk{{list-style:none;margin:6px 0 0;padding:0;font:700 26px/1.4 {F};color:#56636e}} .wk li::before{{content:"・"}}
 .ft{{position:absolute;left:48px;right:48px;bottom:30px;display:flex;align-items:center;gap:16px;font:700 22px/1.4 {F};color:#56636e}}
 .ft b{{color:#c8141c;font:900 30px {F};margin-left:auto;white-space:nowrap}}"""
 
@@ -248,6 +253,68 @@ def _why(b: dict, typ: str | None, cards: dict | None) -> str:
     return f"{t['t']}: {t['why']}" if t else ""
 
 
+COURSE_TYPE = {2: "差し", 3: "まくり", 4: "まくり", 5: "まくり差し", 6: "まくり差し"}
+
+
+def _stm(v) -> str:
+    """市場の書き方「ST.15」。"""
+    t = _st(v)
+    return "ST" + (t[1:] if t.startswith("0") else t)
+
+
+def breakers(rr: dict, cards: dict | None, k: int = 2) -> dict:
+    """1号艇を崩すなら誰か(2026-10-07 ユーザー「崩すのは誰だ?なら少しはデータからの方向性出さないと」)。
+    2〜6号艇を1着の見込みの順に k 人。勝ち方は展開の見込み(tenkai)→ その人の型 → コースのふつうの勝ち方。
+    理由は数字で言えるものだけ: 1号艇よりスタートが速い / その枠のふだんより見込みが高い / 勝ち方に合う型 / インに不利な理論。
+    1号艇の気になる点も、名前は出さず艇番で(選手をけなさない)。"""
+    boats = sorted(rr.get("boats", []), key=lambda b: int(b["lane"]))
+    if len(boats) < 6 or not all(b.get("p_win") is not None for b in boats):
+        return {}
+    one = boats[0]
+    tk = rr.get("tenkai") or {}
+    ptype = {}
+    for pth in sorted(tk.get("paths") or [], key=lambda x: -x.get("p", 0)):
+        ptype.setdefault(int(pth["lane"]), pth["type"])
+    st = {int(b["lane"]): (b.get("traits") or {}).get("st") for b in boats}
+    th_minus = {}
+    for n in rr.get("theories") or []:
+        if n.get("kind") != "occult" and int(n.get("dir") or 0) < 0:
+            for ln in n.get("lanes") or []:
+                if int(ln) != 1:
+                    th_minus.setdefault(int(ln), n["title"])
+    out = []
+    for b in sorted(boats[1:], key=lambda b: -b["p_win"])[:k]:
+        ln = int(b["lane"])
+        typ = ptype.get(ln) or _type_of(b, None, cards) or COURSE_TYPE.get(ln)
+        why = []
+        if st.get(ln) is not None and st.get(1) is not None and st[ln] <= st[1] - 0.02:
+            why.append(f"{_stm(st[ln])}(1号艇は{_stm(st[1])})")
+        r = b["p_win"] * 100 / LANE_BASE[ln]
+        if r >= 1.2:
+            why.append(f"いつもの{ln}号艇({LANE_BASE[ln]:.0f}%)より高い")
+        w = _why(b, typ, cards)
+        if w:
+            why.append(w.split(":")[0])
+        if ln in th_minus:
+            why.append(th_minus[ln])
+        out.append({"lane": ln, "name": b.get("name") or "", "type": typ, "p": b["p_win"], "why": why[:2]})
+    weak = []
+    if st.get(1) is not None and all(st.get(i) is not None for i in range(1, 7)):
+        rank = 1 + sum(1 for i in range(2, 7) if st[i] < st[1])
+        if rank >= 4:
+            weak.append(f"1号艇のスタートは6人中{rank}番目の速さ({_stm(st[1])})")
+    nige = (one.get("traits") or {}).get("nige")
+    if nige is not None and nige < 0.45:
+        weak.append(f"1号艇の逃げ率は{_pct(nige)}%(ふだんの1号艇は55%)")
+    cls = {"A1": 4, "A2": 3, "B1": 2, "B2": 1}
+    c1 = cls.get(str(one.get("class") or ""), 0)
+    higher = sum(1 for b in boats[1:] if cls.get(str(b.get("class") or ""), 0) > c1)
+    if higher >= 3:
+        weak.append(f"1号艇より級別が上の選手が{higher}人")
+    kim = tk.get("kimarite") or {}
+    return {"list": out, "weak": weak[:2], "in_lose": (rr.get("arashi") or {}).get("in_lose"), "kim": kim}
+
+
 def story(rr: dict, cards: dict | None) -> dict:
     """「だから何?」で終わらせないための骨組み。
     hook: このレースの問い(「Aの逃げか、Bのまくりか」)、branches: 展開の分かれ道(見込みと理由)、
@@ -267,6 +334,10 @@ def story(rr: dict, cards: dict | None) -> dict:
     if n:
         br.append({"k": "狙い目かも?", "lane": int(n["lane"]), "name": nm[int(n["lane"])], "type": nt, "p": n["p_win"],
                    "why": _why(n, nt, cards), "ratio": mv["ratio"]})
+    else:   # 「崩すなら誰だ」と問うたら、データからの答えも出す
+        bk = (breakers(rr, cards, 1).get("list") or [None])[0]
+        if bk and int(h["lane"]) == 1:
+            br.append({"k": "崩すなら", "lane": bk["lane"], "name": bk["name"], "type": bk["type"], "p": bk["p"], "why": " ・ ".join(bk["why"])})
     rest = max(0.0, 1 - sum(x["p"] for x in br))
     checks = []
     tj = _lab_pair("tenji", "展示タイム1位")
@@ -338,15 +409,30 @@ def x_cards(series_name: str, grade: str, rr: dict, cards: dict | None, day: dt.
         stv = (b.get("traits") or {}).get("st")
         c = (cards or {}).get(int(b.get("racer_id") or 0))
         tg = sorted(rc.tags_for(c), key=lambda t: -t["score"])[:1] if c else []
-        rows += (f'<div class="row"><span class="lt" style="background:{LANE_BG[i]};color:{LANE_FG[i]}">{i + 1}</span>'
-                 f'<div class="nm">{e(b.get("name") or "")}<small>{e(str(b.get("class") or ""))} ・ スタート{_st(stv)}秒'
-                 + (f' ・ <em>{e(tg[0]["t"])}</em>' if tg else "") + '</small></div>'
+        rows += (f'<div class="row r1"><span class="lt" style="background:{LANE_BG[i]};color:{LANE_FG[i]}">{i + 1}</span>'
+                 f'<div class="nm">{e(b.get("name") or "")}<small>{e(str(b.get("class") or ""))} {_stm(stv)}'
+                 + (f' <em>{e(tg[0]["t"])}</em>' if tg else "") + '</small></div>'
                  f'<div class="bar{" n" if ner is b else ""}"><i style="width:{(b.get("p_win") or 0) / mx * 100:.0f}%"></i></div>'
                  f'<div class="p">{_pct(b.get("p_win"))}<small>%</small></div></div>')
-    il = (rr.get("arashi") or {}).get("in_lose")
+    bk = breakers(rr, cards, 2)
+    il = bk.get("in_lose")
+    bks = ""
+    for x in bk.get("list") or []:
+        i = x["lane"] - 1
+        bks += (f'<div class="bk"><span class="lt" style="background:{LANE_BG[i]};color:{LANE_FG[i]}">{x["lane"]}</span>'
+                f'<div class="bm"><b>{e(x["name"])}{("の" + e(x["type"])) if x["type"] else ""}</b>'
+                + (f'<small>{e(" ・ ".join(x["why"]))}</small>' if x["why"] else "") + f'</div><div class="pc">{_pct(x["p"])}<small>%</small></div></div>')
+    kim = bk.get("kim") or {}
+    kim_s = " ・ ".join(f"{k} {_pct(kim[k])}%" for k in ("差し", "まくり", "まくり差し") if kim.get(k) is not None)
+    weak = "".join(f"<li>{e(w)}</li>" for w in ([f"崩れ方の見込み: {kim_s}"] if kim_s else []) + (bk.get("weak") or []))
+    gen = (st_ or {}).get("gen") or ""   # 3枚目(場所がある)に置くので、ひと言はそのまま
     body2 = (f'<div class="sec"><p class="h">6人の勝つ見込み<span class="key">スタートは平均の速さ ・ 赤字はその人の得意な型</span></p>{rows}</div>'
-             + (f'<div class="sec"><p class="h">荒れそう度</p><ul class="lines"><li class="m">1号艇以外が勝つ見込み {_pct(il)}%<small>ふだんは45%</small></li></ul></div>' if il is not None else "")
-             + (f'<div class="sec gen"><div class="gw"><span>ゲンさん</span><small>ゲンかつぎ歴40年の大先輩</small></div><p>{e(st_["gen"])}</p></div>' if st_ else ""))
+             + (f'<div class="sec"><p class="h">1号艇を崩すなら<span class="key">1号艇以外が勝つ見込み {_pct(il)}%(ふだん45%)</span></p>{bks}'
+                + (f'<ul class="wk">{weak}</ul>' if weak else "") + '</div>' if bks else "")
+             )
+    gen_html = f'<div class="sec gen"><div class="gw"><span>ゲンさん</span><small>ゲンかつぎ歴40年の大先輩</small></div><p>{e(gen)}</p></div>' if gen else ""
+    if not theory_lines(rr):   # 3枚目が無いときは2枚目に
+        body2 += gen_html
     out.append(_card(small, h1, sub + " ・ 2/2", body2))
     # 3枚目: 当てはまる理論(札と、何を見てどれくらい違うかの1行)と、ことばの説明
     th = theory_lines(rr)
@@ -354,7 +440,8 @@ def x_cards(series_name: str, grade: str, rr: dict, cards: dict | None, day: dt.
         lis = "".join(f'<li class="{x["cls"]}"><b>{e(x["title"])}</b><span class="bd {x["bcls"]}">{e(x["badge"])}</span><p>{e(x["text"])}</p></li>' for x in th)
         words = glossary(st_, th)
         body3 = (f'<div class="sec"><p class="h">このレースに当てはまる理論<span class="key">緑=インに有利 ・ 赤=インに不利</span></p><ul class="ths">{lis}</ul></div>'
-                 + (f'<div class="sec"><p class="h">ことば</p><ul class="words">' + "".join(f"<li><b>{e(k)}</b>{e(v)}</li>" for k, v in words) + "</ul></div>" if words else ""))
+                 + (f'<div class="sec"><p class="h">ことば</p><ul class="words">' + "".join(f"<li><b>{e(k)}</b>{e(v)}</li>" for k, v in words) + "</ul></div>" if words else "")
+                 + gen_html)
         out.append(_card(small, h1, sub + " ・ 3/3", body3))
         out[1] = out[1].replace(" ・ 2/2</p>", " ・ 2/3</p>")
     return out
