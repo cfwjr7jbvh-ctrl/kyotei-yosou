@@ -1,0 +1,47 @@
+name: 成績の集計し直し
+
+# 成績タブの集計項目を増やしたときに、過去の日を「もう付いている結果」で集計し直す(結果の取り直しはしない)。
+# gh api -X POST repos/cfwjr7jbvh-ctrl/kyotei-yosou/actions/workflows/rescore.yml/dispatches -f ref=main -f 'inputs[start]=2026-10-04' -f 'inputs[end]=2026-10-06'
+on:
+  workflow_dispatch:
+    inputs:
+      start:
+        description: "開始日(YYYY-MM-DD)"
+        required: true
+      end:
+        description: "終了日(YYYY-MM-DD、空なら開始日だけ)"
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+
+concurrency:
+  group: site
+  cancel-in-progress: false
+
+jobs:
+  rescore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SITE_PASSWORD: ${{ secrets.SITE_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup
+        with:
+          model: "false"
+      - name: 集計し直し
+        run: |
+          if [ -z "$SITE_PASSWORD" ]; then echo "SITE_PASSWORD が無い"; exit 1; fi
+          python scripts/predict.py rescore "${{ inputs.start }}" ${{ inputs.end }}
+      - name: コミット
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          FILES="docs/data/track.json reports/track.json"
+          D="${{ inputs.start }}"; E="${{ inputs.end }}"; E="${E:-$D}"
+          while [[ "$D" < "$E" || "$D" == "$E" ]]; do
+            FILES="$FILES docs/data/days/$D.json"; D=$(date -d "$D + 1 day" +%F)
+          done
+          bash scripts/commit_files.sh "[CI Skip] 成績を集計し直し: ${{ inputs.start }} ${{ inputs.end }}" $FILES

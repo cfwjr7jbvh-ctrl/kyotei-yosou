@@ -820,35 +820,70 @@ function renderBets() {
 
 function stat(k, v, cls = "") { return `<div class="stat"><div class="k">${k}</div><div class="v ${cls}">${v}</div></div>`; }
 
+// ---- 成績の区分(本命・AIの狙い目・期待値のある買い目)----
+// それぞれ「1点100円で買ったとしたら」。見込み(確率の合計・期待値の平均)と実際(的中・回収率)を並べて、AIが強気すぎないかを見る
+const CAT_KEYS = ["top", "pick", "ev"];
+const CAT_INFO = {
+  top: ["本命(3連単1点)", "AIがいちばん来やすいとみた3連単の組を、1点だけ買ったとしたら。"],
+  pick: ["AIの狙い目(参考)", "AIの確率×締切前のオッズ(期待値)が100%以上の組を、高い順に3点まで買ったとしたら。AIの確率だけで計算した参考の組で、勝てる根拠はまだありません。"],
+  ev: ["期待値のある買い目", "AIの確率に人気(オッズ)をまぜた、ひかえめな確率で計算し直しても、期待値が100%以上になった組(5点まで)。本番の買い方で、めったに出ません。"],
+};
+const GLOSSARY = `<details class="gloss"><summary>言葉の意味</summary><dl>
+  <dt>今日の成績</dt><dd>表示している日の、結果が出たレースだけの途中経過。結果は直前予想の更新のたびに付きます。</dd>
+  <dt>実際の成績</dt><dd>予想を始めた日からの合計。毎朝、前の日の分を確定した結果で付け直して足します。</dd>
+  <dt>レース数・点数</dt><dd>その区分の組が出たレースの数と、組の数(1点=1組)。</dd>
+  <dt>確率</dt><dd>AIが見込む、その組が1着-2着-3着の順で来る確率(組を出した時点)。</dd>
+  <dt>オッズ</dt><dd>組を出した時点(締切前)のオッズ。確定オッズとは少しずれます。払戻は確定した配当。</dd>
+  <dt>期待値</dt><dd>確率×オッズ。100%が損得なしの線で、120%なら100円買うと平均120円戻る見込み、80%なら80円。</dd>
+  <dt>見込める的中</dt><dd>確率を全部足した本数。AIの確率が正しければ、このくらい当たるはず。実際の的中より多ければ、AIが強気すぎ。</dd>
+  <dt>回収率・収支</dt><dd>1点100円で買ったとしたときの、払戻÷買った額と、払戻−買った額。</dd>
+</dl></details>`;
+const catAcc = () => ({ races: 0, bets: 0, hits: 0, ret: 0, prob_sum: 0, ev_sum: 0, odds_n: 0, list: [] });
+const plYen = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toLocaleString();
+const catBets = (r, k) => k === "top" ? (r.top && r.top[0] ? [r.top[0]] : []) : ((k === "ev" ? r.bets : r.pick) || []);
+function catBlock(k, a, open) {
+  const [title, desc] = CAT_INFO[k];
+  let h = `<h4 class="tb">${title}</h4><p class="def">${desc}</p>`;
+  if (!a.bets) return h + `<p class="tbn">まだ対象のレースがありません。</p>`;
+  const roi = a.ret / (a.bets * 100), prof = a.ret - a.bets * 100;
+  const evAvg = a.odds_n ? a.ev_sum / a.odds_n : null;
+  h += `<div class="stats s3">${stat("レース数", a.races.toLocaleString())}${stat("点数", a.bets.toLocaleString())}
+    ${stat("的中", `${a.hits}<small>本</small>`)}${stat("回収率", Math.round(roi * 100) + "<small>%</small>", roi >= 1 ? "good" : "bad")}
+    ${stat("収支(円)", plYen(prof), prof >= 0 ? "good" : "bad")}${stat("期待値の平均", evAvg == null ? "-" : Math.round(evAvg * 100) + "<small>%</small>")}</div>
+    <p class="tbn">見込める的中 ${a.prob_sum.toFixed(1)}本 → 実際 ${a.hits}本${evAvg == null ? "" : `。見込みの回収率(期待値の平均)${Math.round(evAvg * 100)}% → 実際 ${Math.round(roi * 100)}%`}${a.odds_n < a.bets ? `(期待値はオッズのある${a.odds_n}点で計算)` : ""}・払戻 ${a.ret.toLocaleString()}円</p>`;
+  if (a.list.length) {
+    const rows = a.list.map((x) => `<tr><td>${x.date ? `<small>${+x.date.slice(5, 7)}/${+x.date.slice(8)}</small><br>` : ""}${esc(x.venue || "")}${x.rno}R</td><td class="l">${tri(x.combo)}</td>
+      <td>${pct1(x.prob)}%</td><td>${x.odds ? x.odds : "-"}</td><td>${x.ev != null ? Math.round(x.ev * 100) + "%" : "-"}</td><td>${(+x.pay).toLocaleString()}</td></tr>`).join("");
+    h += `<details class="hits"${open ? " open" : ""}><summary>当たった組 ${a.list.length}本(確率・オッズ・期待値)</summary><div class="scroll"><table class="tbl dm">
+      <thead><tr><th>レース</th><th class="l">組</th><th>確率</th><th>オッズ<br><small>倍</small></th><th>期待値</th><th>払戻<br><small>円</small></th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+  }
+  return h;
+}
+
 // 表示中の日の途中成績(終わったレースの結果は直前予想の更新のたびに付く)。1点100円で買ったとして計算
 function todayBox() {
   const races = (state.data && state.data.races || []).filter((r) => r.result);
   if (!races.length) return "";
-  const acc = () => ({ races: 0, bets: 0, hits: 0, ret: 0 });
-  const top = acc(), pick = acc(), ev = acc();
-  const add = (a, list, r) => {
-    if (!list || !list.length) return;
-    a.races++;
-    for (const b of list) { a.bets++; if (b.combo === r.result.tri_combo) { a.hits++; a.ret += r.result.tri_pay; } }
-  };
+  const acc = { top: catAcc(), pick: catAcc(), ev: catAcc() };
   for (const r of races) {
-    add(top, r.top && r.top[0] ? [r.top[0]] : [], r);
-    add(pick, r.pick, r);
-    add(ev, r.bets, r);
+    for (const k of CAT_KEYS) {
+      const list = catBets(r, k);
+      if (!list.length) continue;
+      const a = acc[k];
+      a.races++;
+      for (const b of list) {
+        a.bets++; a.prob_sum += b.prob || 0;
+        if (b.odds) { a.odds_n++; a.ev_sum += (b.prob || 0) * b.odds; }
+        if (b.combo === r.result.tri_combo) {
+          a.hits++; a.ret += r.result.tri_pay;
+          a.list.push({ venue: r.venue, rno: r.rno, combo: b.combo, prob: b.prob, odds: b.odds, ev: b.odds ? (b.prob || 0) * b.odds : null, pay: r.result.tri_pay });
+        }
+      }
+    }
   }
-  const pl = (v) => (v >= 0 ? "+" : "−") + Math.abs(v).toLocaleString() + "円";
-  const block = (title, a, note) => {
-    if (!a.bets) return "";
-    const roi = a.ret / (a.bets * 100), prof = a.ret - a.bets * 100;
-    return `<h4 class="tb">${title}</h4><div class="stats">${stat("回収率", Math.round(roi * 100) + "<small>%</small>", roi >= 1 ? "good" : "bad")}
-      ${stat("収支", pl(prof), prof >= 0 ? "good" : "bad")}</div>
-      <p class="tbn">的中 ${a.hits}本 / ${a.bets}点(${a.races}レース)・払戻 ${a.ret.toLocaleString()}円${note ? "。" + note : ""}</p>`;
-  };
   return `<div class="box"><h3>${state.data.date === jst().date ? "今日" : esc(state.data.date)}の成績<small>途中経過</small></h3>
     <p>結果の出た ${races.length} レースを、1点100円で買ったとして計算</p>
-    ${block("本命(3連単1点)", top, "")}
-    ${block("AIの狙い目(参考)", pick, "")}
-    ${block("期待値のある買い目", ev, "")}</div>`;
+    ${CAT_KEYS.map((k) => catBlock(k, acc[k], acc[k].list.length <= 8)).join("")}</div>`;
 }
 
 // ---- 期待値で買った場合の検証 ----
@@ -1001,26 +1036,23 @@ async function renderTrack() {
   try { rep = await getJSON("api/data/report.json"); } catch (e) { repNote = e instanceof Locked ? "検証レポートを作り直し中です。しばらくすると見られます。" : ""; }
   let evc = null;
   try { evc = await getJSON("api/data/ev_check.json"); } catch (e) { /* まだ無い(全期間の検証が終わると出る) */ }
-  const t = track.days.reduce((a, d) => {
-    for (const k of ["races", "top1_hit", "bets", "bet_hits", "invest", "return", "pick_races", "pick_bets", "pick_hits", "pick_return"]) a[k] = (a[k] || 0) + (d[k] || 0);
-    return a;
-  }, {});
-  let html = todayBox();
-  html += `<div class="box"><h3>実際の成績</h3>`;
-  if (t.races) {
-    const roi = t.invest ? t.return / t.invest : 0;
-    html += `<p>${track.days[0].date} 〜 ${track.days[track.days.length - 1].date}(${track.days.length}日、${t.races}レース)</p>
-      <div class="stats">${stat("期待値買いの回収率", t.invest ? (roi * 100).toFixed(0) + "%" : "-", roi >= 1 ? "good" : "bad")}
-      ${stat("収支(1点100円)", (t.return - t.invest >= 0 ? "+" : "") + (t.return - t.invest).toLocaleString() + "円")}
-      ${stat("買い目の的中率", t.bets ? pct1(t.bet_hits / t.bets) + "%" : "-")}
-      ${stat("本命3連単の的中率", pct1(t.top1_hit / t.races) + "%")}</div>`;
-    if (t.pick_bets) {
-      const nr = t.pick_return / (t.pick_bets * 100), np = t.pick_return - t.pick_bets * 100;
-      html += `<h3 class="sub">AIの狙い目(参考)</h3><p>締切前のオッズで判断した本番と同じ条件の成績。${t.pick_races}レース・${t.pick_bets}点</p>
-        <div class="stats">${stat("回収率", (nr * 100).toFixed(0) + "%", nr >= 1 ? "good" : "bad")}
-        ${stat("収支(1点100円)", (np >= 0 ? "+" : "") + np.toLocaleString() + "円")}
-        ${stat("的中", `${t.pick_hits}<small>本</small>`)}${stat("的中率", pct1(t.pick_hits / t.pick_bets) + "%")}</div>`;
-    }
+  // 実際の成績: 毎朝の答え合わせ(scripts/predict.py score_day)が日ごとに残した区分別の集計と、当たった組
+  const days = track.days || [];
+  const tot = { top: catAcc(), pick: catAcc(), ev: catAcc() };
+  let nRaces = 0, nOld = 0;
+  for (const d of days) {
+    nRaces += d.races || 0;
+    if (!d.cat) { nOld++; continue; }
+    for (const k of CAT_KEYS) for (const f of ["races", "bets", "hits", "ret", "prob_sum", "ev_sum", "odds_n"]) tot[k][f] += (d.cat[k] || {})[f] || 0;
+    for (const x of d.hits || []) tot[x.cat] && tot[x.cat].list.push({ ...x, date: d.date });
+  }
+  for (const k of CAT_KEYS) tot[k].list.reverse();  // 新しい順
+  let html = `<div class="box intro"><h3>この画面の見方</h3><p>AIの予想を「1点100円で買ったとしたら」で答え合わせしています(実際には買っていません)。上が表示中の日の途中経過、下が予想を始めてからの合計。それぞれ、本命・AIの狙い目・期待値のある買い目の3つに分けています。</p>${GLOSSARY}</div>`;
+  html += todayBox();
+  html += `<div class="box"><h3>実際の成績<small>予想を始めてからの合計</small></h3>`;
+  if (days.length) {
+    html += `<p>${days[0].date} 〜 ${days[days.length - 1].date}(${days.length}日、${nRaces.toLocaleString()}レース)。毎朝、前の日の分を確定した結果で足します${nOld ? `。${nOld}日分は集計し直し中(区分別の数字にまだ入っていません)` : ""}</p>`;
+    html += CAT_KEYS.map((k) => catBlock(k, tot[k], false)).join("");
   } else html += `<p>予想を始めた翌朝から集計します。</p>`;
   html += `</div>`;
   html += evc ? evCheckHTML(evc) : (rep && rep.ev ? evRecentHTML(rep.ev) : "");

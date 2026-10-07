@@ -467,3 +467,18 @@ details.row[open]>summary{border-bottom:1px solid var(--rule)}
 .ura-post .n a.btn-link{margin-left:6px;border-radius:8px;padding:5px 10px;font-size:12.5px;font-weight:700;text-decoration:none;background:var(--soft);color:var(--ink);box-shadow:inset 0 0 0 1px var(--rule)}
 
 .ura-stars{color:#c8141c;font-weight:700}
+/* 成績タブ: 区分の説明・言葉の意味・当たった組 */
+.stats.s3{grid-template-columns:repeat(3,1fr);gap:6px}
+.stats.s3 .stat{padding:8px 9px}
+.stats.s3 .stat .v{font-size:21px}
+.box p.def{margin:0 0 8px;font-size:12.5px;line-height:1.6;color:var(--ink)}
+details.gloss{margin-top:4px;font-size:13px}
+details.gloss>summary,details.hits>summary{cursor:pointer;font-weight:700;font-size:13px;padding:6px 0;color:var(--ink)}
+details.gloss dl{margin:4px 0 0;display:grid;grid-template-columns:auto 1fr;gap:6px 10px}
+details.gloss dt{font-weight:700;white-space:nowrap}
+details.gloss dd{margin:0;color:var(--mute);line-height:1.6}
+details.hits{margin-top:6px}
+.box.intro p{color:var(--ink)}
+details.hits .tbl th,details.hits .tbl td{padding:6px 4px}
+details.hits .tbl td{font-size:14px}
+details.hits .tbl th small{font-weight:400}

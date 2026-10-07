@@ -140,20 +140,61 @@ def update_index():
                encrypt=False)
 
 
-def score_day(day: dt.date):
-    """前日の予想に結果を付けて、成績を集計する。"""
+# 成績タブの区分: 本命(3連単1点)・AIの狙い目(参考)・期待値のある買い目。
+# 点数・的中・払戻に加えて、見込み(確率の合計=見込める的中の本数、確率×オッズの合計=期待値)と、当たった組の中身を残す
+CATS = {"top": "本命", "pick": "AIの狙い目", "ev": "期待値のある買い目"}
+
+
+def _cat_bets(race: dict, key: str) -> list:
+    if key == "top":
+        return race["top"][:1] if race.get("top") else []
+    return race.get("bets" if key == "ev" else key) or []
+
+
+def _tally(tot: dict, race: dict, combo: str, pay: int):
+    for key in CATS:
+        bets = _cat_bets(race, key)
+        if not bets:
+            continue
+        c = tot["cat"][key]
+        c["races"] += 1
+        for b in bets:
+            prob, odds = float(b.get("prob") or 0), b.get("odds")
+            c["bets"] += 1
+            c["prob_sum"] += prob
+            if odds:
+                c["odds_n"] += 1
+                c["ev_sum"] += prob * float(odds)
+            if b["combo"] == combo:
+                c["hits"] += 1
+                c["ret"] += pay
+                tot["hits"].append({"cat": key, "race_id": race["race_id"], "venue": race.get("venue"), "rno": race.get("rno"),
+                                    "combo": combo, "prob": round(prob, 4), "odds": odds,
+                                    "ev": round(prob * float(odds), 3) if odds else None, "pay": pay})
+    for c in tot["cat"].values():
+        c["prob_sum"], c["ev_sum"] = round(c["prob_sum"], 4), round(c["ev_sum"], 4)
+
+
+def score_day(day: dt.date, use_saved: bool = False):
+    """前日の予想に結果を付けて、成績を集計する。use_saved=True は、もう付いている結果で集計し直す(過去の日の作り直し用)。"""
     p = DAYS / f"{day.isoformat()}.json"
     if not p.exists():
         return
     data = read_json(p)
-    k = download_text("K", day)
-    if not k:
-        return
-    _, races = parse_result(k, day.isoformat())
-    res = {r["race_id"]: r for r in races}
+    if use_saved:
+        res = {r["race_id"]: {"race_id": r["race_id"], **r["result"]} for r in data["races"]
+               if (r.get("result") or {}).get("tri_combo")}
+    else:
+        k = download_text("K", day)
+        if not k:
+            return
+        _, races = parse_result(k, day.isoformat())
+        res = {r["race_id"]: r for r in races}
     tot = {"date": day.isoformat(), "races": 0, "top1_hit": 0, "bets": 0, "bet_hits": 0,
            "invest": 0, "return": 0, "nerai_races": 0, "nerai_bets": 0, "nerai_hits": 0, "nerai_return": 0,
-           "pick_races": 0, "pick_bets": 0, "pick_hits": 0, "pick_return": 0}
+           "pick_races": 0, "pick_bets": 0, "pick_hits": 0, "pick_return": 0,
+           "cat": {k: {"races": 0, "bets": 0, "hits": 0, "ret": 0, "prob_sum": 0.0, "ev_sum": 0.0, "odds_n": 0} for k in CATS},
+           "hits": []}
     for race in data["races"]:
         r = res.get(race["race_id"])
         if not r or not isinstance(r.get("tri_combo"), str):
@@ -183,6 +224,7 @@ def score_day(day: dt.date):
                     tot[f"{key}_hits"] += 1
                     tot[f"{key}_return"] += pay
                     b["hit"] = True
+        _tally(tot, race, r["tri_combo"], pay)
     data["summary"] = tot
     write_json(p, data)
     tp = ROOT / "docs/data/track.json"
@@ -192,7 +234,9 @@ def score_day(day: dt.date):
     write_json(tp, track)
     rp = ROOT / "reports/track.json"  # 見直し用の数字だけの集計(平文)
     rp.parent.mkdir(exist_ok=True)
-    rp.write_text(json.dumps(track, ensure_ascii=False, indent=1), encoding="utf-8")
+    # 公開リポジトリに平文で残すのは数字の集計だけ(当たった組の中身=hits は暗号化した docs/data/track.json にだけ入れる)
+    plain = {**track, "days": [{k: v for k, v in d.items() if k != "hits"} for d in track["days"]]}
+    rp.write_text(json.dumps(plain, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 def build_today(day: dt.date):
@@ -519,6 +563,13 @@ if __name__ == "__main__":
     t0 = time.time()
     if mode == "merge-live":  # python scripts/predict.py merge-live 前回の予想ファイル [日付]
         merge_live(dt.date.fromisoformat(sys.argv[3]) if len(sys.argv) > 3 else now().date(), sys.argv[2])
+    elif mode == "rescore":  # python scripts/predict.py rescore 開始日 [終了日]: 付いている結果で成績を集計し直す(集計項目を増やしたとき)
+        d0 = dt.date.fromisoformat(sys.argv[2])
+        d1 = dt.date.fromisoformat(sys.argv[3]) if len(sys.argv) > 3 else d0
+        while d0 <= d1:
+            score_day(d0, use_saved=True)
+            print("rescored", d0)
+            d0 += dt.timedelta(days=1)
     else:
         day = dt.date.fromisoformat(sys.argv[2]) if len(sys.argv) > 2 else now().date()
         {"morning": morning, "live": live, "features": build_today}[mode](day)
