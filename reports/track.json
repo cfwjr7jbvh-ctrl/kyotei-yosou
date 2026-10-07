@@ -43,6 +43,24 @@
      "prob_sum": 0.0,
      "ev_sum": 0.0,
      "odds_n": 0
+    },
+    "ev13": {
+     "races": 0,
+     "bets": 0,
+     "hits": 0,
+     "ret": 0,
+     "prob_sum": 0.0,
+     "ev_sum": 0.0,
+     "odds_n": 0
+    },
+    "ev15": {
+     "races": 0,
+     "bets": 0,
+     "hits": 0,
+     "ret": 0,
+     "prob_sum": 0.0,
+     "ev_sum": 0.0,
+     "odds_n": 0
     }
    }
   },
@@ -89,6 +107,24 @@
      "prob_sum": 0.0493,
      "ev_sum": 1.0106,
      "odds_n": 1
+    },
+    "ev13": {
+     "races": 0,
+     "bets": 0,
+     "hits": 0,
+     "ret": 0,
+     "prob_sum": 0.0,
+     "ev_sum": 0.0,
+     "odds_n": 0
+    },
+    "ev15": {
+     "races": 0,
+     "bets": 0,
+     "hits": 0,
+     "ret": 0,
+     "prob_sum": 0.0,
+     "ev_sum": 0.0,
+     "odds_n": 0
     }
    }
   },
@@ -135,6 +171,24 @@
      "prob_sum": 0.2928,
      "ev_sum": 7.1802,
      "odds_n": 7
+    },
+    "ev13": {
+     "races": 0,
+     "bets": 0,
+     "hits": 0,
+     "ret": 0,
+     "prob_sum": 0.0,
+     "ev_sum": 0.0,
+     "odds_n": 0
+    },
+    "ev15": {
+     "races": 0,
+     "bets": 0,
+     "hits": 0,
+     "ret": 0,
+     "prob_sum": 0.0,
+     "ev_sum": 0.0,
+     "odds_n": 0
     }
    }
   }
