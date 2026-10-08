@@ -1240,6 +1240,15 @@ function replyRank(r) {
   const t = REPLY_TYPES.find(([k]) => rt.includes(k) && !(k === "優勝戦" && rt.includes("準")));
   return (t ? t[1] : 0) + (r.rno === 12 ? 1.5 : r.rno === 11 ? 1 : 0);
 }
+// このレースの「妙味」: ミカタの1着の見立てが、人気(締切前のオッズ)から考えた1着の確率より大きい艇。
+// 展示速報と同じ線(見立て8%以上・人気の1.3倍以上)でいちばん差の大きい艇。オッズがまだ無ければ null、該当なしなら {lane: 0}
+function raceMyomi(r) {
+  const bs = (r.boats || []).filter((b) => b.mkt_win != null && b.p_win != null);
+  if (bs.length < 5) return null;
+  const c = bs.filter((b) => b.p_win >= 0.08 && b.mkt_win > 0.005 && b.p_win / b.mkt_win >= 1.3)
+    .sort((a, b) => b.p_win / b.mkt_win - a.p_win / a.mkt_win)[0];
+  return c ? { lane: c.lane, p: c.p_win, m: c.mkt_win, at: r.updated_at || "" } : { lane: 0, at: r.updated_at || "" };
+}
 async function replyIdeasHTML() {
   const t = jst();
   let d = state.day === t.date && state.data && state.data.races ? state.data : null;
@@ -1257,7 +1266,7 @@ async function replyIdeasHTML() {
       const body = fitX(`${q}、${n.text}`);
       // 返信に付ける動く画像(数字が形で入っている札だけ。2026-10-08 ユーザー「アニメーション付きのが心象よくない?」)
       const rc = n.num && n.num.a != null && typeof replyCardGIF === "function"
-        ? esc(JSON.stringify({ race: q, deadline: r.deadline || "", title: n.title, lanes: n.lanes || [], num: n.num })) : "";
+        ? esc(JSON.stringify({ race: q, deadline: r.deadline || "", title: n.title, lanes: n.lanes || [], num: n.num, myomi: raceMyomi(r) })) : "";
       return `<div class="ura-post"><div class="n"><span>${i ? "もう1つ: " : head}${i ? esc(n.title) : (n.title === r.race_type ? "" : " ・ " + esc(n.title))}</span>
         <span class="acts">${i ? "" : `<a class="btn-link" href="https://x.com/search?q=${encodeURIComponent(q)}&f=live" data-xq="${esc(q)}" target="_blank" rel="noopener">Xで探す</a> `}${rc ? `<button data-rc="${rc}">画像</button> ` : ""}<button data-copy="${esc(body)}">コピー</button></span></div>${esc(body)}</div>`;
     }).join("");

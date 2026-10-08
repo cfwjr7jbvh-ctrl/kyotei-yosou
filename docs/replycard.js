@@ -22,6 +22,17 @@ function rcPoint(n) {   // 2行([1行目, 2行目])。行の切れ目を言葉�
   if (n.edge === 0) return ["人気にもちゃんと出ている差。", "ここから差がつくのは、2着・3着の並び"];
   return up ? ["出走表だけでは見えない数字。", "3着までの相手を選ぶときに"] : ["出走表だけでは見えない数字。", "相手を選び直す材料に"];
 }
+// 「妙味はどこ?」の答え(2026-10-08 ユーザー「どこに妙味があるか知りたいのよみんなは」「2枚目の方はいい感じ」)。
+// 1) このレースで、ミカタの見立てが人気(締切前のオッズ)より大きい艇があれば、それ(展示速報と同じ線)
+// 2) 無ければ、理論の「人気とのくらべ」(人気以上・ひかえめ)から、人気がずれている側
+// 3) どちらも無ければ、人気どおり → 妙味を探すなら2着・3着の並び。買い目は書かない
+function rcAnswer(o) {
+  const m = o.myomi, n = o.num;
+  if (m && m.lane) return { hl: true, at: m.at, lines: [`${m.lane}号艇の1着かも`, `ミカタの見立て${Math.round(m.p * 100)}%・人気${Math.round(m.m * 100)}%(人気の${(m.p / m.m).toFixed(1)}倍)`] };
+  if (n.edge === 1 || n.edge === -1) return { hl: false, lines: rcPoint(n) };
+  if (m) return { hl: false, at: m.at, lines: ["人気とミカタの見立てが、ほぼ同じ。", "妙味を探すなら、2着・3着の並び"] };
+  return { hl: false, lines: rcPoint(n) };
+}
 function rcPct(v) { return v < 10 ? `${v.toFixed(1)}%` : `${Math.round(v)}%`; }
 function rcWrap(ctx, text, maxW) {
   const out = []; let line = "";
@@ -88,9 +99,14 @@ function drawReplyCard(x, o, t, gull) {
   }
   // ここがポイント(だから何?)
   y += 14;
-  x.fillStyle = "#c8141c"; x.font = `900 32px ${RC_F}`; x.fillText("ここがポイント", 60, y);
-  x.fillStyle = "#14212c"; x.font = `900 38px ${RC_F}`;
-  for (const ln of rcPoint(n)) { y += 50; x.fillText(ln, 60, y, W - 120); }
+  const ans = rcAnswer(o);
+  x.fillStyle = "#c8141c"; x.font = `900 32px ${RC_F}`; x.fillText(`妙味はどこ?${ans.at ? `(${ans.at}のオッズで)` : ""}`, 60, y);
+  ans.lines.forEach((ln, i) => {
+    y += 50;
+    if (ans.hl && i === 0) { x.fillStyle = "#c8141c"; x.font = `900 42px ${RC_F}`; }
+    else { x.fillStyle = "#14212c"; x.font = `900 36px ${RC_F}`; }
+    x.fillText(ln, 60, y, W - 120);
+  });
   if (gull) { try { x.drawImage(gull, 60, H - 96, 68, 68); } catch (err) { /* 顔が描けなくても出す */ } }
   x.fillStyle = "#4d5a66"; x.font = `700 28px ${RC_F}`;
   x.fillText("ミカタ ・ 公式の成績データ(2023年10月〜)で数えました", 144, H - 70);

@@ -124,6 +124,12 @@ def race_payload(rdf: pd.DataFrame, p_win: np.ndarray, stack, stage: str, odds=N
     if market is not None:
         out["market_top"] = [{"combo": COMBOS[i], "prob": round(float(market[i]), 4)}
                              for i in np.argsort(-market)[:3]]
+        # 人気から考えた各艇の1着の確率(3連単のオッズから)。ミカタの見立て(p_win)とくらべて「どこに妙味があるか」を出すため(2026-10-08 ユーザー「どこに妙味があるか知りたいのよみんなは」)
+        mw = np.zeros(6)
+        for i, c in enumerate(COMBOS):
+            mw[int(c[0]) - 1] += market[i]
+        for b in out["boats"]:
+            b["mkt_win"] = round(float(mw[b["lane"] - 1]), 4)
     if th_ctx is not None:  # 理論ぶつけ(検証ラボの理論のうち、このレースに当てはまるもの。買い目ではない)
         try:
             notes = theories.race_theories(rdf, {**th_ctx, "late": stage == "late", "calendar": False})
