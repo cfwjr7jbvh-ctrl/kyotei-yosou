@@ -228,7 +228,7 @@ def tenji_card_html(day_label: str, race: str, deadline: str, race_type: str, ho
             f'<div class="lst">{trs}</div><div class="cl">{e(course_line)}</div>{fh}'
             + (f'<div class="dvl">{e(dev_line)}</div>' if dev_line else "")
             + (f'<div class="ngl{" ink" if hook_red else ""}">{e(nerai)}</div>' if nerai else "")
-            + f'{_foot("見立て=AIの1着の見込み / 人気=締切前のオッズ / ↑↓=ふだんの展示順位より2つ以上上・下")}</div></body></html>')
+            + f'{_foot("見立て=ミカタの1着の見込み / 人気=締切前のオッズ / ↑↓=ふだんの展示順位より2つ以上上・下")}</div></body></html>')
 
 
 def myomi_card_html(day_label: str, race: str, deadline: str, race_type: str, lane: int, p: float, mkt: float,
@@ -258,7 +258,7 @@ def myomi_card_html(day_label: str, race: str, deadline: str, race_type: str, la
             f'<div class="br"><b>ミカタの見立て(展示込み)</b><span class="tr"><span class="fl" style="display:block;width:{p / mx * 100:.1f}%;background:#c8141c"></span></span><em style="color:#c8141c">{round(p * 100)}%</em></div></div>'
             f'<div class="ex">見立てが人気の<em>{ratio:.1f}倍</em>。<br>人気の割に来そう=妙味あり</div>'
             + (f'<ul class="why">{rs}</ul>' if rs else "")
-            + f'<div class="nt">人気=締切前のオッズから出した1着の確率。見立てはAIの計算で、当たりを約束するものではありません</div>'
+            + f'<div class="nt">人気=締切前のオッズから出した1着の確率。見立てはミカタの見込みで、当たりを約束するものではありません</div>'
             + (f'<div class="gen">{gull_svg(84, bg="#ffffff", cls="g", who="gen")}<p><small>ゲンさん(ゲンかつぎ歴40年の大先輩)</small>{e(gen)}</p></div>' if gen else "")
             + f'{_foot("こういう見方もあるよ ・ 6艇の展示は2枚目")}</div></body></html>')
 

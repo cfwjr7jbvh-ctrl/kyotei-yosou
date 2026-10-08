@@ -161,14 +161,14 @@ const betRows = (list, label = "期待値") => list.map((b) => `
       <div class="e${b.ev >= 1.2 ? " strong" : ""}">${Math.round(b.ev * 100)}<small>%</small><span>${label}</span></div></div>`).join("");
 function evHTML(r) {
   if (!r.bets || !r.bets.length) return "";
-  return `<div class="ev"><h3>期待値のある買い目</h3><p class="cap">AIの確率と人気(オッズ)の確率をまぜて計算し直しても、確率×オッズが100%以上の組。めったに出ない、本番の候補</p>${betRows(r.bets)}</div>`;
+  return `<div class="ev"><h3>期待値のある買い目</h3><p class="cap">ミカタの確率と人気(オッズ)の確率をまぜて計算し直しても、確率×オッズが100%以上の組。めったに出ない、本番の候補</p>${betRows(r.bets)}</div>`;
 }
-// AIの狙い目(参考): モデルの確率×オッズが100%以上の組(期待値の高い順に3点まで)
+// ミカタの狙い目(参考): モデルの確率×オッズが100%以上の組(期待値の高い順に3点まで)
 function pickHTML(r) {
   if (!r.pick || !r.pick.length) return "";
-  return `<div class="ev pick"><h3>AIの狙い目<em>参考</em></h3>
-    <p class="cap">AIの確率×オッズが100%以上の組を、高い順に3点まで。人気がないのにAIは来るとみた穴が多い。AIだけの見立てなので、過去の答え合わせでは回収率80%前後(参考)。くわしくは買い目タブ・成績タブの「見方」</p>
-    ${betRows(r.pick, "AIの見積もり")}</div>`;
+  return `<div class="ev pick"><h3>ミカタの狙い目<em>参考</em></h3>
+    <p class="cap">ミカタの確率×オッズが100%以上の組を、高い順に3点まで。人気がないのにミカタは来るとみた穴が多い。ミカタだけの見立てなので、過去の答え合わせでは回収率80%前後(参考)。くわしくは買い目タブ・成績タブの「見方」</p>
+    ${betRows(r.pick, "ミカタの見積もり")}</div>`;
 }
 
 // ---- 荒れ度 ----
@@ -221,7 +221,7 @@ function aiLine(r) {
 // スリットの目印(2026-10-04 の検証、直前予想・約15万レース):
 //   攻め = 3コース以遠で、内の艇より予想STが0.03以上速い → 1着率が1.6〜2.5倍(まくり・まくり差しが中心)。0.05以上は「強攻め」
 //   凹み = 両隣より0.04以上遅い → その艇の3着以内率が13〜16ポイント下がり、外の艇の1着率が1.3〜1.7倍
-//   どちらも AI の確率とオッズにはすでに織り込まれている(買い方の上積みにはならない)。見どころの表示用
+//   どちらも ミカタの確率とオッズにはすでに織り込まれている(買い方の上積みにはならない)。見どころの表示用
 const ATK_TH = 0.03, ATK_STRONG = 0.05, DENT_TH = 0.04;
 function slitRows(r) {
   const rows = r.boats.map((b) => {
@@ -238,7 +238,7 @@ function slitRows(r) {
   });
   return rows;
 }
-// AIのひと言に入れるスリットの注意(強攻めを優先、なければ凹み)
+// ミカタのひと言に入れるスリットの注意(強攻めを優先、なければ凹み)
 function slitAlert(r) {
   const rows = slitRows(r);
   if (rows.length < 4) return null;
@@ -635,7 +635,7 @@ function officialHTML(r) {
     const ai = r.top && r.top[0] ? r.top[0].combo : "";
     const same = ai && (x.focus3 || []).includes(ai);
     pcx = `<div class="pcx"><div class="pcx-h">公式のコンピュータ予想</div>
-      <div class="pcx-m">${ms}</div>${f3 ? `<div class="pcx-f">${f3}${ai ? `<span class="pcx-ai">${same ? "AIの本命と一致" : "AIの本命は別"}</span>` : ""}</div>` : ""}</div>`;
+      <div class="pcx-m">${ms}</div>${f3 ? `<div class="pcx-f">${f3}${ai ? `<span class="pcx-ai">${same ? "ミカタの本命と一致" : "ミカタの本命は別"}</span>` : ""}</div>` : ""}</div>`;
   }
   return `<div class="official">${pcx}<div class="olinks"><span class="k">公式サイト</span>${links}</div></div>`;
 }
@@ -666,7 +666,7 @@ function stageHTML(r) {
     : `<div class="stage">朝の予想(展示前)</div>`;
 }
 
-// 見る順: AIのひと言 → 荒れ度 → 結果 → 本命 → 期待値の買い目 → AIの狙い目 → 展開予測(アニメ・シナリオ・スリット) → 各艇 → ほかの候補 → 公式サイト
+// 見る順: ミカタのひと言 → 荒れ度 → 結果 → 本命 → 期待値の買い目 → ミカタの狙い目 → 展開予測(アニメ・シナリオ・スリット) → 各艇 → ほかの候補 → 公式サイト
 const bodyHTML = (r) => stageHTML(r) + aiLine(r) + arashiHTML(r) + theoriesHTML(r) + resultHTML(r) + honmeiHTML(r) + evHTML(r) + pickHTML(r) + tenkaiHTML(r) + boatsHTML(r) + combosHTML(r) + officialHTML(r);
 
 function clockHTML(r) {
@@ -761,7 +761,7 @@ function anaHTML() {
       <span class="ana-p">1号艇以外が勝つ<b>${Math.round(r.arashi.in_lose * 100)}%</b></span></button>
       ${why.length ? `<p class="ana-why">${esc(why.join("。"))}</p>` : ""}</li>`;
   }).join("");
-  return `<section class="box ana"><h3>今日の荒れそうなレース<small>締切前・AIの確率順</small></h3><ol>${items}</ol>
+  return `<section class="box ana"><h3>今日の荒れそうなレース<small>締切前・ミカタの確率順</small></h3><ol>${items}</ol>
     <p>荒れ度5(5段階のいちばん上)のレースは、これまで1号艇以外が勝ったのが74%。荒れそうなことは人気にも出ている(人気どおり)。どの艇を相手に選ぶかが、腕の見せどころ。</p>
     <button type="button" class="ana-copy">Xの投稿文をコピー</button></section>`;
 }
@@ -809,9 +809,9 @@ function renderBets() {
     getJSON("api/data/ev_check.json").then((d) => { state.evc = d; if (state.tab === "bets") renderBets(); }).catch(() => { });
   }
   let html = `<div class="box intro"><h3>買い目タブの見方</h3>
-    <p>締切の約30分前から、展示とオッズを取り込んで5分ごとに更新し、AIが選んだ組を出します。このサイトはお金を使って買っていません(成績タブで「1点100円で買ったとしたら」の答え合わせをしています)。</p>
-    <ul class="kinds"><li><b>本命</b>: AIがいちばん来やすいとみた組(1レース1点)</li>
-    <li><b>AIの狙い目</b>: 確率×オッズが100%以上の組(3点まで。人気のない穴が多い)</li>
+    <p>締切の約30分前から、展示とオッズを取り込んで5分ごとに更新し、ミカタが選んだ組を出します。このサイトはお金を使って買っていません(成績タブで「1点100円で買ったとしたら」の答え合わせをしています)。</p>
+    <ul class="kinds"><li><b>本命</b>: ミカタがいちばん来やすいとみた組(1レース1点)</li>
+    <li><b>ミカタの狙い目</b>: 確率×オッズが100%以上の組(3点まで。人気のない穴が多い)</li>
     <li><b>期待値のある買い目</b>(赤枠): 人気の見方もまぜて計算し直しても100%以上の組(めったに出ない、本番の候補)</li></ul>
     <details class="gloss"><summary>例で見る・なぜ3点まで?</summary>${KINDS_HTML}${whyThree(state.evc)}</details>
     <p class="tbn">期待値が120%以上の組は赤で強調。「期待値のある買い目」(赤枠)が出たら LINE で知らせます。直前予想 ${late} / ${state.data.races.length} レース</p></div>`;
@@ -829,13 +829,13 @@ function renderBets() {
 
 function stat(k, v, cls = "") { return `<div class="stat"><div class="k">${k}</div><div class="v ${cls}">${v}</div></div>`; }
 
-// ---- 成績の区分(本命・AIの狙い目・期待値のある買い目)----
-// それぞれ「1点100円で買ったとしたら」。見込み(確率の合計・期待値の平均)と実際(的中・回収率)を並べて、AIが強気すぎないかを見る
+// ---- 成績の区分(本命・ミカタの狙い目・期待値のある買い目)----
+// それぞれ「1点100円で買ったとしたら」。見込み(確率の合計・期待値の平均)と実際(的中・回収率)を並べて、ミカタが強気すぎないかを見る
 const CAT_KEYS = ["top", "pick", "ev", "ev13", "ev15"];
 const CAT_INFO = {
-  top: ["本命(3連単1点)", "AIがいちばん来やすいとみた3連単の組を、1点だけ買ったとしたら。"],
-  pick: ["AIの狙い目(参考)", "AIの確率×締切前のオッズ(期待値)が100%以上の組を、高い順に3点まで買ったとしたら。AIの確率だけで計算した参考の組で、勝てる根拠はまだありません。"],
-  ev: ["期待値のある買い目", "AIの確率に人気(オッズ)をまぜた、ひかえめな確率で計算し直しても、期待値が100%以上になった組(5点まで)。本番の買い方で、めったに出ません。"],
+  top: ["本命(3連単1点)", "ミカタがいちばん来やすいとみた3連単の組を、1点だけ買ったとしたら。"],
+  pick: ["ミカタの狙い目(参考)", "ミカタの確率×締切前のオッズ(期待値)が100%以上の組を、高い順に3点まで買ったとしたら。ミカタの確率だけで計算した参考の組で、勝てる根拠はまだありません。"],
+  ev: ["期待値のある買い目", "ミカタの確率に人気(オッズ)をまぜた、ひかえめな確率で計算し直しても、期待値が100%以上になった組(5点まで)。本番の買い方で、めったに出ません。"],
   ev13: ["期待値のある買い目(130%以上だけ)", "上の「期待値のある買い目」のうち、期待値が130%以上の組だけ。過去の検証で、線を上げると前半・後半とも100%を超えた(点数は少ない)。締切前のオッズで本当にそうなるかを確かめ中。"],
   ev15: ["期待値のある買い目(150%以上だけ)", "期待値が150%以上の組だけ。過去の検証ではいちばん良かった線(前半363%・後半231%)だが、1日1〜2点と少なく、大きな配当1本で大きく動く。確かめ中。"],
 };
@@ -843,17 +843,17 @@ const GLOSSARY = `<details class="gloss"><summary>言葉の意味</summary><dl>
   <dt>今日の成績</dt><dd>表示している日の、結果が出たレースだけの途中経過。結果は直前予想の更新のたびに付きます。</dd>
   <dt>実際の成績</dt><dd>予想を始めた日からの合計。毎朝、前の日の分を確定した結果で付け直して足します。</dd>
   <dt>レース数・点数</dt><dd>その区分の組が出たレースの数と、組の数(1点=1組)。</dd>
-  <dt>確率</dt><dd>AIが見込む、その組が1着-2着-3着の順で来る確率(組を出した時点)。</dd>
+  <dt>確率</dt><dd>ミカタが見込む、その組が1着-2着-3着の順で来る確率(組を出した時点)。</dd>
   <dt>オッズ</dt><dd>上の数字は組を出した時点(締切前の最後の更新)のオッズで、確率・期待値はこれで計算。下の「確定」はレース後に決まったオッズ(100円の払戻は確定×100円)。締切まぎわの売れ方しだいで、確定とはずれます。</dd>
   <dt>期待値</dt><dd>確率×オッズ。100%が損得なしの線で、120%なら100円買うと平均120円戻る見込み、80%なら80円。</dd>
-  <dt>見込める的中</dt><dd>確率を全部足した本数。AIの確率が正しければ、このくらい当たるはず。実際の的中より多ければ、AIが強気すぎ。</dd>
+  <dt>見込める的中</dt><dd>確率を全部足した本数。ミカタの確率が正しければ、このくらい当たるはず。実際の的中より多ければ、ミカタが強気すぎ。</dd>
   <dt>回収率・収支</dt><dd>1点100円で買ったとしたときの、払戻÷買った額と、払戻−買った額。</dd>
 </dl></details>`;
-// 本命・AIの狙い目・期待値のある買い目のちがい(成績タブと買い目タブで同じ説明。2026-10-07 ユーザー「買い目の意味とかは分かりやすくサイトに」)
-const KINDS_HTML = `<div class="ex"><b>3つのちがい(例)</b>あるレースで、AIが「1-2-3」の来る確率を11%(オッズ8.4倍)、「4-1-2」を3%(オッズ60倍)とみたとき
+// 本命・ミカタの狙い目・期待値のある買い目のちがい(成績タブと買い目タブで同じ説明。2026-10-07 ユーザー「買い目の意味とかは分かりやすくサイトに」)
+const KINDS_HTML = `<div class="ex"><b>3つのちがい(例)</b>あるレースで、ミカタが「1-2-3」の来る確率を11%(オッズ8.4倍)、「4-1-2」を3%(オッズ60倍)とみたとき
     <ul><li><b>本命</b>: いちばん来やすい「1-2-3」を1点。どのレースでも1点。期待値は 11%×8.4倍=92%</li>
-    <li><b>AIの狙い目</b>: 確率×オッズが100%以上の組。「4-1-2」は 3%×60倍=180% なので入る(1レース3点まで。人気がないのに、AIは来るとみた組=穴が多い)</li>
-    <li><b>期待値のある買い目</b>: AIの確率と人気(オッズ)の確率をまぜて計算し直しても100%以上の組。「4-1-2」はまぜると1.5%×60倍=90% なので入らない。だからめったに出ない(まぜる割合は、過去のレースでいちばん当たる割合)</li></ul></div>`;
+    <li><b>ミカタの狙い目</b>: 確率×オッズが100%以上の組。「4-1-2」は 3%×60倍=180% なので入る(1レース3点まで。人気がないのに、ミカタは来るとみた組=穴が多い)</li>
+    <li><b>期待値のある買い目</b>: ミカタの確率と人気(オッズ)の確率をまぜて計算し直しても100%以上の組。「4-1-2」はまぜると1.5%×60倍=90% なので入らない。だからめったに出ない(まぜる割合は、過去のレースでいちばん当たる割合)</li></ul></div>`;
 // なぜ3点まで? 過去の答え合わせ(docs/data/ev_check.json。各レースより前のデータだけで予想し直し、確定オッズで1点100円)
 function whyThree(evc) {
   const a = evc && evc.all;
@@ -865,7 +865,7 @@ function whyThree(evc) {
   return `<details class="gloss why"><summary>なぜ3点まで? 過去の答え合わせ</summary>
     <p>${ymd(a.period[0])}〜${ymd(a.period[1])} の約${n}万レースを、そのレースより前のデータだけで予想し直して確かめた結果(1点100円)。</p>
     <ul><li>確率×オッズが100%以上の組を<b>全部</b>買う(1レース平均${per(a.all_ev100)}点): 回収率 <b>${r(a.all_ev100.roi)}</b></li>
-    <li>高い順に<b>3点まで</b>(AIの狙い目): 回収率 <b>${r(a.pick_rule.roi)}</b></li>
+    <li>高い順に<b>3点まで</b>(ミカタの狙い目): 回収率 <b>${r(a.pick_rule.roi)}</b></li>
     ${bl ? `<li><b>期待値のある買い目</b>(${bl.bets.toLocaleString()}点): 回収率 <b>${r(bl.roi)}</b>(ブレの幅 ${ci0(bl.roi_ci90)})</li>` : ""}</ul>
     <p>全部買っても3点にしぼっても回収率はほぼ同じで、3点なら点数が少なくてすむ。だから3点まで。どれもまだ100%に届いていない(合格はブレの幅の下の端が100%を超えたとき)ので、今は参考として見てください。</p></details>`;
 }
@@ -920,7 +920,7 @@ function todayBox() {
 }
 
 // ---- 期待値で買った場合の検証 ----
-// 全期間(scripts/upset_eval.py --walk-forward → docs/data/ev_check.json): 各レースより前のデータだけで学習したモデルの確率 × 確定オッズ
+// 全期間(scripts/upset_eval.py --walk-forward → docs/data/ev_check.json): 各レースより前のデータだけで作ったミカタの確率 × 確定オッズ
 const pc0 = (x) => x == null ? "-" : `${Math.round(x * 100)}%`;
 const ci0 = (c) => c ? `${Math.round(c[0] * 100)}〜${Math.round(c[1] * 100)}%` : "-";
 const ymd = (s) => `${String(s).slice(0, 4)}/${+String(s).slice(4, 6)}/${+String(s).slice(6, 8)}`;
@@ -933,8 +933,8 @@ function evCheckHTML(d) {
   const half = (h, n) => h ? `${n}(${ymd(h.period[0])}〜${ymd(h.period[1])})${pc0(h.pick_rule.roi)}` : "";
   const bl = a.blend_ev100;
   return `<div class="box"><h3>期待値で買った場合の検証<small>全期間</small></h3>
-    <p>${ymd(a.period[0])} 〜 ${ymd(a.period[1])} のオッズのある ${a.races.toLocaleString()} レースを、そのレースより前のデータだけで学習したモデルで予想し直し、確定オッズで1点100円買った場合(本番より少し甘め: 本番は締切前のオッズで判断)。</p>
-    <h4 class="tb">AIの狙い目と同じ買い方<small>期待値100%以上を高い順に3点まで</small></h4>
+    <p>${ymd(a.period[0])} 〜 ${ymd(a.period[1])} のオッズのある ${a.races.toLocaleString()} レースを、そのレースより前のデータだけで作ったミカタの見立てで予想し直し、確定オッズで1点100円買った場合(本番より少し甘め: 本番は締切前のオッズで判断)。</p>
+    <h4 class="tb">ミカタの狙い目と同じ買い方<small>期待値100%以上を高い順に3点まで</small></h4>
     <div class="stats">${stat("回収率", pc0(pr.roi), pr.roi >= 1 ? "good" : "bad")}${stat("ブレの幅", ci0(pr.roi_ci90))}
       ${stat("点数", pr.bets.toLocaleString())}${stat("的中", `${pr.hits}<small>本</small>`)}</div>
     <p class="tbn">${half(d.first_half, "前半")}・${half(d.second_half, "後半")}。期待値100%以上を全部買うと ${pc0(ev.roi)}(${ev.bets.toLocaleString()}点)</p>
@@ -1080,7 +1080,7 @@ async function renderTrack() {
     for (const x of d.hits || []) tot[x.cat] && tot[x.cat].list.push({ ...x, date: d.date });
   }
   for (const k of CAT_KEYS) tot[k].list.reverse();  // 新しい順
-  let html = `<div class="box intro"><h3>この画面の見方</h3><p>AIの予想を「1点100円で買ったとしたら」で答え合わせしています(実際には買っていません)。上が表示中の日の途中経過、下が予想を始めてからの合計。それぞれ、本命・AIの狙い目・期待値のある買い目の3つに分けています。</p>
+  let html = `<div class="box intro"><h3>この画面の見方</h3><p>ミカタの予想を「1点100円で買ったとしたら」で答え合わせしています(実際には買っていません)。上が表示中の日の途中経過、下が予想を始めてからの合計。それぞれ、本命・ミカタの狙い目・期待値のある買い目の3つに分けています。</p>
     ${KINDS_HTML}${whyThree(evc)}${GLOSSARY}</div>`;
   html += todayBox();
   html += `<div class="box"><h3>実際の成績<small>予想を始めてからの合計</small></h3>`;

@@ -82,8 +82,8 @@ def make(series_name: str, grade: str, rr: dict, cards: dict | None, score: floa
         bl = " / ".join(f"{b['lane']}号艇 {_pct(b.get('p_win'))}%" for b in sorted(rr.get("boats", []), key=lambda b: int(b["lane"])))
         kim = mv.get("kim") or {}
         kl = "・".join(f"{k}{_pct(kim.get(k))}%" for k in ("逃げ", "差し", "まくり", "まくり差し"))
-        view_note = ["■ミカタの見立て(モデルの見込み。朝の出走表の時点)", hl, nl, f"1着の見込み: {bl}", f"展開(決まり手): {kl}"]
-        view_html = ('<section><span class="label">ミカタの見立て(モデルの見込み)</span><ul class="ths">'
+        view_note = ["■ミカタの見立て(朝の出走表の時点)", hl, nl, f"1着の見込み: {bl}", f"展開(決まり手): {kl}"]
+        view_html = ('<section><span class="label">ミカタの見立て(朝の出走表の時点)</span><ul class="ths">'
                      + "".join(f'<li class="th real"><p>{e(x)}</p></li>' for x in view_note[1:]) + "</ul></section>")
     title = f"【競艇】{race} {rt}{('|' + series_name) if series_name else ''} 本線と狙い目・6人の型|ミカタ新聞 {day.month}/{day.day}"
     page = f"""<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="robots" content="noindex"><title>{e(title)}</title>{mag.FONTS}<style>{mag.CSS}
