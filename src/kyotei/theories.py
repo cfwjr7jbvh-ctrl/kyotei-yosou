@@ -63,29 +63,32 @@ def _pct(v):
     return f"{x:.1f}%" if x < 10 else f"{round(x)}%"
 
 
-def _cnt(m, per=100):
-    """差の書き方の決まり(CLAUDE.md): 「ふだん51%→47%に下がる」。丸めて同じなら「ふだんと同じ51%」"""
+def _cnt(m, per=100, ref="ふだん"):
+    """差の書き方の決まり(CLAUDE.md): 「ふだん51%→47%に下がる」。丸めて同じなら「ふだんと同じ51%」。ref: くらべる相手(ふだん以外なら「◯◯の」)"""
     if not m:
         return ""
     a, b = _pct(m['in1_ref']), _pct(m['in1'])
     if a == b:
-        return f"ふだんと同じ{b}"
-    return f"ふだん{a}→{b}に{'上がる' if (m['in1'] or 0) > (m['in1_ref'] or 0) else '下がる'}"
+        return f"{ref}と同じ{b}"
+    r_ = "ふだん" if ref == "ふだん" else f"{ref}の"
+    return f"{r_}{a}→{b}に{'上がる' if (m['in1'] or 0) > (m['in1_ref'] or 0) else '下がる'}"
 
 
-def _in1_line(m, subj="1号艇"):
+def _in1_line(m, subj="1号艇", ref="ふだん"):
     """1号艇の1着の変化を、前向きな言い方で(2026-10-07 ユーザー「ネガティブな表現はやめてね」)。
-    上がるときは「1号艇の1着はふだん55%→69%に上がる」、下がるときは挑む側の言葉で「1号艇以外が勝つのはふだん45%→52%に上がる」"""
+    上がるときは「1号艇の1着はふだん55%→69%に上がる」、下がるときは挑む側の言葉で「1号艇以外が勝つのはふだん45%→52%に上がる」。
+    ref: くらべる相手(2026-10-08 ユーザー「主語が抜けがち」。ふだん以外とくらべた数字は「風2m以下の43%→53%」のように相手を書く)"""
     if not m:
         return ""
     a, b = m.get("in1_ref"), m.get("in1")
     if a is None or b is None:
         return ""
+    r_ = "ふだん" if ref == "ふだん" else f"{ref}の"
     if _pct(a) == _pct(b):
-        return f"{subj}の1着はふだんと同じ{_pct(b)}"
+        return f"{subj}の1着は{ref}と同じ{_pct(b)}"
     if b > a:
-        return f"{subj}の1着はふだん{_pct(a)}→{_pct(b)}に上がる"
-    return f"{subj}以外が勝つのはふだん{_pct(1 - a)}→{_pct(1 - b)}に上がる"
+        return f"{subj}の1着は{r_}{_pct(a)}→{_pct(b)}に上がる"
+    return f"{subj}以外が勝つのは{r_}{_pct(1 - a)}→{_pct(1 - b)}に上がる"
 
 
 def _badge(v, occult=False):
@@ -261,7 +264,7 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
                                    num=_numd(m, v, "1号艇の1着")))
     if int(r0.get("fixed_entry") or 0) == 1:
         m, v = _m("fixed", 1)
-        notes.append(_note("fixed", "進入固定", [1], f"前づけができないので1号艇は助走を十分にとれる。力の差が同じくらいでも{_in1_line(m)}", v, +1,
+        notes.append(_note("fixed", "進入固定", [1], f"前づけができないので1号艇は助走を十分にとれる。力の差が同じくらいでも{_in1_line(m, ref='固定でないレース')}", v, +1,
                            num=_numd(m, v, "1号艇の1着", "固定でない")))
 
     # --- 番組の癖(場×レース番号)
@@ -288,13 +291,13 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
                 exn = all(int(g(k, "course")) == k for k in range(1, 7) if k in r.index and g(k, "course") == g(k, "course"))
             if exn is not False:
                 notes.append(_note("slowdash", "カドの一撃", [4],
-                                   f"4号艇がカドに入れば、ふだんのSTが内の3人より{abs(gap):.2f}秒速い。この形だとカドの1着は{_cnt(m)}",
+                                   f"4号艇がカドに入れば、ふだんのSTが内の3人より{abs(gap):.2f}秒速い。この形だとカドの1着は{_cnt(m, ref='STが同じくらいのとき')}",
                                    v, -1, gen="4カドのまくりこそ競艇の華よ!", num=_numd(*_m("slowdash", 1), "1号艇の1着", "STが同じくらい")))
 
     # --- 1号艇: 隠れA2
     if str(g(1, "racer_class")) == "B1" and g(1, "rc_avgst") <= 0.15 and g(1, "nige_rate") >= 0.55:
         m, v = _m("a1in", 3)
-        notes.append(_note("a1in", "隠れA2の1号艇", [1], f"B1でも、スタートが速く1コースで勝ってきた人。この形だと{_in1_line(m)}", v, +1,
+        notes.append(_note("a1in", "隠れA2の1号艇", [1], f"B1でも、スタートが速く1コースで勝ってきた人。この形だと{_in1_line(m, ref='ほかのB1')}", v, +1,
                            num=_numd(m, v, "1号艇の1着", "ほかのB1")))
 
     # --- 選手ごと
@@ -311,15 +314,16 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
             m, v = _m("hot", 0)
             m1, v1 = _m("hot", "1号艇が今節2連勝中")
             if lane == 1 and m1:
-                notes.append(_note("hot", "今節2連勝中", [lane], f"{who}は今節2連勝中。今節2連勝中の1号艇は、{_in1_line(m1)}", v1, +1,
+                notes.append(_note("hot", "今節2連勝中", [lane], f"{who}は今節2連勝中。今節2連勝中の1号艇が勝つのは、ほかの1号艇の{_pct(m1['in1_ref'])}→{_pct(m1['in1'])}に上がる", v1, +1,
                                    num=_numd(m1, v1, "1号艇の1着", "ほかの1号艇")))
             else:
                 notes.append(_note("hot", "今節2連勝中", [lane], f"{who}は今節2連勝中。今節2連勝中の艇は3着以内が{_cnt(m)}", v, +1 if lane == 1 else 0,
                                    num=_numd(m, v, f"{lane}号艇の3着以内")))
         elif len(l2) == 2 and all(c in "56" for c in l2):
             m, v = _m("hot", "5・6着")
-            notes.append(_note("hot", "2走続けて5・6着", [lane], f"{wl}は今節2走続けて5・6着。こういうときの次のレースは、3着以内が{_cnt(m)}", v, -1 if lane == 1 else 0, num=_numd(m, v, f"{lane}号艇の3着以内"),
-                               lab_title="今節2連勝中の選手は、次も来る?(2走続けて5・6着のときも数えた)"))
+            if m:
+                notes.append(_note("hot", "2走続けて5・6着", [lane], f"{wl}は今節2走続けて5・6着。こういうときの次のレースは、3着以内が{_cnt(m)}", v, -1 if lane == 1 else 0, num=_numd(m, v, f"{lane}号艇の3着以内"),
+                                   lab_title="今節2連勝中の選手は、次も来る?(2走続けて5・6着のときも数えた)"))
         fs = q.get("f_since")
         if fs == fs and fs is not None and fs <= 10:
             m, v = _m("flying", 0)
@@ -367,12 +371,12 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
         c6, c5 = g(6, "course"), g(5, "course")
         if (c6 == c6 and c6 <= 3) or (c5 == c5 and c5 <= 2):
             m, v = _m("formation", 0)
-            notes.append(_note("formation", "展示で外の艇が深く内へ", [1], f"スロー勢が増えて1コースは深くなりやすい。このとき{_in1_line(m, '1コースの艇')}", v, -1, num=_numd(m, v, "1コースの艇の1着", "枠なり")))
+            notes.append(_note("formation", "展示で外の艇が深く内へ", [1], f"スロー勢が増えて1コースは深くなりやすい。このとき{_in1_line(m, '1コースの艇', '枠なり')}", v, -1, num=_numd(m, v, "1コースの艇の1着", "枠なり")))
     elif "front_rate" in r.columns:
         fr = [k for k in r.index if k >= 4 and g(k, "front_rate") == g(k, "front_rate") and g(k, "front_rate") >= 0.3]
         if fr:
             m, v = _m("formation", 0)
-            notes.append(_note("formation", "前づけの常連がいる", fr, f"{'・'.join(f'{k}号艇' for k in fr)}は前づけの多い選手。外の艇が深く入ると、{_in1_line(m, '1コースの艇')}", v, -1, num=_numd(m, v, "1コースの艇の1着", "枠なり")))
+            notes.append(_note("formation", "前づけの常連がいる", fr, f"{'・'.join(f'{k}号艇' for k in fr)}は前づけの多い選手。外の艇が深く入ると、{_in1_line(m, '1コースの艇', '枠なり')}", v, -1, num=_numd(m, v, "1コースの艇の1着", "枠なり")))
 
     # --- 風(予報 or 直前)
     wind = None
@@ -391,10 +395,10 @@ def race_theories(rdf: pd.DataFrame, ctx: dict | None = None) -> list[dict]:
         src = "天気予報"
     if wind is not None and wind >= 5:
         m, v = _m("wind", 1 if wind >= 7 else 0)
-        notes.append(_note("wind", f"風{wind:.0f}m", [1], f"{src}の風が{wind:.0f}m。風{'7' if wind >= 7 else '5'}m以上で{_in1_line(m)}", v, -1, num=_numd(m, v, "1号艇の1着", "風2m以下")))
+        notes.append(_note("wind", f"風{wind:.0f}m", [1], f"{src}の風が{wind:.0f}m。風{'7' if wind >= 7 else '5'}m以上で{_in1_line(m, ref='風2m以下')}", v, -1, num=_numd(m, v, "1号艇の1着", "風2m以下")))
     if hum is not None and hum >= 75:
         m, v = _m("humid", 0)
-        notes.append(_note("humid", f"湿度{hum:.0f}%", [1], f"湿った空気の日は1号艇が強い。{_in1_line(m)}", v, +1, num=_numd(m, v, "1号艇の1着", "乾いた日")))
+        notes.append(_note("humid", f"湿度{hum:.0f}%", [1], f"湿った空気の日は1号艇が強い。{_in1_line(m, ref='乾いた日')}", v, +1, num=_numd(m, v, "1号艇の1着", "乾いた日")))
 
     # --- 場のらしい出目(情報)
     dm = _lab("deme").get("numbers", {}).get("venues", [])
