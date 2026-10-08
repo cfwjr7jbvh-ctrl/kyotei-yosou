@@ -263,7 +263,8 @@ html,body{{margin:0}} .c{{width:1080px;height:1350px;background:#f4efdf;font-fam
 # OK が出たら True に。見本はユーザーに見せて確かめてもらう
 REVIEW_OK = {"neta_chart": True,     # 15:30 1枚1ネタのミカタの型の動くカードと「数えてみました」の文(2026-10-08 8:41 ユーザー「いい感じ!」)
              "arashi_card": True,    # 12:10 荒れそうなレースの画像(同上)
-             "clash_view": True}     # 8:20 悩ましいレースに「どっちがどれくらい動かすか・人気とのくらべ・ミカタの見方」を入れた新しい形(2026-10-08 9:34 ユーザー「いいけど」。画像は静止画、動画は15:30の反応を見てから)
+             "clash_view": True,
+             "neta_view": False}     # 15:30 1枚1ネタに「ミカタの見方」(人気とのくらべ → 読む人への問い)(2026-10-08 ユーザー「たそう」。見本の確認待ち)     # 8:20 悩ましいレースに「どっちがどれくらい動かすか・人気とのくらべ・ミカタの見方」を入れた新しい形(2026-10-08 9:34 ユーザー「いいけど」。画像は静止画、動画は15:30の反応を見てから)
 
 
 def neta_image(out: pathlib.Path, r: dict, no_images: bool) -> dict | None:
@@ -277,7 +278,8 @@ def neta_image(out: pathlib.Path, r: dict, no_images: bool) -> dict | None:
             raise RuntimeError("新しいカードはユーザーの確認待ち")
         from kyotei import xanim
         from kyotei.factcheck import text_problems, visible_text
-        sp = xanim.neta_spec(r, r.get("n"))
+        import lab as _lab
+        sp = xanim.neta_spec(r, r.get("n"), _lab.neta_view(r) if REVIEW_OK["neta_view"] else None)
         png, over = xanim.render_png(xanim.mikata_html(sp, animate=False))   # 確認が出たミカタの紙面の型(2026-10-08)
         bad = (text_problems(visible_text(xanim.mikata_html(sp, animate=False)), {})
                + (["はみ出し"] if not over or over.get("v", 0) > 0 or over.get("h", 0) > 0 else [])
@@ -699,7 +701,7 @@ def main():
             if k >= 0:
                 r_ = _pick(k)
                 if REVIEW_OK["neta_chart"]:
-                    t_neta = labmod.neta_text(r_, from_poll=polled_yesterday(today), hits=theory_hits(today, r_["lab"]))   # タグなし(人気投稿の分析)
+                    t_neta = labmod.neta_text(r_, from_poll=polled_yesterday(today), hits=theory_hits(today, r_["lab"]), view=REVIEW_OK["neta_view"])   # タグなし(人気投稿の分析)
                 else:   # ユーザーの確認待ちのあいだは、いつもの文
                     t_neta = seo.with_tags(labmod.neta_text_old(r_, from_poll=polled_yesterday(today), hits=theory_hits(today, r_["lab"])), day_tags)
                 xq.append(("15:30", "1枚1ネタ", t_neta,

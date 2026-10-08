@@ -53,7 +53,7 @@ function rcWrap(ctx, text, maxW) {
 
 // o: {race:"桐生12R", deadline:"20:45", title:"今節2連勝中", lanes:[1], num:{what, ref, a, b}}
 // t: 0〜1(棒が伸びる進み具合。1 で最後の形)。gull: 先に読み込んだミカタの顔
-function drawReplyCard(x, o, t, gull) {
+function drawReplyCard(x, o, t, gull, nLines = 9) {   // nLines: 見方の何行目まで出すか(動く版で1行ずつ出す)
   const W = 1080, H = 1080;
   const n = o.num, up = n.b >= n.a, col = up ? "#c8141c" : "#0b5fb4";
   const e = (u) => 1 - Math.pow(1 - Math.min(1, Math.max(0, u)), 3);
@@ -107,6 +107,7 @@ function drawReplyCard(x, o, t, gull) {
   const ans = rcAnswer(o);
   x.fillStyle = "#c8141c"; x.font = `900 30px ${RC_F}`; x.fillText(`ミカタの見方${ans.at ? `(${ans.at}のオッズで)` : ""}`, 60, y);
   ans.lines.forEach((ln, i) => {
+    if (i >= nLines) return;
     const last = i === ans.lines.length - 1 && ans.lines.length === 3;
     y += i === 0 ? 48 : 44;
     if (ans.hl && i === 0) { x.fillStyle = "#c8141c"; x.font = `900 40px ${RC_F}`; }
@@ -144,12 +145,14 @@ async function replyCardGIF(o, size = 720) {
   const x = c.getContext("2d", { willReadFrequently: true });
   const frames = [], delays = [];
   const N = 16;
-  for (let i = 0; i <= N; i++) {
+  const shot = (t, nl, d) => {
     x.setTransform(size / 1080, 0, 0, size / 1080, 0, 0);
-    drawReplyCard(x, o, i / N, gull);
+    drawReplyCard(x, o, t, gull, nl);
     frames.push(x.getImageData(0, 0, size, size).data);
-    delays.push(i === N ? 400 : (i === 0 ? 40 : 8));
-  }
+    delays.push(d);
+  };
+  for (let i = 0; i <= N; i++) shot(i / N, 0, i === 0 ? 40 : 8);   // 棒が伸びて、数字が数え上がり、旗が出る
+  shot(1, 1, 45); shot(1, 2, 45); shot(1, 3, 450);                   // 見方を1行ずつ。最後の問いのあと4.5秒止まる
   return URL.createObjectURL(new Blob([gifEncode(frames, delays, size, size)], { type: "image/gif" }));
 }
 

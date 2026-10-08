@@ -124,6 +124,9 @@ def mikata_html(spec: dict, animate: bool = True) -> str:
     t_len = len(spec["title"])
     t_size = 62 if t_len <= 20 else 54 if t_len <= 26 else 48 if t_len <= 36 else 42
     say = spec.get("say") or "こういう見方もあるよ"
+    vw = spec.get("view")
+    view_html = (f'<p class="vw"><small>ミカタの見方</small><b>{e(vw[0])}</b><span class="v2">{e(vw[1])}</span><span class="v3">{e(vw[2])}</span></p>' if vw
+                 else f'<p><small>ミカタ(カモメの記者)</small>{e(say)}<span class="mt">こういう見方もあるよ</span></p>')
     anim = """
 .run{transform-origin:left center;animation:go 1.2s cubic-bezier(.25,.85,.3,1) both}
 @keyframes go{from{transform:scaleX(0)}to{transform:scaleX(1)}}
@@ -131,7 +134,12 @@ def mikata_html(spec: dict, animate: bool = True) -> str:
 .say{animation:slide .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:2.1s}
 @keyframes pop{from{opacity:0;transform:translateY(10px) scale(.9)}to{opacity:1;transform:none}}
 @keyframes slide{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion: reduce){.run,.num,.flag,.say{animation:none}}""" if animate else ""
+.say .vw b,.say .vw .v2,.say .vw .v3{animation:rise .5s cubic-bezier(.2,.8,.2,1) both}
+.say .vw b{animation-delay:2.55s} .say .vw .v2{animation-delay:3.05s} .say .vw .v3{animation:rise .5s cubic-bezier(.2,.8,.2,1) both,nudge .6s ease-in-out 4.1s 1}
+.say .vw .v3{animation-delay:3.6s,4.2s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes nudge{0%,100%{transform:none}50%{transform:translateX(8px)}}
+@media (prefers-reduced-motion: reduce){.run,.num,.flag,.say,.say .vw b,.say .vw .v2,.say .vw .v3{animation:none}}""" if animate else ""
     count_js = """<script>
 document.querySelectorAll('.num').forEach((el)=>{const v=+el.dataset.v,u=el.dataset.u,t0=performance.now()+1250;
 const f=(t)=>{const k=Math.min(1,Math.max(0,(t-t0)/700));const x=v*(0.8+0.2*(1-Math.pow(1-k,3)));
@@ -158,12 +166,12 @@ html,body{{margin:0;background:#f4efdf}} .c{{width:1080px;height:1350px;backgrou
 .say{{position:absolute;left:60px;right:60px;bottom:120px;display:flex;align-items:center;gap:22px}}
 .say p{{margin:0;flex:1;background:#fff;border:4px solid #14212c;border-radius:26px;padding:22px 30px;font:900 36px/1.45 {F2};position:relative}}
 .say p::before{{content:"";position:absolute;left:-26px;top:50%;margin-top:-14px;border:14px solid transparent;border-right:22px solid #14212c}}
-.say small{{display:block;font:700 24px {F2};color:#c8141c;margin-bottom:4px}} .say .mt{{display:block;font:700 28px {F2};color:#56636e;margin-top:4px}}
+.say small{{display:block;font:700 24px {F2};color:#c8141c;margin-bottom:4px}} .say .vw{{padding:18px 28px}} .say .vw b{{display:block;font:900 38px/1.35 {F2};color:#c8141c}} .say .vw .v2{{display:block;font:900 32px/1.4 {F2}}} .say .vw .v3{{display:block;font:700 30px/1.4 {F2};color:#56636e;margin-top:2px}} .say .mt{{display:block;font:700 28px {F2};color:#56636e;margin-top:4px}}
 .ft{{position:absolute;left:60px;right:60px;bottom:40px;display:flex;justify-content:space-between;font:700 24px {F2};color:#56636e}} .ft b{{color:#c8141c;font:900 28px {F2}}}{anim}
 </style></head><body><div class="c"><div class="top"><small>ミカタ検証ラボ ・ 数えてみた</small><h1>{e(spec["title"])}</h1></div><div class="lb">{lanes}</div>
 <div class="sub">{e(spec.get("sub") or "")}</div>
 <div class="course">{rows}<div class="ticks">{ticks}</div></div>
-<div class="say">{gull_svg(132, bg="#ffffff", cls="g")}<p><small>ミカタ(カモメの記者)</small>{e(say)}<span class="mt">こういう見方もあるよ</span></p></div>
+<div class="say">{gull_svg(132, bg="#ffffff", cls="g")}{view_html}</div>
 <div class="ft"><span>{e(spec.get("count") or "")}</span><b>@mikata_kyotei</b></div></div>{count_js}</body></html>"""
 
 
@@ -188,8 +196,10 @@ def render_png(html: str) -> tuple[bytes, dict | None]:
     return png, over
 
 
-def render_mp4(html: str, seconds: float = 5.0) -> bytes | None:
+def render_mp4(html: str, seconds: float | None = None) -> bytes | None:
     """アニメーションを録って mp4(H.264・yuv420p・30fps)に。ffmpeg が無い・失敗したら None(静止画で出す)。"""
+    if seconds is None:
+        seconds = 6.0 if 'class="vw"' in html else 5.0
     ff = shutil.which("ffmpeg")
     if not ff:
         try:
@@ -228,7 +238,7 @@ def render_mp4(html: str, seconds: float = 5.0) -> bytes | None:
         return mp4.read_bytes()
 
 
-def neta_spec(r: dict, n: int | None = None) -> dict:
+def neta_spec(r: dict, n: int | None = None, view: list[str] | None = None) -> dict:
     """1枚1ネタ(lab.neta_items の1行)から、カードの中身を作る。見出しは「だれの・どのレースの」話かが分かる問い(lab.NETA_SUBJ)。"""
     sj = r.get("subj")
     if not sj:
@@ -247,7 +257,7 @@ def neta_spec(r: dict, n: int | None = None) -> dict:
            "少ない": f"{nums}。予想のときに思い出したいね",
            "ほぼ同じ": f"{nums}。ここは気にしなくてよさそう"}[r["answer"]]
     count = f"公式の成績データ(2023年10月〜)・{n:,}{unit}を数えました" if n else "公式の成績データ(2023年10月〜)で数えました"
-    return {"say": say, "count": count, "tone": r["answer"],
+    return {"say": say, "count": count, "tone": r["answer"], **({"view": view} if view else {}),
             "title": f"{q}は?", "sub": (f"{ref}とくらべて、ミカタが約3年分のレースで数えてみた" if len(ref) <= 12 else "ミカタが約3年分のレースで数えてみた"),
             "bars": [{"label": ref, "value": r["b"], "color": BASE}, {"label": label if len(label) <= 11 else "この条件", "value": r["a"], "color": col}],
             "unit": "%", "panel": panel, "handle": "@mikata_kyotei"}

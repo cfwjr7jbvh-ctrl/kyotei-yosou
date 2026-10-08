@@ -3874,6 +3874,7 @@ def neta_items(labs: list[dict]) -> list[dict]:
                          "line": measure_line(t, m, name), "answer": ans, "occult": t["id"] in HOOKS,
                          "a": round(m["in1"] * per, 1), "b": round(m["in1_ref"] * per, 1), "n": m.get("n"),
                          "refl": m.get("ref_label") or t.get("ref_label") or ("ふだん" if t.get("no_market") else "全レース"),
+                         "edge": (v or {}).get("edge"),
                          "per": per, "subj": neta_subject(t["id"], name),
                          "q": f"{name}。" + measure_line(t, m, name).split("のは")[0] + "のは、ふだんより?"})
             sj = rows[-1]["subj"]
@@ -3935,7 +3936,29 @@ def neta_ref(r: dict) -> str:
     return "ふだん" if refl.startswith(_GENERIC_REF) else refl
 
 
-def neta_text(r: dict, from_poll: bool = False, hits: list[dict] | None = None) -> str:
+def neta_view(r: dict) -> list[str]:
+    """1枚1ネタの「ミカタの見方」3行(2026-10-08 ユーザー「どこに妙味があるか知りたいのよみんなは」「個人の予想を楽しくするってコンセプトとシナジーが出る形で」
+    「ミカタの見方とかはどう?」「たそう」)。検証ラボの「人気とのくらべ」から、ずれている場所を指して、最後は読む人への問い。買い目は書かない。
+    返信用の画像(docs/replycard.js の rcAnswer)と同じ考え方"""
+    sj = r.get("subj") or (None, None, None)
+    q = sj[0] or ""
+    who = "1号艇" if "1号艇が勝つ" in q else ("6号艇" if "6号艇が勝つ" in q else "この条件の艇")
+    up, e = r.get("answer") == "多い", r.get("edge")
+    if r.get("answer") == "ほぼ同じ":
+        return ["ふだんと同じ(差は出なかった)", "そのぶん、展示と水面で差をつけよう", "キミはどこを見る?"]
+    if e == 1:
+        return ["人気以上に来ている条件", "この数字は、まだあまり知られていないかも", "乗ってみる? 決めるのはキミ"] if up else \
+               ["下がるとみんな思いすぎ", f"{who}は、人気ほどは崩れていない", "見限る? 残す? 決めるのはキミ"]
+    if e == -1:
+        return ["強いのは本当。でも人気が集まりすぎ", "そのぶん、人気ほどは来ていない", "信じて買う? あえて外す? 決めるのはキミ"] if up else \
+               [f"{who}は、人気のわりにひかえめ", "人気が集まりすぎていないか見ておきたい", f"{who}を信じる? 外から崩す? 決めるのはキミ"]
+    if e == 0:
+        return ["人気にもちゃんと出ている差", "差がつくのは、2着・3着の並び", "キミの並びは?"]
+    return ["出走表だけでは見えない数字", "3着までの相手を選ぶときに", "相手に入れる? 決めるのはキミ"] if up else \
+           ["出走表だけでは見えない数字", "相手を選び直す材料に", "外す? 残す? 決めるのはキミ"]
+
+
+def neta_text(r: dict, from_poll: bool = False, hits: list[dict] | None = None, view: bool = False) -> str:
     """15:30 1枚1ネタ(2026-10-07〜 伸びている人の型: 「〜か、データで調べてみました」+ 感想ひと言 + グラフ1枚。
     AI っぽい決まり文句(→予想では:・📰・掛け合い)は入れない。タグは付けない(人気投稿の分析で、タグなしのほうが伸びやすかった)。言い回しは投稿ごとに少し変える)
     2026-10-08: 「だれの・どのレースの」話かを必ず書く(NETA_SUBJ)。主語が無い物差しは出さない(ura_auto が次の行を使う)"""
@@ -3960,7 +3983,11 @@ def neta_text(r: dict, from_poll: bool = False, hits: list[dict] | None = None) 
     head = "昨日の投票の答えです。\n" if from_poll else ""
     today = neta_today(r, hits)
     today = today.replace("今日なら ", "今日だと ").replace("がこのタイプ", "があてはまります") if today else ""
-    body = f"{head}{opens[k % 3]}\n{feel[(k // 3) % 3]}" + (f"\n\n{today}" if today else "")
+    body = f"{head}{opens[k % 3]}\n{feel[(k // 3) % 3]}"
+    if view:   # ミカタの見方(ずれている場所 → 読む人への問い)
+        v_ = neta_view(r)
+        body += f"\n\nミカタの見方: {v_[0]}。{v_[2]}"
+    body += (f"\n\n{today}" if today else "")
     return body
 
 
