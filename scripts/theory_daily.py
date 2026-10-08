@@ -272,8 +272,13 @@ def build(day: dt.date, data: dict, view: bool = False) -> dict | None:
         mains = clash_mains(r)
         vw = clash_view(*mains, short=True) if view else ""
         if vw:   # 見方を入れる形(確認が出たら): 両側は主役の1つずつ、タグは場名と #競艇 だけ(入らなければタグなし)
-            def _sd(t_):
-                return t_[0] + (f"({c})" if (c := clash_num(r, t_[0])) else "") if t_ else ""
+            def _sd(t_):   # 本文では「1号艇の1着 54%→73%」まで(くらべる相手はカードに)
+                st = t_[1] if t_ else None
+                if not t_:
+                    return ""
+                if not st or st.get("a") is None:
+                    return t_[0] + (f"({c})" if (c := clash_num(r, t_[0])) else "")
+                return f"{t_[0]}({st['what']} {_p(st['a'])}→{_p(st['b'])})"
             for tg in (f"\n#ボートレース{r['venue']} #競艇", ""):
                 b = (f"今日の悩ましいレース|{race_short(r)}{dl}\n\nインに有利: {_sd(mains[0])}\nインに不利: {_sd(mains[1])}\n\n→ {vw}\n\nあなたはどっちに乗る?{tg}")
                 if xlen(b) <= 280:
