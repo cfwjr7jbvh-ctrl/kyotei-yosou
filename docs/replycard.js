@@ -22,16 +22,21 @@ function rcPoint(n) {   // 2行([1行目, 2行目])。行の切れ目を言葉�
   if (n.edge === 0) return ["人気にもちゃんと出ている差。", "ここから差がつくのは、2着・3着の並び"];
   return up ? ["出走表だけでは見えない数字。", "3着までの相手を選ぶときに"] : ["出走表だけでは見えない数字。", "相手を選び直す材料に"];
 }
-// 「妙味はどこ?」の答え(2026-10-08 ユーザー「どこに妙味があるか知りたいのよみんなは」「2枚目の方はいい感じ」)。
-// 1) このレースで、ミカタの見立てが人気(締切前のオッズ)より大きい艇があれば、それ(展示速報と同じ線)
-// 2) 無ければ、理論の「人気とのくらべ」(人気以上・ひかえめ)から、人気がずれている側
-// 3) どちらも無ければ、人気どおり → 妙味を探すなら2着・3着の並び。買い目は書かない
+// 「妙味のヒント」(2026-10-08 ユーザー「どこに妙味があるか知りたいのよみんなは」「個人の予想を楽しくするってコンセプトとシナジーが出る形で」)。
+// 答えを渡すのではなく、ずれている場所を指して、最後は読む人が決める(ミカタは予想を押しつけない。決めるのはキミ)。
+// 1) このレースで、ミカタの見立てが人気(締切前のオッズ)より大きい艇(展示速報と同じ線)
+// 2) 無ければ、理論の「人気とのくらべ」(人気以上・ひかえめ)
+// 3) どちらも無ければ、人気どおり → 差がつくのは2着・3着の並び。買い目は書かない
 function rcAnswer(o) {
   const m = o.myomi, n = o.num;
-  if (m && m.lane) return { hl: true, at: m.at, lines: [`${m.lane}号艇の1着かも`, `ミカタの見立て${Math.round(m.p * 100)}%・人気${Math.round(m.m * 100)}%(人気の${(m.p / m.m).toFixed(1)}倍)`] };
-  if (n.edge === 1 || n.edge === -1) return { hl: false, lines: rcPoint(n) };
-  if (m) return { hl: false, at: m.at, lines: ["人気とミカタの見立てが、ほぼ同じ。", "妙味を探すなら、2着・3着の並び"] };
-  return { hl: false, lines: rcPoint(n) };
+  const up = n.b >= n.a, one = /^(\d号艇|1コースの艇)/.exec(n.what || ""), who = one ? one[1] : "この艇";
+  if (m && m.lane) return { hl: true, at: m.at, lines: [`${m.lane}号艇が、人気より上`, `ミカタの見立て${Math.round(m.p * 100)}%・人気${Math.round(m.m * 100)}%(人気の${(m.p / m.m).toFixed(1)}倍)`, "頭で狙う? 2・3着に置く? 決めるのはキミ"] };
+  if (n.edge === -1) return { hl: true, lines: up ? ["強いのは本当。でも人気が集まりすぎ", "そのぶん、人気ほどは来ていない", "信じて買う? あえて外す? 決めるのはキミ"]
+    : [`${who}は、人気のわりにひかえめ`, "人気が集まりすぎていないか見ておきたい", `${who}を信じる? 外から崩す? 決めるのはキミ`] };
+  if (n.edge === 1) return { hl: true, lines: up ? ["人気以上に来ている形", "この数字は、まだあまり知られていないかも", "乗ってみる? 決めるのはキミ"]
+    : ["下がるとみんな思いすぎ", `${who}は、人気ほどは崩れていない`, "見限る? 残す? 決めるのはキミ"] };
+  if (m) return { hl: false, at: m.at, lines: ["人気とミカタの見立てが、ほぼ同じ", "差がつくのは、2着・3着の並び", "キミの並びは?"] };
+  return { hl: false, lines: ["出走表だけでは見えない数字", up ? "3着までの相手に入れる? 決めるのはキミ" : "相手を選び直す? 決めるのはキミ"] };
 }
 function rcPct(v) { return v < 10 ? `${v.toFixed(1)}%` : `${Math.round(v)}%`; }
 function rcWrap(ctx, text, maxW) {
@@ -95,16 +100,18 @@ function drawReplyCard(x, o, t, gull) {
       x.fillStyle = cc; x.fillRect(bx, y, Math.max(2, px(vv) - bx), 92);
       x.font = `900 104px ${RC_F}`; x.fillStyle = "#14212c"; x.fillText(k >= 1 ? rcPct(v) : rcPct(vv), px(vv) + 24, y + 88);
     }
-    y += 154;
+    y += 148;
   }
-  // ここがポイント(だから何?)
-  y += 14;
+  // 妙味のヒント(だから何?)
+  y += 6;
   const ans = rcAnswer(o);
-  x.fillStyle = "#c8141c"; x.font = `900 32px ${RC_F}`; x.fillText(`妙味はどこ?${ans.at ? `(${ans.at}のオッズで)` : ""}`, 60, y);
+  x.fillStyle = "#c8141c"; x.font = `900 30px ${RC_F}`; x.fillText(`妙味のヒント${ans.at ? `(${ans.at}のオッズで)` : ""}`, 60, y);
   ans.lines.forEach((ln, i) => {
-    y += 50;
-    if (ans.hl && i === 0) { x.fillStyle = "#c8141c"; x.font = `900 42px ${RC_F}`; }
-    else { x.fillStyle = "#14212c"; x.font = `900 36px ${RC_F}`; }
+    const last = i === ans.lines.length - 1 && ans.lines.length === 3;
+    y += i === 0 ? 48 : 44;
+    if (ans.hl && i === 0) { x.fillStyle = "#c8141c"; x.font = `900 40px ${RC_F}`; }
+    else if (last) { x.fillStyle = "#4d5a66"; x.font = `900 32px ${RC_F}`; }
+    else { x.fillStyle = "#14212c"; x.font = `900 34px ${RC_F}`; }
     x.fillText(ln, 60, y, W - 120);
   });
   if (gull) { try { x.drawImage(gull, 60, H - 96, 68, 68); } catch (err) { /* 顔が描けなくても出す */ } }
