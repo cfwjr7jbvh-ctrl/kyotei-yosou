@@ -269,11 +269,13 @@ def build(race: dict, info: dict, day: dt.date, late: dict | None = None, mornin
     dv = lab_dev()
     dev_line = ""
     big = sorted([l for l in dev if abs(dev[l]) >= 2], key=lambda l: (-(dev[l] >= 2), l != 1, -abs(dev[l])))
+    big = [l for l in big if l not in top] or big   # 展示1位の艇は上の行で書くので、ほかの艇があればそちらを(同じ艇の話が2行続かないように)
     if big:
         l = big[0]
         u = (usual or {})[rid[l]][0]
-        dev_line = (f"{l}号艇は展示{rank[l]}位(ふだん{u:.0f}位前後)。ふだんより2つ以上上の艇は3着以内{dv[0]}→{dv[1]}" if dev[l] > 0
-                    else f"{l}号艇は展示{rank[l]}位(ふだん{u:.0f}位前後)。ふだんより2つ以上下だと3着以内{dv[0]}→{dv[2]}")
+        # 2026-10-08 ユーザー「下の方の説明わかりづらい」→ だれの話か(その艇)・何とくらべたか(この選手のふだん)を文で
+        dev_line = (f"{l}号艇は展示{rank[l]}位(この選手はふだん{u:.0f}位前後)。ふだんより2つ以上よい艇の3着以内は、ふだん{dv[0]}→{dv[1]}" if dev[l] > 0
+                    else f"{l}号艇は展示{rank[l]}位(この選手はふだん{u:.0f}位前後)。ふだんより2つ以上わるい艇の3着以内は、ふだん{dv[0]}→{dv[2]}")
     # 型: 展示が悪くても本番で崩れにくいタイプ(選手カードの「展示は控えめ、本番で化ける」。時期を変えても少しは重なる程度の型)
     type_line = ""
     for l in sorted(ts, key=lambda x: -rank[x]):
@@ -289,7 +291,7 @@ def build(race: dict, info: dict, day: dt.date, late: dict | None = None, mornin
     # 1行目は市場の型(場名+R+締切)に「展示速報」。2行目に、出した理由の「狙い目かも?」(2026-10-07 ユーザー「速報の時は何でタイトル?」)
     # 2026-10-07 ユーザー「ミカタ感がないからタイトル工夫」→ 名前の「ミカタ(見方)」に掛けて【ミカタ速報】+「展示で見方が変わった」。最後にミカタのひと言
     head = f"【ミカタ速報】{race['venue']}{race['rno']}R{(' ' + rt) if rt else ''} 締切{race['deadline']}"
-    f_ = f"{'・'.join(f'{l}号艇' for l in top)}は展示1位。展示1位の艇の3着以内は{fact[1]}→{fact[2]}"
+    f_ = f"{'・'.join(f'{l}号艇' for l in top)}は展示タイム1位。展示1位の艇の3着以内は、ふだん{fact[1]}→{fact[2]}"
     tail = f"\n\nこういう見方もあるよ📰 あなたの予想は?\n{seo.x_tags(race['venue'])}"
     text = ""
     for parts in ([head, nerai, hook, dev_line], [head, nerai, hook, f_], [head, nerai, dev_line], [head, nerai, hook],
@@ -302,8 +304,10 @@ def build(race: dict, info: dict, day: dt.date, late: dict | None = None, mornin
     dl_ = f"{day.month}/{day.day}({WEEK[day.weekday()]})"
     rc_ = f"{race['venue']}{race['rno']}R"
     # 2枚目: 6艇の展示順位・タイム・見立て・人気(いちばん大きい行は1号艇/展示1位の見込みの動き)
+    cl_note = ("進入は展示で枠なり(艇番どおり)" if cl == "進入は枠なり(展示)" else cl)
+    notes = [x for x in (f_, dev_line or type_line, cl_note) if x]
     table = tenji_card_html(dl_, rc_, race["deadline"], rt, hook_card, rows, "見立て(展示込み)" if pw else "見立て(朝)",
-                            cl or "進入は展示の情報なし", fact, dev_line or type_line, "")
+                            cl or "進入は展示の情報なし", fact, dev_line or type_line, "", notes=notes)
     cards = [table]
     if nl:   # 1枚目: 狙い目かも?(人気=みんなの予想と、ミカタの見立てを2本の棒で。なぜその艇か、を3つまで)
         from kyotei.xcard import myomi_card_html

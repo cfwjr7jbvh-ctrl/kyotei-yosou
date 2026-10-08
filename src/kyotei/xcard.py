@@ -186,15 +186,34 @@ def lab_card_html(title: str, verdict: str, real: bool, cond: str, sv: str,
             f'{_foot("公式の成績データ(2023年10月〜)を独自に集計")}</div></body></html>')
 
 
+def _em_arrow(x: str) -> str:
+    """「ふだん51%→63%」の右の数字だけ赤く(どこが変わったかを目で拾えるように)。"""
+    m = re.search(r"(ふだん)?(\d+(?:\.\d)?%)→(\d+(?:\.\d)?%)", x)
+    if not m:
+        return e(x)
+    return e(x[:m.start()]) + f'<span class="nw">{e(m.group(1) or "")}{e(m.group(2))}→<em>{e(m.group(3))}</em></span>' + e(x[m.end():])
+
+
 def tenji_card_html(day_label: str, race: str, deadline: str, race_type: str, hook: str, rows: list[dict],
                     view_label: str, course_line: str, fact: tuple[str, str, str] | None, dev_line: str = "", nerai: str = "",
-                    hook_red: bool = False) -> str:
+                    hook_red: bool = False, notes: list[str] | None = None) -> str:
     """展示速報(展示が出たらすぐ。2026-10-07 ユーザー「情報量ふやして、読み手の予測がワクワクする感じで」「狙い目かも?をオッズから逆算」)。
     hook: いちばん大きく見せる1行(「1号艇は展示2位。逃げの見込み 52%→58%」)
     rows: 艇番順 [{"lane", "time", "rank", "course", "p", "p0", "mkt", "nerai"}](p=展示込みの1着の見込み、p0=朝の見立て、mkt=人気から考えた1着の確率)
-    fact: (ラベル, ふだん, 展示1位) / nerai: 「狙い目かも? 4号艇の1着 14%(人気から考えると8%)」"""
+    fact: (ラベル, ふだん, 展示1位) / nerai: 「狙い目かも? 4号艇の1着 14%(人気から考えると8%)」
+    notes: 表の下の「展示から分かること」(2026-10-08 ユーザー「下の方の説明わかりづらい」→ 1行ずつ、だれの話か・何とくらべたかを書いた文で)。
+    notes があれば course_line / fact / dev_line の代わりに使う"""
     sub = " ・ ".join(x for x in (f"締切 {deadline}" if deadline else "", race_type or "") if x)
     pc = lambda v: "-" if v is None else f"{round(v * 100)}%"  # noqa: E731
+    if notes:   # 下の帯に重ならないよう、5行(1行28字の目安。数字は細いので)に収まる分だけ。後ろ(進入)から落とす
+        keep, lines = [], 0
+        for x in notes:
+            n_ = -(-len(x) // 28)
+            if lines + n_ > 5:
+                break
+            keep.append(x)
+            lines += n_
+        notes = keep
     trs = ""
     for r in rows:
         cls = " r1" if r.get("rank") == 1 else ""
@@ -209,7 +228,7 @@ def tenji_card_html(day_label: str, race: str, deadline: str, race_type: str, ho
 .hk{{margin:28px 60px 0;font:900 42px/1.3 {F}}}
 .hd{{display:flex;margin:22px 60px 0;font:700 28px {F};color:{MUTE};padding-bottom:6px;border-bottom:3px solid {INK}}}
 .hd span:nth-child(1){{width:172px}} .hd span:nth-child(2){{width:150px}} .hd span:nth-child(3){{width:260px}} .hd span:nth-child(4){{width:130px}}
-.lst{{margin:0 60px}} .tr{{display:flex;align-items:center;height:74px;border-bottom:2px solid #e3dcc6}}
+.lst{{margin:0 60px}} .tr{{display:flex;align-items:center;height:{68 if notes else 74}px;border-bottom:2px solid #e3dcc6}}
 .tr .ln{{margin:0 14px 0 0;width:48px;height:50px;font-size:34px}} .tr .rk{{width:110px;font:900 36px {F};color:{MUTE}}}
 .tr .tm{{width:150px;font:900 44px {F}}} .tr .pw{{width:260px;font:900 44px {F};display:flex;align-items:center;gap:10px}}
 .tr .bar{{display:inline-block;width:90px;height:14px;background:#e3dcc6}} .tr .bar span{{display:block;height:100%;background:{INK}}}
@@ -220,15 +239,19 @@ def tenji_card_html(day_label: str, race: str, deadline: str, race_type: str, ho
 .fact{{margin:8px 60px 0;font:700 34px/1.4 {F};color:{MUTE}}} .fact b{{font:900 44px {F};color:{INK}}} .fact em{{font-style:normal;color:#c8141c}}
 .ngl{{margin:8px 60px 0;font:900 34px/1.4 {F};color:#c8141c}} .hk.red{{color:#c8141c}} .ngl.ink{{color:{INK}}}
 .tr .rk sup{{font-size:30px;margin-left:2px}} .tr .rk .up{{color:#1e6b3f}} .tr .rk .dn{{color:#0b5fb4}}
-.dvl{{margin:8px 60px 0;font:700 32px/1.4 {F};color:{INK}}}"""
+.dvl{{margin:8px 60px 0;font:700 32px/1.4 {F};color:{INK}}}
+.nts{{margin:16px 60px 0;background:#fffdf6;border-left:10px solid {INK};padding:8px 22px 10px}}
+.nts b{{display:block;font:900 28px {F};color:{MUTE}}}
+.nts p{{margin:4px 0 0;font:700 34px/1.34 {F};color:{INK};position:relative;padding-left:30px}} .nts p::before{{content:'';position:absolute;left:4px;top:18px;width:12px;height:12px;border-radius:50%;background:{INK}}} .nts .nw{{white-space:nowrap}} .nts p em{{font-style:normal;font-weight:900;color:#c8141c}}"""
     return (f'<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>{css}</style></head><body><div class="c">'
             f'<div class="top"><small>ミカタ速報 ・ 展示で見方が変わった ・ {e(day_label)}</small><div class="rc">{e(race)}</div><div class="rs">{e(sub)}</div>{_lanes_bar()}</div>'
             f'<div class="hk{" red" if hook_red else ""}">{e(hook)}</div>'
             f'<div class="hd"><span>艇・展示</span><span>タイム</span><span>{e(view_label)}</span><span>人気</span></div>'
-            f'<div class="lst">{trs}</div><div class="cl">{e(course_line)}</div>{fh}'
-            + (f'<div class="dvl">{e(dev_line)}</div>' if dev_line else "")
+            f'<div class="lst">{trs}</div>'
+            + ((f'<div class="nts"><b>展示から分かること</b>' + "".join(f"<p>{_em_arrow(x)}</p>" for x in notes) + "</div>") if notes else
+               (f'<div class="cl">{e(course_line)}</div>{fh}' + (f'<div class="dvl">{e(dev_line)}</div>' if dev_line else "")))
             + (f'<div class="ngl{" ink" if hook_red else ""}">{e(nerai)}</div>' if nerai else "")
-            + f'{_foot("見立て=ミカタの1着の見込み / 人気=締切前のオッズ / ↑↓=ふだんの展示順位より2つ以上上・下")}</div></body></html>')
+            + f'{_foot("見立て=ミカタの1着の見込み / 人気=オッズから出した1着の確率 / ↑↓=ふだんの展示順位より2つ以上よい・わるい")}</div></body></html>')
 
 
 def myomi_card_html(day_label: str, race: str, deadline: str, race_type: str, lane: int, p: float, mkt: float,
