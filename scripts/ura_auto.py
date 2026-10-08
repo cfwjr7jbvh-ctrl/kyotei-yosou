@@ -264,7 +264,7 @@ html,body{{margin:0}} .c{{width:1080px;height:1350px;background:#f4efdf;font-fam
 REVIEW_OK = {"neta_chart": True,     # 15:30 1枚1ネタのミカタの型の動くカードと「数えてみました」の文(2026-10-08 8:41 ユーザー「いい感じ!」)
              "arashi_card": True,    # 12:10 荒れそうなレースの画像(同上)
              "clash_view": True,
-             "neta_view": False}     # 15:30 1枚1ネタに「ミカタの見方」(人気とのくらべ → 読む人への問い)(2026-10-08 ユーザー「たそう」。見本の確認待ち)     # 8:20 悩ましいレースに「どっちがどれくらい動かすか・人気とのくらべ・ミカタの見方」を入れた新しい形(2026-10-08 9:34 ユーザー「いいけど」。画像は静止画、動画は15:30の反応を見てから)
+             "neta_view": True}     # 15:30 1枚1ネタに「ミカタの見方」(人気とのくらべ → 読む人への問い)(2026-10-08 15:02 ユーザー「だしていい」)     # 8:20 悩ましいレースに「どっちがどれくらい動かすか・人気とのくらべ・ミカタの見方」を入れた新しい形(2026-10-08 9:34 ユーザー「いいけど」。画像は静止画、動画は15:30の反応を見てから)
 
 
 def neta_image(out: pathlib.Path, r: dict, no_images: bool) -> dict | None:
@@ -457,17 +457,17 @@ def news_posts(live: list[dict], races: list[dict], day: dt.date | None = None, 
         import race_feature as _rf
         st_ = _rf.story(rr, cards)
         body = None
-        if st_:   # 問い → 本線と狙い目かも → ここを見て決める → あなたは?(「だから何?」で終わらせない)
+        if st_:   # 問い → 本線とミカタの見方(もとは「狙い目かも?」。2026-10-08 ユーザー「揃えよ」)→ ここを見て決める → あなたは?
             h_ = st_["branches"][0]
             n_ = next((x for x in st_["branches"][1:] if x.get("ratio")), None)          # 狙い目かも?(ふだんより高い艇)
             k_ = next((x for x in st_["branches"][1:] if x.get("k") == "崩すなら"), None)  # 狙い目が無いときの「崩すなら」
             lines = [f"本線 {h_['lane']}号艇{('の' + h_['type']) if h_['type'] else ''} {_rf._pct(h_['p'])}%"]
             if n_:
-                lines.append(f"狙い目かも? {n_['lane']}号艇{('の' + n_['type']) if n_['type'] else ''} {_rf._pct(n_['p'])}%(ふだんの{n_['ratio']:.1f}倍)")
+                lines.append(f"ミカタの見方: {n_['lane']}号艇{('の' + n_['type']) if n_['type'] else ''} {_rf._pct(n_['p'])}%(ふだんの{n_['lane']}号艇の{n_['ratio']:.1f}倍)")
             elif k_:
                 lines.append(f"崩すなら {k_['lane']}号艇{('の' + k_['type']) if k_['type'] else ''} {_rf._pct(k_['p'])}%")
             else:
-                lines.append("狙い目かも? 本線が堅め")
+                lines.append("ミカタの見方: 本線が堅め")
             for k in (2, 1, 0):
                 chk = ("見るのはここ: " + " / ".join(st_["short"][:k])) if k else ""
                 b = (f"{head}\n{st_['hook']}🔥\n\n" + "\n".join(lines) + (f"\n{chk}" if chk else "")

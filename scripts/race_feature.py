@@ -76,9 +76,9 @@ def make(series_name: str, grade: str, rr: dict, cards: dict | None, score: floa
         hl = f"本線: {h['lane']}号艇 {h.get('name') or ''}{('の' + mv['hon_type']) if mv['hon_type'] else ''}(1着の見込み{_pct(h['p_win'])}%、ふだんの{h['lane']}号艇は{LANE_BASE[int(h['lane'])]:.0f}%)"
         if mv["ner"]:
             n_ = mv["ner"]
-            nl = f"狙い目かも? {n_['lane']}号艇 {n_.get('name') or ''}{('の' + mv['ner_type']) if mv['ner_type'] else ''}(1着の見込み{_pct(n_['p_win'])}%、ふだんの{n_['lane']}号艇の{mv['ratio']:.1f}倍)"
+            nl = f"ミカタの見方: {n_['lane']}号艇 {n_.get('name') or ''}{('の' + mv['ner_type']) if mv['ner_type'] else ''}(1着の見込み{_pct(n_['p_win'])}%、ふだんの{n_['lane']}号艇の{mv['ratio']:.1f}倍)"
         else:
-            nl = "狙い目かも? 本線が堅め(ふだんより見込みが高い外の艇は見当たらない)"
+            nl = "ミカタの見方: 本線が堅め(ふだんより見込みが高い外の艇は見当たらない)"
         bl = " / ".join(f"{b['lane']}号艇 {_pct(b.get('p_win'))}%" for b in sorted(rr.get("boats", []), key=lambda b: int(b["lane"])))
         kim = mv.get("kim") or {}
         kl = "・".join(f"{k}{_pct(kim.get(k))}%" for k in ("逃げ", "差し", "まくり", "まくり差し"))
@@ -333,7 +333,7 @@ def story(rr: dict, cards: dict | None) -> dict:
     br = [{"k": "本命", "lane": int(h["lane"]), "name": nm[int(h["lane"])], "type": ht if ht != "1着" else None, "p": h["p_win"], "why": _why(h, ht, cards),
            "second": mv["second"][:2]}]
     if n:
-        br.append({"k": "狙い目かも?", "lane": int(n["lane"]), "name": nm[int(n["lane"])], "type": nt, "p": n["p_win"],
+        br.append({"k": "ミカタの見方", "lane": int(n["lane"]), "name": nm[int(n["lane"])], "type": nt, "p": n["p_win"],
                    "why": _why(n, nt, cards), "ratio": mv["ratio"]})
     else:   # 「崩すなら誰だ」と問うたら、データからの答えも出す
         bk = (breakers(rr, cards, 1).get("list") or [None])[0]
