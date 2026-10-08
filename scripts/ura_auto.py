@@ -277,13 +277,15 @@ def neta_image(out: pathlib.Path, r: dict, no_images: bool) -> dict | None:
         from kyotei import xanim
         from kyotei.factcheck import text_problems, visible_text
         sp = xanim.neta_spec(r, r.get("n"))
-        png, over = xanim.render_png(xanim.chart_html(sp, animate=False))
-        bad = text_problems(visible_text(xanim.chart_html(sp, animate=False)), {}) + (["はみ出し"] if not over or over.get("v", 0) > 0 or over.get("h", 0) > 0 else [])
+        png, over = xanim.render_png(xanim.mikata_html(sp, animate=False))   # 確認が出たミカタの紙面の型(2026-10-08)
+        bad = (text_problems(visible_text(xanim.mikata_html(sp, animate=False)), {})
+               + (["はみ出し"] if not over or over.get("v", 0) > 0 or over.get("h", 0) > 0 else [])
+               + (["棒と吹き出しの重なり"] if over and over.get("o", 0) > 0 else []))
         if bad:
             raise RuntimeError("見張り: " + " / ".join(bad))
         res = {"file": f"{key}_x.json", "name": "02_1枚1ネタ.png"}
         write_json(out / res["file"], {"name": res["name"], "png": base64.b64encode(png).decode()})
-        mp4 = xanim.render_mp4(xanim.chart_html(sp, animate=True))
+        mp4 = xanim.render_mp4(xanim.mikata_html(sp, animate=True))
         if mp4:
             write_json(out / f"{key}_v.json", {"name": "02_1枚1ネタ.mp4", "mp4": base64.b64encode(mp4).decode()})
             res["video"] = f"{key}_v.json"
@@ -683,17 +685,25 @@ def main():
     # 15:30 1枚1ネタ(前の日の投票の答え)と 21:30 投票(次の日の1枚1ネタを先に問題に)
     try:
         rows = labmod.neta_items(labs)
+        # 「だれの・どのレースの」話かが決まっていない物差しは出さない(2026-10-08 ユーザー「主語が抜けがち」)
+        no_subj = [r["id"] for r in rows if not r.get("subj")]
+        if no_subj:
+            print(f"::warning::1枚1ネタ: 主語が決まっていない物差し {len(no_subj)} 本(lab.NETA_SUBJ に足す。それまでは飛ばす): {', '.join(no_subj[:12])}")
+        rows = [r for r in rows if r.get("subj")]
+
+        def _pick(i: int) -> dict:
+            return rows[i % len(rows)]
         if rows:
             k = (today - NETA_START).days
             if k >= 0:
-                r_ = rows[k % len(rows)]
+                r_ = _pick(k)
                 if REVIEW_OK["neta_chart"]:
                     t_neta = labmod.neta_text(r_, from_poll=polled_yesterday(today), hits=theory_hits(today, r_["lab"]))   # タグなし(人気投稿の分析)
                 else:   # ユーザーの確認待ちのあいだは、いつもの文
                     t_neta = seo.with_tags(labmod.neta_text_old(r_, from_poll=polled_yesterday(today), hits=theory_hits(today, r_["lab"])), day_tags)
                 xq.append(("15:30", "1枚1ネタ", t_neta,
                            neta_image(out, r_, a.no_images)))
-            r2 = rows[(k + 1) % len(rows)]
+            r2 = _pick(k + 1)
             pq = labmod.neta_poll(r2)
             xq.append(("21:30", "投票(答えは明日15:30)", seo.with_tags(pq["text"], day_tags) + "\n\n選択肢: " + " / ".join(pq["options"]), None))
             poll_today = pq

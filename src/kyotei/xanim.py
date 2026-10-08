@@ -122,7 +122,7 @@ def mikata_html(spec: dict, animate: bool = True) -> str:
     ticks = "".join(f'<i style="left:{xpx(t) + 24:.0f}px"><b>{t:g}</b></i>' for t in range(int(lo), int(hi) + 1, 5 if hi - lo <= 40 else 10))
     lanes = "".join(f'<i style="background:{c}"></i>' for c in LANE_BG)
     t_len = len(spec["title"])
-    t_size = 62 if t_len <= 20 else 54 if t_len <= 26 else 48
+    t_size = 62 if t_len <= 20 else 54 if t_len <= 26 else 48 if t_len <= 36 else 42
     say = spec.get("say") or "こういう見方もあるよ"
     anim = """
 .run{transform-origin:left center;animation:go 1.2s cubic-bezier(.25,.85,.3,1) both}
@@ -144,9 +144,9 @@ html,body{{margin:0;background:#f4efdf}} .c{{width:1080px;height:1350px;backgrou
 .top h1{{margin:14px 0 0;font:900 {t_size}px/1.3 {F2};word-break:keep-all;overflow-wrap:anywhere}}
 .lb{{display:flex;gap:4px;height:14px;padding:4px 0}} .lb i{{flex:1}}
 .sub{{margin:28px 60px 0;font:700 28px/1.5 {F2};color:#56636e}}
-.course{{position:relative;margin:56px 60px 0 60px;padding:40px 0 70px;border-left:6px solid #14212c}}
+.course{{position:relative;margin:36px 60px 0 60px;padding:34px 0 62px;border-left:6px solid #14212c}}
 
-.rw{{position:relative;margin:0 0 54px;z-index:1}} .nm{{font:900 36px {F2};margin:0 0 12px 24px;display:flex;align-items:center;gap:16px}}
+.rw{{position:relative;margin:0 0 44px;z-index:1}} .nm{{font:900 36px {F2};margin:0 0 12px 24px;display:flex;align-items:center;gap:16px}}
 .lane{{position:relative;height:96px;margin-left:24px}}
 .run{{position:absolute;left:0;top:0;height:96px;display:flex;align-items:center}}
 .wake{{display:block;height:64px;flex:1;border-radius:0 6px 6px 0;opacity:.92}}
@@ -180,7 +180,9 @@ def render_png(html: str) -> tuple[bytes, dict | None]:
           const w = document.createTreeWalker(document.querySelector('.c'), NodeFilter.SHOW_TEXT);
           while (w.nextNode()) { const r = document.createRange(); r.selectNodeContents(w.currentNode);
             for (const x of r.getClientRects()) { if (!x.width) continue; v = Math.max(v, x.bottom - c.bottom + 8); h = Math.max(h, x.right - c.right + 8, c.left + 8 - x.left); } }
-          return {v: Math.round(v), h: Math.round(h)}; }""")
+          let o = -1e9; const sy = document.querySelector('.say'), co = document.querySelector('.course');
+          if (sy && co) { const top = sy.getBoundingClientRect().top; for (const el of co.querySelectorAll('*')) { const r = el.getBoundingClientRect(); if (r.height) o = Math.max(o, r.bottom - top + 8); } }
+          return {v: Math.round(v), h: Math.round(h), o: Math.round(o)}; }""")
         png = pg.screenshot(clip={"x": 0, "y": 0, "width": 1080, "height": 1350})
         b.close()
     return png, over
@@ -227,33 +229,27 @@ def render_mp4(html: str, seconds: float = 5.0) -> bytes | None:
 
 
 def neta_spec(r: dict, n: int | None = None) -> dict:
-    """1枚1ネタ(lab.neta_items の1行)から、カードの中身を作る。"""
-    import re
-    name = re.sub(r"[((][^))]*[))]", "", r["name"]).strip().replace("今節、", "今節")
-    line = r.get("line", "")
-    metric = line.split("のは")[0]
-    if "3着以内" in metric:
-        m_short = "3着以内率"
-    elif "1号艇が勝つ" in metric:
-        m_short = "1号艇の1着率"
-    elif metric.endswith("勝つ"):
-        m_short = "1着率"
-    else:
-        m_short = metric + "割合"
+    """1枚1ネタ(lab.neta_items の1行)から、カードの中身を作る。見出しは「だれの・どのレースの」話かが分かる問い(lab.NETA_SUBJ)。"""
+    sj = r.get("subj")
+    if not sj:
+        raise ValueError(f"主語が決まっていない物差し: {r.get('id')}")
+    q, label, ref_ = sj
     refl = r.get("refl") or "ふだん"
-    refl = "ふだん" if refl.startswith(("その人のふだん", "ふだん")) else refl
+    ref = ref_ or ("ふだん" if refl.startswith(("ふだん", "その人のふだん", "全レース", "本人のふだん")) else refl)
     col = {"多い": UP, "少ない": DOWN, "ほぼ同じ": SAME}[r["answer"]]
-    panel = [(f"{refl}→この条件", f"{_fmt(r['b'], '%')}→{_fmt(r['a'], '%')}")]
+    a, b = _fmt(r["a"], "%"), _fmt(r["b"], "%")
+    unit = "走" if "3着以内" in q or "選手が" in q else "レース"
+    panel = [(f"{ref}→この条件", f"{b}→{a}")]
     if n:
-        unit = "走" if "3着以内" in m_short else "レース"
         panel.append(("数えた数", f"{n:,}{unit}"))
-    say = {"多い": f"ふだん{_fmt(r['b'], '%')}→{_fmt(r['a'], '%')}。はっきり差が出たね",
-           "少ない": f"ふだん{_fmt(r['b'], '%')}→{_fmt(r['a'], '%')}。予想のときに思い出したいね",
-           "ほぼ同じ": f"ふだん{_fmt(r['b'], '%')}→{_fmt(r['a'], '%')}。ここは気にしなくてよさそう"}[r["answer"]]
-    count = f"公式の成績データ(2023年10月〜)・{n:,}{'走' if '3着以内' in m_short else 'レース'}を数えました" if n else "公式の成績データ(2023年10月〜)で数えました"
+    nums = f"ふだん{b}→{a}" if ref == "ふだん" else f"{ref}の{b}→{a}"
+    say = {"多い": f"{nums}。はっきり差が出たね",
+           "少ない": f"{nums}。予想のときに思い出したいね",
+           "ほぼ同じ": f"{nums}。ここは気にしなくてよさそう"}[r["answer"]]
+    count = f"公式の成績データ(2023年10月〜)・{n:,}{unit}を数えました" if n else "公式の成績データ(2023年10月〜)で数えました"
     return {"say": say, "count": count, "tone": r["answer"],
-            "title": f"{name}だと、{m_short}はどれだけ変わる?", "sub": "ミカタが約3年分のレースで数えてみた",
-            "bars": [{"label": refl, "value": r["b"], "color": BASE}, {"label": name if len(name) <= 10 else "この条件", "value": r["a"], "color": col}],
+            "title": f"{q}は?", "sub": (f"{ref}とくらべて、ミカタが約3年分のレースで数えてみた" if len(ref) <= 12 else "ミカタが約3年分のレースで数えてみた"),
+            "bars": [{"label": ref, "value": r["b"], "color": BASE}, {"label": label if len(label) <= 11 else "この条件", "value": r["a"], "color": col}],
             "unit": "%", "panel": panel, "handle": "@mikata_kyotei"}
 
 
@@ -261,7 +257,8 @@ if __name__ == "__main__":   # 手元の確認: python -m kyotei.xanim out/anim
     import sys
     out = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "out/anim")
     out.mkdir(parents=True, exist_ok=True)
-    r = {"name": "今節、2連勝中", "line": "3着以内に入るのは57%(その人のふだんは51%)", "a": 57.3, "b": 50.5, "answer": "多い", "refl": "その人のふだん"}
+    r = {"name": "今節、2連勝中", "line": "3着以内に入るのは57%(その人のふだんは51%)", "a": 57.3, "b": 50.5, "answer": "多い", "refl": "その人のふだん",
+         "subj": ("今節2連勝中の選手が3着以内に入る割合", "今節2連勝中", None)}
     sp = neta_spec(r, 24403)
     png, over = render_png(chart_html(sp, animate=False))
     (out / "neta.png").write_bytes(png)
