@@ -3199,6 +3199,172 @@ def t_saying(ent, r):
     }
 
 
+def _strat(a: pd.DataFrame, b: pd.DataFrame, keys=("jcd", "rno", "qtr"), col: str = "c1"):
+    """a と b の率の差を、同じ場・同じレース番号・同じ季節(3か月ごと)の中でくらべて、重みつきで平均する(hayami.strat_diff の場・季節つき版)。
+    満潮・干潮の時刻は日ごとに動くので、場によっては後半のレース(1号艇がもともと強い番組)に満潮が重なる。そろえないと潮の差が大きく見える(平和島で確認)。
+    返り値: (差, [下, 上])。"""
+    ga, gb = a.groupby(list(keys))[col].agg(["mean", "size"]), b.groupby(list(keys))[col].agg(["mean", "size"])
+    m = ga.join(gb, lsuffix="_a", rsuffix="_b", how="inner")
+    m = m[(m["size_a"] >= 5) & (m["size_b"] >= 5)]
+    if m.empty:
+        return None, None
+    w = m["size_a"] * m["size_b"] / (m["size_a"] + m["size_b"])
+    d = float(((m["mean_a"] - m["mean_b"]) * w).sum() / w.sum())
+    pa, pb = m["mean_a"].clip(0.01, 0.99), m["mean_b"].clip(0.01, 0.99)
+    se = float((w ** 2 * (pa * (1 - pa) / m["size_a"] + pb * (1 - pb) / m["size_b"])).sum() / w.sum() ** 2) ** 0.5
+    return d, [d - 1.645 * se, d + 1.645 * se]
+
+
+def t_tide(ent, r):
+    """潮の法則(2026-10-08): 満潮はイン、干潮は外? 気象庁の潮位表(data/tide)を締切の時刻に当てる(kyotei.tide.tide_for)。
+    海水・汽水の場だけ。比べるのは同じ場・同じレース番号・同じ季節どうし(_strat)。人気とのくらべは同じくらい人気を集めた艇どうし(_same_pop)。"""
+    from kyotei.tide import tide_for
+    dl = ent.drop_duplicates("race_id").set_index("race_id")["deadline"]
+    x = r.copy()
+    x["deadline"] = x["race_id"].map(dl)
+    x = x[x["deadline"].astype(str).str.match(r"^\d{1,2}:\d{2}")].copy()
+    x["deadline"] = x["deadline"].astype(str).str.zfill(5)
+    x = tide_for(x)
+    x = x[x["tide_kind"].notna()].copy()
+    x["qtr"] = (pd.to_datetime(x["date"]).dt.month % 12) // 3          # 冬(12〜2月)・春・夏・秋
+    day_rng = x.groupby(["jcd", x["date"].astype(str).str[:10]])["tide_range"].transform("first")
+    lo_q = x.groupby("jcd")["tide_range"].transform(lambda s: s.quantile(0.25))
+    hi_q = x.groupby("jcd")["tide_range"].transform(lambda s: s.quantile(0.75))
+    x["big"], x["small"] = day_rng >= hi_q, day_rng <= lo_q
+    hi, lo = x["tide_kind"] == "満潮のころ", x["tide_kind"] == "干潮のころ"
+    rise, fall = x["tide_kind"] == "満ち潮", x["tide_kind"] == "引き潮"
+
+    def _m(ma, mb, ref_label):
+        m = measure(x, ma, ref=mb)
+        d, ci = _strat(x[ma], x[mb])
+        d1, _ = _strat(x[ma & ~x["late"]], x[mb & ~x["late"]])
+        d2, _ = _strat(x[ma & x["late"]], x[mb & x["late"]])
+        du, _ = _strat(x[ma], x[mb], col="upset")
+        m["in1_raw_ref"] = m["in1_ref"]
+        m["in1_ref"] = m["in1"] - d                       # 相手を、同じ場・番号・季節にそろえたときの率
+        m["in1_ci"] = [m["in1_ref"] + ci[0], m["in1_ref"] + ci[1]]
+        m["upset_ref"] = m["upset"] - (du or 0.0)
+        if d1 is not None and d2 is not None:
+            m["half"] = [d1, d2]
+        sp = _same_pop(x[ma | mb], ma[ma | mb]) if m.get("market_ratio") else None
+        if sp:
+            m["market_ref"] = m["market_ratio"] / sp[0]
+            m["market_ci"] = [m["market_ref"] * sp[1], m["market_ref"] * sp[2]]
+        m.update({"ref_label": ref_label, "subject": "1号艇", "verb": "勝つ", "unit": "レース"})
+        v = verdicts(m)
+        if sp and v.get("edge") in (1, -1):   # 期間を前後に分けて、どちらもはっきりしなければ追試中に(power と同じ)
+            xo = x[(ma | mb) & x["q1"].notna()]
+            mid = xo["date"].astype(str).sort_values().iloc[len(xo) // 2]
+            hs = [_same_pop(x[((ma | mb) & ((x["date"].astype(str) < mid) == first))], ma) for first in (True, False)]
+            if not all(h and (h[1] > 1 if v["edge"] == 1 else h[2] < 1) for h in hs):
+                v["known"] = ("人気以上に来ている気配。" if v["edge"] == 1 else "人気のわりにひかえめの気配。") + "ただ差は小さく、期間を前後に分けるとブレの幅に入る(追試中)"
+                v["edge"] = 0
+        return m, sp, v
+
+    m_hi, sp_hi, v_hi = _m(hi, lo, "同じ場・同じレース番号の干潮のころ")
+    m_rise, _, v_rise = _m(rise, fall, "同じ場・同じレース番号の引き潮のとき")
+    m_big, _, v_big = _m(x["big"], x["small"], "同じ場・同じレース番号の、満ち引きが小さい日")
+    # 場ごと(満潮のころ − 干潮のころ、同じレース番号・季節にそろえて)。前の2年と最近の1年で同じ向きか
+    rows, tbl = [], []
+    for j, g in x.groupby("jcd"):
+        a, b = g[g["tide_kind"] == "満潮のころ"], g[g["tide_kind"] == "干潮のころ"]
+        if len(a) < 300 or len(b) < 300:
+            continue
+        d, ci = _strat(a, b)
+        d1, _ = _strat(a[~a["late"]], b[~b["late"]])
+        d2, _ = _strat(a[a["late"]], b[b["late"]])
+        if d is None or d1 is None or d2 is None:
+            continue
+        same = bool(np.sign(d1) == np.sign(d2) and min(abs(d1), abs(d2)) >= 0.02 and not (ci[0] <= 0 <= ci[1]))
+        rows.append({"jcd": int(j), "venue": VENUES[int(j)], "hi": float(a["c1"].mean()), "lo_aligned": float(a["c1"].mean() - d), "d": d,
+                     "raw": float(a["c1"].mean() - b["c1"].mean()),
+                     "d_first": d1, "d_last": d2, "same": same, "n": int(len(a) + len(b))})
+    rows.sort(key=lambda z: z["d"])
+    for z in rows:
+        tbl.append([z["venue"], _rate(z["hi"]), _rate(z["lo_aligned"]), f"{z['d'] * 100:+.0f}", f"{z['d_first'] * 100:+.0f}", f"{z['d_last'] * 100:+.0f}",
+                    "同じ向き" if z["same"] else "-"])
+    # 前の2年で選んで、最近の1年で確かめる(場が多いと、たまたま差が出る場もまざるため)
+    pick_w = [z["jcd"] for z in rows if z["d_first"] <= -0.03]
+    pick_s = [z["jcd"] for z in rows if z["d_first"] >= 0.03]
+    late = x["late"]
+    chk = {}
+    for nm, js in (("weak", pick_w), ("strong", pick_s)):
+        g = x[late & x["jcd"].isin(js)]
+        gh = g[g["tide_kind"] == "満潮のころ"]
+        d, ci = _strat(gh, g[g["tide_kind"] == "干潮のころ"]) if js else (None, None)
+        chk[nm] = {"venues": [VENUES[j] for j in js], "d": d, "ci": ci, "hi": float(gh["c1"].mean()) if len(gh) else None}
+    # 満ち引きの大きさ(大潮のころ)の表
+    t_kind = []
+    for k in ("満潮のころ", "満ち潮", "引き潮", "干潮のころ"):
+        g = x[x["tide_kind"] == k]
+        t_kind.append([k, f"{len(g):,}", _rate(g["c1"].mean()), _rate(g["upset"].mean()), f"{g['rno'].mean():.1f}R"])
+    d_hi = m_hi["in1"] - m_hi["in1_ref"]
+    raw = m_hi["in1"] - m_hi["in1_raw_ref"]
+    real = v_hi["real"]
+    n_same = sum(1 for z in rows if z["same"])
+    same_w = [z["venue"] for z in rows if z["same"] and z["d"] < 0]
+    same_s = [z["venue"] for z in rows if z["same"] and z["d"] > 0]
+    head = ("本当。満潮のころはインが強い" if real and d_hi > 0 else ("逆。満潮のころはインが少し弱い" if real else "ふだんと同じ。満潮でも干潮でも1号艇はほぼ同じ"))
+    ex = max(rows, key=lambda z: abs(z["raw"] - z["d"])) if rows else None      # そろえる前と後の差がいちばん大きい場(例に使う)
+    rn_hi, rn_lo = float(x.loc[hi, "rno"].mean()), float(x.loc[lo, "rno"].mean())
+    ck_w, ck_s = chk["weak"], chk["strong"]
+
+    def _ck(c, word):
+        if not c["venues"] or c["d"] is None:
+            return ""
+        keep = c["ci"] and not (c["ci"][0] <= 0 <= c["ci"][1]) and np.sign(c["d"]) == (-1 if word == "弱" else 1)
+        flip = abs(c["d"]) >= 0.02 and np.sign(c["d"]) == (1 if word == "弱" else -1)
+        return (f"前の2年で満潮のころインが{word}かった{len(c['venues'])}場({'・'.join(c['venues'][:5])}{'など' if len(c['venues']) > 5 else ''})を、最近の1年で確かめると、"
+                f"満潮のころ{_rate(c['hi'])}・干潮のころ{_rate(c['hi'] - c['d'])}(同じレース番号にそろえて)" + ("で、同じ向きが続いた。" if keep else ("で、むしろ逆の向きだった。" if flip else "で、ほぼ同じに戻った。")))
+    pop = ""
+    if sp_hi:
+        pop = (f"人気とのくらべ: 満潮のころの1号艇は、同じくらい人気を集めた干潮のころの1号艇から考えると{_rate(m_hi['in1'] / sp_hi[0], True)}のところ、実際は{_rate(m_hi['in1'], True)}。"
+               + {1: "人気以上に来る。", -1: "人気のわりにひかえめ。"}.get(v_hi.get("edge"), "人気どおり。"))
+    return {
+        "id": "tide", "title": "満潮はイン、干潮は外?(潮の法則)", "belief": "海の場は満潮のころインが強く、干潮のころは外が来る。潮が満ちると水面が落ち着くから",
+        "subject": "1号艇", "unit": "レース", "compare": "同じ場・同じレース番号・同じ季節の、干潮のころのレース",
+        "x1": f"海と汽水の{x['jcd'].nunique()}場で、満潮の前後1時間に締切のレース。1号艇が勝つのは{_rate(m_hi['in1'])}。同じ場・同じレース番号の干潮のころは{_rate(m_hi['in1_ref'])}。",
+        "lead": f"気象庁の潮位表を、海水と汽水の{x['jcd'].nunique()}場のレースの締切時刻に当てた。満潮・干潮の前後1時間を『満潮のころ』『干潮のころ』として、1号艇が勝つ割合をくらべる。"
+                f"\n\nそのまま数えると、満潮のころ{_rate(m_hi['in1'])}、干潮のころ{_rate(m_hi['in1_raw_ref'])}。ただ、満潮・干潮の時刻は日ごとにずれ、どのレース番号に重なるかが場と季節でかたよる"
+                f"(平均で満潮のころは{rn_hi:.1f}R、干潮のころは{rn_lo:.1f}R。後半のレースは番組で1号艇に強い人を置く)。そこで同じ場・同じレース番号・同じ季節どうしでくらべると、"
+                f"干潮のころ{_rate(m_hi['in1_ref'])}→満潮のころ{_rate(m_hi['in1'])}。"
+                + ("" if real else f"海と汽水の{x['jcd'].nunique()}場まとめてなら、満潮でも干潮でも1号艇はふだんと同じ(差は出なかった)。")
+                + f"\n\n満ち潮と引き潮でも、1号艇が勝つのは満ち潮{_rate(m_rise['in1'])}、同じ場・同じレース番号の引き潮{_rate(m_rise['in1_ref'])}。"
+                f"満ち引きの大きい日(場ごとの上位4分の1、大潮のころ)は{_rate(m_big['in1'])}、小さい日は{_rate(m_big['in1_ref'])}。"
+                f"\n\n場ごとに見ると向きが分かれる。{len(rows)}場のうち、前の2年も最近の1年も同じ向きだったのは{n_same}場"
+                + (f"(満潮のころインが弱い: {'・'.join(same_w)}" if same_w else "(")
+                + (f"{'/' if same_w else ''}満潮のころインが強い: {'・'.join(same_s)}" if same_s else "") + ")。"
+                + _ck(ck_w, "弱") + _ck(ck_s, "強")
+                + (f"\n\n{pop}" if pop else ""),
+        "conclusion": [head, f"同じ場・同じレース番号・同じ季節でくらべると、満潮のころ締切のレースで1号艇が勝つのは{_rate(m_hi['in1'])}、干潮のころは{_rate(m_hi['in1_ref'])}。"
+                             + (f"場ごとでは、前の2年も最近の1年も同じ向き(満潮のころインが弱め)だったのが{'・'.join(same_w)}の{len(same_w)}場" if same_w and not same_s
+                                else f"前の2年も最近の1年も同じ向きだった場は{len(rows)}場のうち{n_same}場")],
+        "tables": [("潮の時間帯ごとの数字(海水・汽水の場)", t_kind, ["締切のとき", "レース数", "1号艇の1着", "万舟(30番人気以下)", "平均のレース番号"]),
+                   ("場ごとの、満潮のころと干潮のころの1号艇(同じレース番号・季節にそろえて)", tbl,
+                    ["場", "満潮のころ", "干潮のころ(そろえて)", "差(ポイント)", "前の2年", "最近の1年", "前後で"])],
+        "measures": [("満潮のころ(満潮の前後1時間)の締切", m_hi, v_hi), ("満ち潮の締切", m_rise, v_rise),
+                     ("満ち引きの大きい日(場ごとの上位4分の1)", m_big, v_big)],
+        "rules": ["潮位は気象庁の潮位表(天文潮位の予報。風や気圧による実際のずれは入らない)。場にいちばん近い観測点の、締切時刻の潮位",
+                  "『満潮のころ』『干潮のころ』は、その日の満潮・干潮の時刻の前後1時間に締切があるレース。それ以外は潮位が上がっていれば『満ち潮』、下がっていれば『引き潮』",
+                  f"潮の満ち引きが無い淡水の場({'・'.join(VENUES[j] for j in range(1, 25) if j not in set(x['jcd'].astype(int)))})は数えない。海水と汽水の場だけ",
+                  "差は、同じ場・同じレース番号・同じ季節(3か月ごと)の中でくらべてから平均した。満潮・干潮の時刻は日ごとに約50分ずつずれ、季節やレース番号にかたよるため"],
+        "faq": [("レース番号をそろえるのはなぜ?", f"満潮・干潮がどのレース番号に重なるかが、場と季節でかたよるため。"
+                 + (f"たとえば{ex['venue']}は、そのまま数えると干潮のころ{_rate(ex['hi'] - ex['raw'])}→満潮のころ{_rate(ex['hi'])}だが、"
+                    f"同じレース番号にそろえると{_rate(ex['lo_aligned'])}→{_rate(ex['hi'])}" if ex else "")),
+                ("場によっては効く?", (f"前の2年も最近の1年も同じ向きだったのは{len(rows)}場のうち{n_same}場(" + "・".join(same_w + same_s) + ")。来年の分でもう一度確かめる(これからも数え続ける)") if n_same
+                 else f"{len(rows)}場を見て、前の2年と最近の1年で同じ向きが続いた場は無かった"),
+                ("大潮の日は荒れる?", f"満ち引きが大きい日の1号艇は{_rate(m_big['in1'])}、小さい日は{_rate(m_big['in1_ref'])}(同じ場・同じレース番号で)。万舟は{_rate(m_big['upset'])}、小さい日は{_rate(m_big['upset_ref'])}")],
+        "use": ["潮で1号艇の見込みを大きく動かすより、まずレース番号と番組を見る。潮の時刻表は、場ごとのクセを確かめるときの材料に",
+                (f"前の2年も最近の1年も同じ向きだった{'・'.join(same_w + same_s)}は、満潮の時刻に重なるレースの1号艇を少しだけ割り引いて見る" if same_w and not same_s
+                 else "場ごとの向きは表のとおり。前の2年も最近の1年も同じ向きの場だけ、潮の時刻を頭のすみに")],
+        "mikata": (f"潮が効くのは場ごと。{'・'.join(same_w[:3])}は満潮のころインが弱め。こういう見方もあるよ" if same_w and not same_s
+                   else "満潮でも干潮でも、1号艇はほぼ同じ。潮より場とレース番号。こういう見方もあるよ"),
+        "gen": "満潮はイン、干潮は外。海の場じゃ昔から言うんだよ。……レース番号でそろえると、そんなに変わらねえのか",
+        "challenge": "今日の海の場で、満潮の時刻に重なるレースを1つ探す。そのレースの1号艇を、同じ場の同じレース番号のふだんの1号艇とくらべてみて",
+        "numbers": {"venues": rows, "check": chk, "d_hi": d_hi, "raw": raw, "same_pop": list(sp_hi) if sp_hi else None},
+    }
+
+
 BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in": t_a1in, "maezuke": t_maezuke, "tenji": t_tenji, "flying": t_flying, "combo": t_combo,
             "rest": t_rest, "travel": t_travel, "weight": t_weight, "dayno": t_dayno, "twice": t_twice, "tilt": t_tilt,
             "moon": t_moon, "manshu": t_manshu, "lucky7": t_lucky7,
@@ -3206,7 +3372,7 @@ BUILDERS = {"bangumi": t_bangumi, "kikaku": t_kikaku, "streak": t_streak, "a1in"
             "birthday": t_birthday, "blood": t_blood, "height": t_height, "furusato": t_furusato,
             "pressure": t_pressure, "humid": t_humid, "heat": t_heat,
             "lane6": t_lane6, "motor": t_motor, "entry": t_entry,
-            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season, "penalty": t_penalty, "slowdash": t_slowdash, "formation": t_formation, "samefin": t_samefin, "series": t_series, "fixed": t_fixed, "final": t_final, "saying": t_saying, "suji": t_suji, "night": t_night, "power": t_power}
+            "e30": t_e30, "boat": t_boat, "deme": t_deme, "wind": t_wind, "exst": t_exst, "newmotor": t_newmotor, "rokuyo": t_rokuyo, "name": t_name, "hot": t_hot, "c1lose": t_c1lose, "season": t_season, "penalty": t_penalty, "slowdash": t_slowdash, "formation": t_formation, "samefin": t_samefin, "series": t_series, "fixed": t_fixed, "final": t_final, "saying": t_saying, "suji": t_suji, "night": t_night, "power": t_power, "tide": t_tide}
 
 
 # ---------------------------------------------------------------- 記事
@@ -3648,6 +3814,9 @@ NETA_SUBJ: dict = {
     ("wind", "風5m以上"): ("風5m以上のレースで" + _W1, "風5m以上", "風2m以下"),
     ("wind", "風7m以上"): ("風7m以上のレースで" + _W1, "風7m以上", "風2m以下"),
     ("wind", "波5cm以上"): ("波5cm以上のレースで" + _W1, "波5cm以上", "波2cm以下"),
+    ("tide", "満潮のころの締切"): ("海と汽水の場で、満潮の前後1時間に締切のレースで" + _W1, "満潮のころ", "干潮のころ"),
+    ("tide", "満ち潮の締切"): ("海と汽水の場で、潮が満ちているときに締切のレースで" + _W1, "満ち潮", "引き潮"),
+    ("tide", "満ち引きの大きい日"): ("海と汽水の場で、潮の満ち引きが大きい日(大潮のころ)に" + _W1.lstrip("、"), "大潮のころ", "満ち引きが小さい日"),
     ("zorome", "ゾロ目の日"): ("ゾロ目の日(1/1、2/2…12/12)に" + _W1.lstrip("、"), "ゾロ目の日"),
     ("zorome", "13日の金曜日"): ("13日の金曜日に" + _W1.lstrip("、"), "13日の金曜日"),
 }

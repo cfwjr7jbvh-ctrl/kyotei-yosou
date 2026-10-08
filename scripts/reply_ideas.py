@@ -72,6 +72,21 @@ def venue_numbers(d: pd.DataFrame | None, venue: str, jcd: int, today: dt.date |
     return out
 
 
+def tide_text(venue: str) -> str:
+    """潮の話への返信(検証ラボ tide の場ごとの数字: 同じレース番号・季節にそろえた、満潮のころと干潮のころの1号艇の1着)。数字が無い場は空。"""
+    z = next((z for z in ((_lab("tide").get("numbers") or {}).get("venues") or []) if z.get("venue") == venue), None)
+    if not z or z.get("hi") is None or z.get("lo_aligned") is None:
+        return ""
+    hi, lo = _pct(z["hi"]), _pct(z["lo_aligned"])
+    if z.get("same"):
+        word = "弱め" if z["d"] < 0 else "強め"
+        return (f"{venue}は満潮のころインが{word}の場。満潮のころ締切のレースで1号艇が勝つのは{hi}、同じレース番号の干潮のころは{lo}。"
+                "前の2年も最近の1年も同じ向き。潮の時刻表も見てみて")
+    tail = ("ほぼ同じ。潮の時刻より、レース番号と展示を見たいね" if abs(z.get("d") or 0) < 0.03
+            else "年によって差の大きさが変わるので、これからも数え続けるね")
+    return f"{venue}の潮、数えてみたよ。満潮のころ締切のレースで1号艇が勝つのは{hi}、同じレース番号の干潮のころは{lo}。{tail}"
+
+
 def drafts_for_venue(nums: dict, races: list[dict]) -> list[dict]:
     """返信の文案(100字前後、ミカタの口調)。相手の投稿の種類も添える。"""
     v = nums["venue"]
@@ -111,7 +126,10 @@ def drafts_for_venue(nums: dict, races: list[dict]) -> list[dict]:
         r = conf[0]; sm = r["th_sum"]
         out.append({"to": f"{v}{r['rno']}R(締切{r.get('deadline', '-')})の予想の投稿",
                     "text": f"{v}{r['rno']}Rは理論がぶつかるレース。インに有利: {'・'.join(sm['plus'][:2])}/不利: {'・'.join(sm['minus'][:2])}。どっちに乗る?"})
-    if v in SEA:
+    td = tide_text(v)
+    if td:
+        out.append({"to": "「満潮だからイン」「干潮だから外」の投稿", "text": td})
+    elif v in SEA and not _lab("tide"):
         out.append({"to": "「満潮だからイン」「干潮だから外」の投稿", "text": f"{v}は海水の場だから潮の話が出るよね。潮でインがどれだけ変わるかは、いま数えてる(近いうちに検証ラボで)。結果が出たら教えに来るね"})
     for x in out:
         if xlen(x["text"]) > 280:
