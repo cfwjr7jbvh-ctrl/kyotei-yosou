@@ -32,19 +32,106 @@ _NUM2 = re.compile(r"(\d+(?:\.\d)?%)[((]([^))%\d]*)(\d+(?:\.\d)?%)[))]")   # 「
 _NUM1 = re.compile(r"1着が(\d+(?:\.\d)?%)の枠")                                  # 番組の癖「1号艇の1着が72%の枠」
 
 
-def clash_num(r: dict, title: str) -> str:
-    """悩ましいレースの理論1つぶんの数字(「1号艇の1着 予選55%→69%」)。数字は理論のノートの文(検証ラボの JSON から入る)を読む。
-    名前だけだと、どちらの理論が重いか読み手が比べられない(X の1行目・2行目は数字、が市場の型)。読めないときは空。"""
+_ARR = re.compile(r"(\d+(?:\.\d)?)%→(\d+(?:\.\d)?)%")                     # 「ふだん51%→57%に上がる」(2026-10-07〜 の書き方)
+
+
+def _p(x: float) -> str:
+    return f"{x:.1f}%" if x < 10 else f"{int(x + 0.5)}%"
+
+
+def clash_stat(r: dict, title: str) -> dict | None:
+    """悩ましいレースの理論1つぶんの数字を形で: {what(何の率), ref(くらべる相手), a(相手の率), b(この条件の率), edge(人気とのくらべ)}。
+    札に num があればそれ(2026-10-08〜)。無ければ札の文から読む。読めなければ None"""
     n = next((x for x in r.get("theories") or [] if x.get("title") == title and x.get("kind") != "occult"), None)
-    text = (n or {}).get("text") or ""
+    if not n:
+        return None
+    if n.get("num"):
+        return dict(n["num"])
+    text, badge = n.get("text") or "", n.get("badge") or ""
+    edge = 1 if "人気以上" in badge else -1 if "ひかえめ" in badge else 0 if "人気どおり" in badge else None
+    lanes = n.get("lanes") or []
     m = _NUM2.search(text)
     if m:
         seg = re.split(r"[。、]", text[:m.start()])[-1]   # 数字のすぐ前の句で、何の率かを決める
-        what = "3着以内" if "3着以内" in seg else "カドの1着" if "カド" in seg else "1コースの1着" if "1コース" in seg else "1号艇の1着"
-        ref = m.group(2).strip().removesuffix("は")
-        return f"{what} {ref}{m.group(3)}→{m.group(1)}"
+        what = "3着以内" if "3着以内" in seg else "カドの1着" if "カド" in seg else "1コースの艇の1着" if "1コース" in seg else "1号艇の1着"
+        return {"what": what, "ref": m.group(2).strip().removesuffix("は") or "ふだん", "a": float(m.group(3)[:-1]), "b": float(m.group(1)[:-1]), "edge": edge}
+    m = _ARR.search(text)
+    if m:
+        seg = re.split(r"[。]", text[:m.start()])[-1]
+        a, b = float(m.group(1)), float(m.group(2))
+        if "以外が勝つ" in seg:   # 「1号艇以外が勝つのはふだん43%→53%」→ 1号艇の1着 57%→47%(物差しをそろえる)
+            what, a, b = ("1コースの艇の1着" if "1コース" in seg else "1号艇の1着"), round(100 - a, 1), round(100 - b, 1)
+        elif "3着以内" in seg:
+            what = f"{lanes[0]}号艇の3着以内" if len(lanes) == 1 else "3着以内"
+        elif "カド" in seg:
+            what = "カドの1着"
+        elif "1コース" in seg:
+            what = "1コースの艇の1着"
+        else:
+            what = "1号艇の1着"
+        return {"what": what, "ref": "ふだん", "a": a, "b": b, "edge": edge}
     m = _NUM1.search(text)
-    return f"1号艇の1着{m.group(1)}" if m else ""
+    return {"what": "1号艇の1着", "ref": "", "a": None, "b": float(m.group(1)[:-1]), "edge": edge} if m else None
+
+
+def clash_num(r: dict, title: str) -> str:
+    """悩ましいレースの理論1つぶんの数字(「1号艇の1着 予選55%→69%」)。数字は理論の札(検証ラボの JSON から入る)を読む。
+    名前だけだと、どちらの理論が重いか読み手が比べられない(X の1行目・2行目は数字、が市場の型)。読めないときは空。"""
+    st = clash_stat(r, title)
+    if not st:
+        return ""
+    if st.get("a") is None:
+        return f"{st['what']}{_p(st['b'])}"
+    return f"{st['what']} {st['ref']}{_p(st['a'])}→{_p(st['b'])}"
+
+
+def _sg(x: float) -> str:
+    return ("+" if x >= 0 else "−") + (f"{abs(x):.1f}" if abs(x) < 10 else f"{int(abs(x) + 0.5)}")
+
+
+def clash_view(plus: tuple | None, minus: tuple | None, short: bool = False) -> str:
+    """悩ましいレースの「見方」(2026-10-08 ユーザー「どっちがどれくらいの影響があって、こんな感じならこういう考えが妙味があるかも?みたいな情報を入れないと」)。
+    plus/minus: (理論の名前, clash_stat)。①同じ物差しなら、どっちが大きく動かすか ②人気とのくらべ(人気以上・ひかえめ)から、どっちから考えると妙味があるか。
+    買い目は出さない。short=True は X の本文用(短く)"""
+    out = []
+    ps, ms = (plus[1] if plus else None), (minus[1] if minus else None)
+    if ps and ms and ps["what"] == ms["what"] and ps.get("a") is not None and ms.get("a") is not None:
+        dp, dm = ps["b"] - ps["a"], ms["b"] - ms["a"]
+        big = plus[0] if abs(dp) >= abs(dm) else minus[0]
+        out.append(f"動く幅は「{big}」が大きい" + ("。" if short else f"({_sg(dp)}と{_sg(dm)})。"))
+    ep, em = (ps or {}).get("edge"), (ms or {}).get("edge")
+    one = "1号艇" if "1号艇" in ((ps or ms or {}).get("what") or "1号艇") else "1コースの艇"
+    but = "でも" if out else ""
+    if em == -1:
+        out.append(f"{but}「{minus[0]}」の{one}は人気のわりにひかえめ。" + ("" if short else f"{one}に人気が集まるなら、") + f"{one}以外に妙味があるかも")
+    elif ep == 1:
+        out.append(f"{but}「{plus[0]}」の{one}は人気以上に来ている。" + ("" if short else f"{one}の人気がそこそこなら、") + f"{one}に妙味があるかも")
+    elif ep == -1:
+        out.append(f"{but}「{plus[0]}」でも{one}は人気のわりにひかえめ。人気が{one}に寄りすぎていないかを見よう")
+    elif em == 1:
+        out.append(f"{but}「{minus[0]}」でも{one}は人気以上に来ている。" + ("" if short else f"{one}の人気が落ちていたら、") + f"{one}に妙味があるかも")
+    elif ep == 0 and em == 0:
+        out.append("どちらも人気どおり。締切前の人気がどっちに寄っているかを見よう")
+    else:
+        out.append("締切前の人気がどっちに寄っているかを見よう")
+    return "".join(out)
+
+
+def clash_item(r: dict, title: str) -> dict:
+    return {"title": title, "lanes": next((x.get("lanes") or [] for x in r.get("theories") or [] if x.get("title") == title), []), "stat": clash_stat(r, title)}
+
+
+def clash_mains(r: dict) -> tuple:
+    """両側の主役の理論 (名前, 数字)。両側に同じ物差し(1号艇の1着など)があればその組み合わせを優先。"""
+    sm = r.get("th_sum") or {}
+    P = [(t, clash_stat(r, t)) for t in sm.get("plus") or []]
+    M = [(t, clash_stat(r, t)) for t in sm.get("minus") or []]
+    P, M = [x for x in P if x[1]] or P[:1], [x for x in M if x[1]] or M[:1]
+    for p_ in P:
+        for m_ in M:
+            if p_[1] and m_[1] and p_[1]["what"] == m_[1]["what"]:
+                return p_, m_
+    return (P[0] if P else None), (M[0] if M else None)
 
 
 def clash_side(r: dict, titles: list[str], k: int | None = None) -> str:
@@ -68,7 +155,8 @@ def _calendar(day: dt.date) -> list[str]:
     return out
 
 
-def build(day: dt.date, data: dict) -> dict | None:
+def build(day: dt.date, data: dict, view: bool = False) -> dict | None:
+    """view=True: 悩ましいレースに「見方」(どっちが大きく動かすか・人気とのくらべ)を入れる新しい形(ユーザーの確認が出るまで False)"""
     races = [r for r in data.get("races", []) if r.get("theories") is not None]
     try:   # 出す前の見張り: 出走表と合わない札(名前に無い字など)は外す(kyotei.factcheck)
         from kyotei import factcheck
@@ -181,8 +269,19 @@ def build(day: dt.date, data: dict) -> dict | None:
         dl = f" 締切{r['deadline']}" if r.get("deadline") else ""
         # 2026-10-07: 理論の名前だけでなく数字も(「準優勝戦(1号艇の1着 予選55%→69%)」)。入る長さで、数字の多い形から選ぶ
         tail_ = f"\n\nあなたはどっちに乗る?\n#今日の理論ぶつけ #ボートレース{r['venue']} #競艇"
-        body = ""
-        for k in (None, 2, 1):
+        mains = clash_mains(r)
+        vw = clash_view(*mains, short=True) if view else ""
+        if vw:   # 見方を入れる形(確認が出たら): 両側は主役の1つずつ、タグは場名と #競艇 だけ(入らなければタグなし)
+            def _sd(t_):
+                return t_[0] + (f"({c})" if (c := clash_num(r, t_[0])) else "") if t_ else ""
+            for tg in (f"\n#ボートレース{r['venue']} #競艇", ""):
+                b = (f"今日の悩ましいレース|{race_short(r)}{dl}\n\nインに有利: {_sd(mains[0])}\nインに不利: {_sd(mains[1])}\n\n→ {vw}\n\nあなたはどっちに乗る?{tg}")
+                if xlen(b) <= 280:
+                    tail_ = None
+                    body = b
+                    break
+        body = "" if tail_ is not None else body
+        for k in ((None, 2, 1) if tail_ is not None else ()):
             b = f"今日の悩ましいレース|{race_short(r)}{dl}\n\nインに有利: {clash_side(r, sm['plus'], k)}\nインに不利: {clash_side(r, sm['minus'], k)}{tail_}"
             if xlen(b) <= 280:
                 body = b
@@ -204,8 +303,14 @@ def build(day: dt.date, data: dict) -> dict | None:
         def items(titles):
             return [{"title": t_, "lanes": next((x.get("lanes") or [] for x in r["theories"] if x.get("title") == t_), []), "num": clash_num(r, t_)}
                     for t_ in titles]
-        card = theory_card_html(f"{day.month}/{day.day}({WEEK[day.weekday()]})", race_short(r), r.get("deadline") or "", str(r.get("race_type") or ""),
-                                items(sm["plus"]), items(sm["minus"]), len(conf) - 1)
+        if view:
+            from kyotei.xcard import clash_card_html
+            mains = clash_mains(r)
+            card = clash_card_html(f"{day.month}/{day.day}({WEEK[day.weekday()]})", race_short(r), r.get("deadline") or "", str(r.get("race_type") or ""),
+                                   [clash_item(r, t_) for t_ in sm["plus"]], [clash_item(r, t_) for t_ in sm["minus"]], clash_view(*mains))
+        else:
+            card = theory_card_html(f"{day.month}/{day.day}({WEEK[day.weekday()]})", race_short(r), r.get("deadline") or "", str(r.get("race_type") or ""),
+                                    items(sm["plus"]), items(sm["minus"]), len(conf) - 1)
     return {"title": title, "html": page, "card": card, "note": "\n".join(lines),
             "x": f"--- 投稿1({xlen(body)}/280) ---\n{body}\n\n画像: 悩ましいレースのカード(大きな文字の1枚)\n出し方: 記事のリンクは本文に入れず、この投稿への自分の返信に付ける",
             "n_conf": len(conf), "n_races": len(races)}

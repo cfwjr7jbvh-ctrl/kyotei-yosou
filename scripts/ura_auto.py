@@ -262,7 +262,8 @@ html,body{{margin:0}} .c{{width:1080px;height:1350px;background:#f4efdf;font-fam
 # いつもと違う見た目の投稿は、ユーザーが OK するまで出さない(2026-10-08 ユーザー「いつもと違う感じの投稿する前には私の検閲通して」)。
 # OK が出たら True に。見本はユーザーに見せて確かめてもらう
 REVIEW_OK = {"neta_chart": True,     # 15:30 1枚1ネタのミカタの型の動くカードと「数えてみました」の文(2026-10-08 8:41 ユーザー「いい感じ!」)
-             "arashi_card": True}    # 12:10 荒れそうなレースの画像(同上)
+             "arashi_card": True,
+             "clash_view": False}   # 8:20 悩ましいレースに「どっちがどれくらい動かすか・人気とのくらべ・ミカタの見方」を入れた新しい形(2026-10-08 ユーザーの確認待ち)    # 12:10 荒れそうなレースの画像(同上)
 
 
 def neta_image(out: pathlib.Path, r: dict, no_images: bool) -> dict | None:
@@ -602,7 +603,7 @@ def main():
         from kyotei.publish import read_json
         dp = ROOT / f"docs/data/days/{today.isoformat()}.json"
         if dp.exists():
-            t = theory_daily.build(today, read_json(dp))
+            t = theory_daily.build(today, read_json(dp), view=REVIEW_OK["clash_view"])
             if t:
                 key = f"theory_{today.strftime('%Y%m%d')}"
                 pages_ = save_pages(out, key, t["html"], a.no_images)

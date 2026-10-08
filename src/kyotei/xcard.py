@@ -44,7 +44,7 @@ def _foot(sub: str) -> str:
             f'<div class="at">@mikata_kyotei</div></div>')
 
 
-_ARROW = re.compile(r"^(.*\S)\s+(\D*)(\d+(?:\.\d)?%)→(\d+(?:\.\d)?%)$")
+_ARROW = re.compile(r"^(.*?\S)\s+(.*?)(\d+(?:\.\d)?%)→(\d+(?:\.\d)?%)$")   # くらべる相手に数字が入ってもよい(「ほかの1号艇54%→73%」)
 
 
 def _num_html(num: str, col: str, title: str = "", lanes: list | None = None) -> str:
@@ -90,6 +90,62 @@ def theory_card_html(day_label: str, race: str, deadline: str, race_type: str,
             f'{side("インに有利", plus, PLUS)}{side("インに不利", minus, MINUS)}'
             f'<div class="ask">あなたは、どっちに乗る?</div>'
             f'{_foot("検証ラボの理論を、今日の出走表に")}'
+            f'</div></body></html>')
+
+
+def _pc(x: float) -> str:
+    return f"{x:.1f}%" if x < 10 else f"{int(x + 0.5)}%"
+
+
+def clash_card_html(day_label: str, race: str, deadline: str, race_type: str,
+                    plus: list[dict], minus: list[dict], view: str) -> str:
+    """8:20「今日の悩ましいレース」の新しい形(2026-10-08 ユーザー「どっちがどれくらいの影響があって、こんな感じならこういう考えが妙味があるかも?みたいな情報を入れないと」)。
+    両側の主役の理論を、同じ物差し(1号艇の1着など)の「ふだん→この条件」と差の旗で並べ、人気とのくらべを札で。最後にミカタの見方。
+    plus/minus: [{"title", "lanes", "stat": {what, ref, a, b, edge}}]"""
+    EDGE = {1: ("人気以上に来ている", "#c8141c"), 0: ("人気どおり", "#4d5a66"), -1: ("人気のわりにひかえめ", "#0b5fb4")}
+
+    def side(lbl, items, col):
+        main = next((it for it in items if it.get("stat") and it["stat"].get("a") is not None), items[0] if items else None)
+        if not main:
+            return ""
+        st = main.get("stat") or {}
+        lanes = "".join(lane_box(x) for x in (main.get("lanes") or [])[:2])
+        rest = [it["title"] for it in items if it is not main]
+        more = f'<span class="mo">ほか{len(rest)}つ</span>' if rest else ""
+        ed = EDGE.get(st.get("edge"))
+        pill = f'<span class="pl" style="border-color:{ed[1]};color:{ed[1]}">{e(ed[0])}</span>' if ed else ""
+        body = ""
+        if st.get("a") is not None:
+            d = st["b"] - st["a"]
+            dtxt = ("+" if d >= 0 else "−") + (f"{abs(d):.1f}" if abs(d) < 10 else f"{int(abs(d) + 0.5)}")
+            body = (f'<div class="wh">{e(st["what"])}({e(st.get("ref") or "ふだん")} → この条件)</div>'
+                    f'<div class="nb">{e(_pc(st["a"]))} → <em style="color:{col}">{e(_pc(st["b"]))}</em><span class="fl" style="background:{col}">{e(dtxt)}</span></div>')
+        elif st.get("b") is not None:
+            body = f'<div class="nb"><em style="color:{col}">{e(st["what"])} {e(_pc(st["b"]))}</em></div>'
+        return (f'<div class="sd" style="border-color:{col}"><div class="h1"><span class="hd" style="background:{col}">{lbl}</span>'
+                f'<span class="tt">{e(main["title"])}</span>{lanes}{more}</div>{body}{pill}</div>')
+    sub = " ・ ".join(x for x in (f"締切 {deadline}" if deadline else "", race_type or "") if x)
+    css = BASE_CSS + f"""
+.rc{{font:900 96px/1.05 {F};margin:6px 0 0}} .rs{{font:700 34px {F};color:#d9dde0;margin-top:6px}}
+.top .at{{position:absolute;right:60px;top:40px;font:900 30px {F};color:#ffe100}}
+.sd{{margin:24px 60px 0;border-left:14px solid;background:#fffdf6;padding:16px 28px 18px 28px}}
+.h1{{display:flex;align-items:center;gap:14px;flex-wrap:wrap}}
+.hd{{color:#fff;font:900 32px {F};padding:6px 16px}} .tt{{font:900 48px/1.2 {F}}} .mo{{font:700 30px {F};color:{MUTE}}}
+.wh{{font:700 34px/1.35 {F};color:{MUTE};margin-top:10px}}
+.nb{{font:900 72px/1.1 {F};display:flex;align-items:center;gap:18px}} .nb em{{font-style:normal}}
+.fl{{display:inline-block;color:#fff;font:900 38px/1 {F};padding:9px 26px 9px 14px;clip-path:polygon(0 0,100% 0,86% 50%,100% 100%,0 100%)}}
+.pl{{display:inline-block;margin-top:10px;border:4px solid;border-radius:999px;padding:4px 20px;font:900 34px/1.3 {F};background:#fff}}
+.vw{{margin:26px 60px 0;display:flex;gap:20px;align-items:flex-start}}
+.vw p{{margin:0;flex:1;background:#fff;border:4px solid {INK};border-radius:24px;padding:14px 24px;font:900 36px/1.42 {F};position:relative}}
+.vw p small{{display:block;font:700 26px {F};color:#c8141c}} .vw p i{{display:block;font:700 28px {F};font-style:normal;color:{MUTE};margin-top:4px}}
+.ask{{position:absolute;left:60px;bottom:40px;font:900 50px/1.2 {F};color:#c8141c}}"""
+    vw = (f'<div class="vw">{gull_svg(110, bg="#ffffff", cls="v")}<p><small>ミカタの見方</small>{e(view)}<i>こういう見方もあるよ</i></p></div>' if view else "")
+    ask = "" if view else '<div class="ask">あなたは、どっちに乗る?</div>'   # 見方があるときは、問いは本文に(重ならないように)
+    return (f'<!doctype html><html lang="ja"><head><meta charset="utf-8"><style>{css}</style></head><body><div class="c">'
+            f'<div class="top"><small>今日の悩ましいレース ・ {e(day_label)}</small><span class="at">@mikata_kyotei</span><div class="rc">{e(race)}</div>'
+            f'<div class="rs">{e(sub)}</div>{_lanes_bar()}</div>'
+            f'{side("インに有利", plus, PLUS)}{side("インに不利", minus, MINUS)}{vw}'
+            f'{ask}'
             f'</div></body></html>')
 
 
