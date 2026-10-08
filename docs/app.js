@@ -390,7 +390,23 @@ document.addEventListener("click", (e) => {
   if (b) { e.preventDefault(); openCard(b); }
   const x = e.target.closest && e.target.closest("[data-xq]");
   if (x) { e.preventDefault(); openXSearch(x.dataset.xq, x.href); }
+  const g = e.target.closest && e.target.closest("[data-rc]");
+  if (g) { e.preventDefault(); makeReplyCard(g); }
 });
+
+// 返信用の動く画像を作って、下書きの下に出す(もう一度押すと閉じる)
+async function makeReplyCard(btn) {
+  const post = btn.closest(".ura-post");
+  const old = post.querySelector(".rc-fig");
+  if (old) { old.remove(); return; }
+  btn.disabled = true; const t = btn.textContent; btn.textContent = "作成中…";
+  try {
+    const url = await replyCardGIF(JSON.parse(btn.dataset.rc));
+    post.insertAdjacentHTML("beforeend", `<figure class="rc-fig"><img src="${url}" alt="返信用の画像"><figcaption>長押しで「写真に追加」→ X の返信で画像を選ぶ(動く画像のまま付きます)</figcaption></figure>`);
+  } catch (err) {
+    post.insertAdjacentHTML("beforeend", `<figure class="rc-fig"><figcaption>画像を作れませんでした</figcaption></figure>`);
+  } finally { btn.disabled = false; btn.textContent = t; }
+}
 
 // 「Xで探す」は X のアプリで開く(2026-10-08 ユーザー「Xで探すをアプリに飛ぶようにして」)。
 // ホーム画面に置いたアプリやアプリ内ブラウザからだと x.com のリンクがブラウザで開いてしまうので、先に X アプリの URL を開き、
@@ -1239,12 +1255,15 @@ async function replyIdeasHTML() {
     const head = `${esc(q)} ${esc(r.race_type || "")} ${esc(r.deadline || "")}締切`;
     return ns.map((n, i) => {
       const body = fitX(`${q}、${n.text}`);
+      // 返信に付ける動く画像(数字が形で入っている札だけ。2026-10-08 ユーザー「アニメーション付きのが心象よくない?」)
+      const rc = n.num && n.num.a != null && typeof replyCardGIF === "function"
+        ? esc(JSON.stringify({ race: q, deadline: r.deadline || "", title: n.title, lanes: n.lanes || [], num: n.num })) : "";
       return `<div class="ura-post"><div class="n"><span>${i ? "もう1つ: " : head}${i ? esc(n.title) : (n.title === r.race_type ? "" : " ・ " + esc(n.title))}</span>
-        <span class="acts">${i ? "" : `<a class="btn-link" href="https://x.com/search?q=${encodeURIComponent(q)}&f=live" data-xq="${esc(q)}" target="_blank" rel="noopener">Xで探す</a> `}<button data-copy="${esc(body)}">コピー</button></span></div>${esc(body)}</div>`;
+        <span class="acts">${i ? "" : `<a class="btn-link" href="https://x.com/search?q=${encodeURIComponent(q)}&f=live" data-xq="${esc(q)}" target="_blank" rel="noopener">Xで探す</a> `}${rc ? `<button data-rc="${rc}">画像</button> ` : ""}<button data-copy="${esc(body)}">コピー</button></span></div>${esc(body)}</div>`;
     }).join("");
   }).join("");
   return `<div class="ura-sec"><h3>ひと言リプの下書き<small> 今日これからの${races.length}レース</small></h3>
-    <p class="ura-note">「Xで探す」でそのレースの投稿を開き、合うものに返信で貼る。1日5件まで。リンク・ハッシュタグ・宣伝は入れない。同じ文を何回も貼らない。買い目・的中・回収率は書かない。</p>${posts}</div>`;
+    <p class="ura-note">「画像」で動く画像を作れます(長押しで保存して、返信に添付)。「Xで探す」でそのレースの投稿を開き、合うものに返信で貼る。1日5件まで。リンク・ハッシュタグ・宣伝は入れない。同じ文を何回も貼らない。買い目・的中・回収率は書かない。</p>${posts}</div>`;
 }
 
 async function renderUra() {
