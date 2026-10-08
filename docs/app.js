@@ -388,7 +388,21 @@ async function openCard(btn) {
 document.addEventListener("click", (e) => {
   const b = e.target.closest && e.target.closest(".rname");
   if (b) { e.preventDefault(); openCard(b); }
+  const x = e.target.closest && e.target.closest("[data-xq]");
+  if (x) { e.preventDefault(); openXSearch(x.dataset.xq, x.href); }
 });
+
+// 「Xで探す」は X のアプリで開く(2026-10-08 ユーザー「Xで探すをアプリに飛ぶようにして」)。
+// ホーム画面に置いたアプリやアプリ内ブラウザからだと x.com のリンクがブラウザで開いてしまうので、先に X アプリの URL を開き、
+// アプリが開かなかったとき(画面が切り替わらなかったとき)だけ、ブラウザの x.com に切り替える
+function openXSearch(q, web) {
+  let left = false;
+  const gone = () => { left = true; };
+  document.addEventListener("visibilitychange", gone, { once: true });
+  window.addEventListener("pagehide", gone, { once: true });
+  window.location.href = `twitter://search?query=${encodeURIComponent(q)}`;
+  setTimeout(() => { if (!left && !document.hidden) window.location.href = web; }, 1500);
+}
 
 // ---- 1マークの展開アニメ ----
 // 勝ち筋(展開シナリオ)ごとに「スタート → スリット → 1マークの回り方 → 着順」を動かして見せる。
@@ -1226,7 +1240,7 @@ async function replyIdeasHTML() {
     return ns.map((n, i) => {
       const body = fitX(`${q}、${n.text}`);
       return `<div class="ura-post"><div class="n"><span>${i ? "もう1つ: " : head}${i ? esc(n.title) : (n.title === r.race_type ? "" : " ・ " + esc(n.title))}</span>
-        <span class="acts">${i ? "" : `<a class="btn-link" href="https://x.com/search?q=${encodeURIComponent(q)}&f=live" target="_blank" rel="noopener">Xで探す</a> `}<button data-copy="${esc(body)}">コピー</button></span></div>${esc(body)}</div>`;
+        <span class="acts">${i ? "" : `<a class="btn-link" href="https://x.com/search?q=${encodeURIComponent(q)}&f=live" data-xq="${esc(q)}" target="_blank" rel="noopener">Xで探す</a> `}<button data-copy="${esc(body)}">コピー</button></span></div>${esc(body)}</div>`;
     }).join("");
   }).join("");
   return `<div class="ura-sec"><h3>ひと言リプの下書き<small> 今日これからの${races.length}レース</small></h3>
