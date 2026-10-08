@@ -383,14 +383,16 @@ def upload_video(s, mp4: bytes) -> str | None:
     """動画のアップロード(分けて送る形)。v2 → だめなら v1.1。どちらもだめなら None(静止画で出す)。"""
     import time as _t
 
-    class _C:   # s.post / s.get を数えながら呼ぶ
+    sess = s
+
+    class _C:   # s.post / s.get を数えながら呼ぶ(もとのセッションを sess に取っておく。s を指すと自分を呼び続けてしまう)
         def post(self, *a, **k):
             MEDIA_CALLS["n"] += 1
-            return s.post(*a, **k)
+            return sess.post(*a, **k)
 
         def get(self, *a, **k):
             MEDIA_CALLS["n"] += 1
-            return s.get(*a, **k)
+            return sess.get(*a, **k)
     s = _C()
     CH = 4 * 1024 * 1024
     try:
