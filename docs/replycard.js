@@ -12,6 +12,16 @@ function rcWhat(what) {   // 「1号艇の1着」→「1号艇が勝つ割合」
   if (m) return `${m[1]}が3着以内に入る割合`;
   return `${what}の割合`;
 }
+// 「だから何?」の1行(2026-10-08 ユーザー「狙い目じゃ無いけど、みんなが気づいていない貴重な情報かもしれない感を出したほうが価値上がる」)。
+// 検証ラボの「人気とのくらべ」(edge)から。買い目は書かない
+function rcPoint(n) {   // 2行([1行目, 2行目])。行の切れ目を言葉の切れ目にそろえる
+  const up = n.b >= n.a, one = /^(\d号艇|1コースの艇)/.exec(n.what || "");
+  const who = one ? one[1] : "この艇";
+  if (n.edge === 1) return up ? ["人気以上に来ている形。", "この数字は、まだあまり知られていないかも"] : ["下がるとみんな思いすぎ。", `${who}は人気ほどは崩れていない`];
+  if (n.edge === -1) return up ? ["強いのは本当。でも人気が集まりすぎて、", "そのぶん来ていない"] : [`${who}は人気のわりにひかえめ。`, "人気が集まりすぎていないか見ておきたい"];
+  if (n.edge === 0) return ["人気にもちゃんと出ている差。", "ここから差がつくのは、2着・3着の並び"];
+  return up ? ["出走表だけでは見えない数字。", "3着までの相手を選ぶときに"] : ["出走表だけでは見えない数字。", "相手を選び直す材料に"];
+}
 function rcPct(v) { return v < 10 ? `${v.toFixed(1)}%` : `${Math.round(v)}%`; }
 function rcWrap(ctx, text, maxW) {
   const out = []; let line = "";
@@ -58,7 +68,7 @@ function drawReplyCard(x, o, t, gull) {
   const bx = 60, bw = 560, px = (v) => bx + (v - lo) / (hi - lo) * bw;
   const d = n.b - n.a, dt = `${d >= 0 ? "+" : "−"}${Math.abs(d) < 10 ? Math.abs(d).toFixed(1) : Math.round(Math.abs(d))}`;
   const rows = [[n.ref || "ふだん", n.a, "#9a937f", "", e(t / 0.6)], [o.title.length <= 10 ? o.title : "この条件", n.b, col, dt, e((t - 0.25) / 0.6)]];
-  y += 110;
+  y += 92;
   for (const [lbl, v, cc, flag, k] of rows) {
     x.fillStyle = "#14212c"; x.font = `900 42px ${RC_F}`; x.fillText(lbl, bx, y);
     if (flag && t >= 0.9) {
@@ -74,12 +84,17 @@ function drawReplyCard(x, o, t, gull) {
       x.fillStyle = cc; x.fillRect(bx, y, Math.max(2, px(vv) - bx), 92);
       x.font = `900 104px ${RC_F}`; x.fillStyle = "#14212c"; x.fillText(k >= 1 ? rcPct(v) : rcPct(vv), px(vv) + 24, y + 88);
     }
-    y += 180;
+    y += 154;
   }
-  if (gull) { try { x.drawImage(gull, 60, H - 150, 100, 100); } catch (err) { /* 顔が描けなくても出す */ } }
-  x.fillStyle = "#4d5a66"; x.font = `700 32px ${RC_F}`;
-  x.fillText("ミカタ ・ 公式の成績データ(2023年10月〜)で数えました", 180, H - 112);
-  x.fillStyle = "#c8141c"; x.font = `900 32px ${RC_F}`; x.fillText("こういう見方もあるよ", 180, H - 66);
+  // ここがポイント(だから何?)
+  y += 14;
+  x.fillStyle = "#c8141c"; x.font = `900 32px ${RC_F}`; x.fillText("ここがポイント", 60, y);
+  x.fillStyle = "#14212c"; x.font = `900 38px ${RC_F}`;
+  for (const ln of rcPoint(n)) { y += 50; x.fillText(ln, 60, y, W - 120); }
+  if (gull) { try { x.drawImage(gull, 60, H - 96, 68, 68); } catch (err) { /* 顔が描けなくても出す */ } }
+  x.fillStyle = "#4d5a66"; x.font = `700 28px ${RC_F}`;
+  x.fillText("ミカタ ・ 公式の成績データ(2023年10月〜)で数えました", 144, H - 70);
+  x.fillStyle = "#c8141c"; x.font = `900 28px ${RC_F}`; x.fillText("こういう見方もあるよ", 144, H - 34);
 }
 
 let RC_GULL_IMG = null;
