@@ -376,9 +376,22 @@ def upload_media(s, png: bytes) -> str | None:
     return None
 
 
+MEDIA_CALLS = {"n": 0}   # 動画のアップロードで呼んだ API の回数(posted.json の media_log に残し、費用対効果を見る)
+
+
 def upload_video(s, mp4: bytes) -> str | None:
     """動画のアップロード(分けて送る形)。v2 → だめなら v1.1。どちらもだめなら None(静止画で出す)。"""
     import time as _t
+
+    class _C:   # s.post / s.get を数えながら呼ぶ
+        def post(self, *a, **k):
+            MEDIA_CALLS["n"] += 1
+            return s.post(*a, **k)
+
+        def get(self, *a, **k):
+            MEDIA_CALLS["n"] += 1
+            return s.get(*a, **k)
+    s = _C()
     CH = 4 * 1024 * 1024
     try:
         r = s.post(f"{API}/media/upload/initialize", json={"media_type": "video/mp4", "total_bytes": len(mp4), "media_category": "tweet_video"})
@@ -618,8 +631,10 @@ def main():
     if not live:
         print("下書き:", draft); return
     s = session()
+    vid_used = False
     if isinstance(media, dict):   # 動画(だめなら静止画)
         vid = upload_video(s, media["mp4"]) if media.get("mp4") else None
+        vid_used = bool(vid)
         media = None if vid else media.get("png")
         mids = [vid] if vid else []
     else:
@@ -632,6 +647,10 @@ def main():
         last = post(s, t, mid if not ids else None, last, poll if not ids else None)
         ids.append(last)
     posted[tag] = day if a.what != "thread" else {"day": day, "ids": ids}
+    if a.what in ("neta", "theory") or MEDIA_CALLS["n"]:   # 動画か静止画か・アップロードの呼び出し回数(費用対効果の比べ用。直近60件)
+        ml = posted.setdefault("media_log", [])
+        ml.append({"day": day, "slot": a.what, "media": "video" if vid_used else ("image" if mid else "text"), "upload_calls": MEDIA_CALLS["n"], "id": ids[0] if ids else None})
+        posted["media_log"] = ml[-60:]
     if a.what in ("evening", "noon") and ":" in tag:
         posted.setdefault("evening_racers", []).append(tag.split(":", 1)[1])
         posted[a.what] = day

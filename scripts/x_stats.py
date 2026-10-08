@@ -86,17 +86,22 @@ def main():
     uid, handle = me["id"], me["username"]
     r = s.get(f"{API}/users/{uid}/tweets", params={"max_results": 50, "exclude": "retweets,replies",
                                                    "tweet.fields": "created_at,public_metrics,non_public_metrics,attachments",
-                                                   "expansions": "attachments.poll_ids", "poll.fields": "options,voting_status"})
+                                                   "expansions": "attachments.poll_ids,attachments.media_keys", "poll.fields": "options,voting_status",
+                                                   "media.fields": "type"})
     r.raise_for_status()
     posts = r.json().get("data", [])
     polls = {p["id"]: p for p in r.json().get("includes", {}).get("polls", [])}
+    mtype = {m["media_key"]: m.get("type") for m in r.json().get("includes", {}).get("media", [])}   # 動画か画像か(費用対効果の比べ用)
     pk = published_kinds()
     old = json.loads(STATS.read_text(encoding="utf-8")) if STATS.exists() else {"posts": {}}
     for p in posts:
         pm, npm = p.get("public_metrics", {}), p.get("non_public_metrics", {})
         pid = ((p.get("attachments") or {}).get("poll_ids") or [None])[0]
         at_jst = dt.datetime.fromisoformat(p["created_at"].replace("Z", "+00:00")).astimezone(JST)
+        ts = {mtype.get(k) for k in (p.get("attachments") or {}).get("media_keys") or []}
+        media = "video" if ts & {"video", "animated_gif"} else "image" if "photo" in ts else "text"
         old["posts"][p["id"]] = {"at": p["created_at"], "jst": at_jst.strftime("%m/%d %H:%M"), "kind": kind_of(p["text"], p["id"], pk), "head": p["text"][:40],
+                                 "media": media,
                                  **({"poll": {o["label"]: o["votes"] for o in polls[pid]["options"]}} if pid in polls else {}),
                                  "impressions": pm.get("impression_count"), "likes": pm.get("like_count"), "replies": pm.get("reply_count"),
                                  "reposts": pm.get("retweet_count"), "bookmarks": pm.get("bookmark_count"),
@@ -115,6 +120,21 @@ def main():
         old["by_kind"][k] = {"n": b["n"], **{m: round(b[m] / b["n"], 1) for m in M},
                              "react_pct": round((b["likes"] + b["replies"] + b["reposts"] + b["bookmarks"] + b["votes"]) / imp * 100, 2),
                              "profile_per_1000": round(b["profile_clicks"] / imp * 1000, 1)}
+    # 同じ種類の中で、動画・画像・文字だけをくらべる(2026-10-08 ユーザー「アニメーションの方が伸びるならそっちで、費用対効果考えてな」)
+    bm: dict = {}
+    for v in old["posts"].values():
+        if not v.get("media"):
+            continue
+        b = bm.setdefault(v["kind"], {}).setdefault(v["media"], {"n": 0, "impressions": 0, "react": 0, "profile_clicks": 0, "imps": []})
+        b["n"] += 1
+        b["impressions"] += v.get("impressions") or 0
+        b["imps"].append(v.get("impressions") or 0)
+        b["react"] += sum(v.get(k) or 0 for k in ("likes", "replies", "reposts", "bookmarks", "votes"))
+        b["profile_clicks"] += v.get("profile_clicks") or 0
+    old["by_kind_media"] = {k: {m: {"n": b["n"], "impressions_median": sorted(b["imps"])[len(b["imps"]) // 2],
+                                    "react_pct": round(b["react"] / max(b["impressions"], 1) * 100, 2),
+                                    "profile_per_1000": round(b["profile_clicks"] / max(b["impressions"], 1) * 1000, 1)} for m, b in ms.items()}
+                            for k, ms in bm.items() if len(ms) > 1}
     # 出した時間帯ごと(何時に出すと見られるか。ミカタ新聞の時間を決める材料)
     bh: dict = {}
     for v in old["posts"].values():
@@ -141,6 +161,8 @@ def main():
     print("種類 | 本数 | 平均の表示 | 反応率 | 1000表示あたりプロフィールへ | 平均の返信 | 平均の票")
     for k, b in old["by_kind"].items():
         print(f"{k} | {b['n']} | {b['impressions']} | {b['react_pct']}% | {b['profile_per_1000']} | {b['replies']} | {b['votes']}")
+    for k, ms in old["by_kind_media"].items():
+        print(f"{k}: " + " / ".join(f"{m} {b['n']}本 表示の中央値{b['impressions_median']} 反応率{b['react_pct']}% プロフィールへ{b['profile_per_1000']}" for m, b in ms.items()))
     print("出した時 | 本数 | 平均の表示 | 1000表示あたりプロフィールへ")
     for h, b in old["by_hour"].items():
         print(f"{h}時 | {b['n']} | {b['impressions']} | {b['profile_per_1000']}")
