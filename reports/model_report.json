@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-10T02:40+09:00",
+ "generated_at": "2026-10-10T04:29+09:00",
  "synthetic": false,
  "period": {
   "train": [
@@ -587,8 +587,8 @@
     "2nd_race_cond": 0.382,
     "3rd_race_cond": 0.377
    },
-   "lam2": 0.6345947018657869,
-   "lam3": 0.4218832526829519,
+   "lam2": 0.6345946840811594,
+   "lam3": 0.42188324209633155,
    "top_features": {
     "rating_diff": 517,
     "exhibit_time_diff": 502,
@@ -930,9 +930,9 @@
   "blend_a_model": 0.383,
   "blend_b_market": 0.704,
   "tri_logloss": {
-   "model": 3.726839418652677,
+   "model": 3.7268394186656244,
    "market": 3.6999878985813823,
-   "blend": 3.690555389294886
+   "blend": 3.6905553859822002
   },
   "ev_model": [
    {
@@ -1002,10 +1002,10 @@
    },
    {
     "ev_min": 1.1,
-    "bets": 822,
-    "hit_rate": 0.0182,
-    "roi": 0.5639,
-    "profit_yen": -35850,
+    "bets": 821,
+    "hit_rate": 0.0183,
+    "roi": 0.5646,
+    "profit_yen": -35750,
     "roi_lo90": 0.2801,
     "roi_hi90": 0.8969
    },
