@@ -77,6 +77,11 @@ publish_live() {  # 当日(と前日)の予想ファイルだけの1コミット
     GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w "$tl"),notify/tenji_log.txt"
     rm -f "$tl"
   fi
+  # 返信先の候補(scripts/reply_targets.py。暗号化済み。アプリの「ひと言リプの下書き」が読む)
+  local rp="${TENJI_DIR:-$KEEP}/replies_$(jst +%Y%m%d).json"
+  if [ -f "$rp" ]; then
+    GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w "$rp"),replies/$today.json"
+  fi
   if [ -f data/cache/live_perf.json ]; then  # 1周の内訳(数字だけ。速さの見直し用)
     GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w data/cache/live_perf.json),perf/live_perf.json"
   fi
@@ -124,6 +129,7 @@ while [ "$(date +%s)" -lt "$END" ]; do
       python scripts/predict.py merge-live "$KEEP/prev.json" || true
     fi
     python scripts/predict.py live || true
+    timeout 120 python scripts/reply_targets.py --out "${TENJI_DIR:-$KEEP}" || true   # 15分おき(中で間引く)
     publish_live "$TODAY" "$YDAY" || echo "live ブランチへの公開に失敗(次回やり直し)"
   fi
 

@@ -505,3 +505,7 @@ details.why ul{padding-left:1.1em}
 
 /* 返信用の動く画像(2026-10-08) */
 .rc-fig{margin:10px 0 0;display:grid;gap:4px} .rc-fig img{width:100%;max-width:360px;border-radius:8px;border:1px solid #d9d1bc} .rc-fig figcaption{font-size:12px;color:#5b6670}
+
+/* 返信先の候補(2026-10-09) */
+.rp-tg{margin-top:8px;display:grid;gap:6px} .rp-tg small{color:#5b6670;font-size:12px;margin-left:6px}
+.rp-c{display:grid;gap:2px;padding:8px 10px;border:1px solid #d9d1bc;border-radius:8px;text-decoration:none;color:inherit} .rp-c span{font-size:12px;color:#5b6670} .rp-c q{font-size:13px;quotes:none}

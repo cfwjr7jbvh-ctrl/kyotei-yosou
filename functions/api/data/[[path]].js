@@ -3,6 +3,7 @@
 // - days/<今日>.json : live ブランチ(5分ごとの直前予想)→ main の docs/data/days/ の順に探す(過去の日は main 優先)
 // - cards/*.json    : cards ブランチ(選手カード、毎朝更新)
 // - ura/*.json      : cards ブランチ(グレードレースの記事の下書き、毎朝更新)
+// - replies/*.json  : live ブランチ(返信先の候補、15分おき)
 // - それ以外        : main の docs/data/
 // リポジトリを非公開にしたら、Cloudflare の Secret「GITHUB_TOKEN」(読み取り専用のトークン)を入れる。
 const REPO = "cfwjr7jbvh-ctrl/kyotei-yosou";
@@ -31,6 +32,8 @@ export async function onRequestGet({ params, env }) {
     ? [["live", path], ["main", `docs/data/${path}`]]   // 今日は直前予想(live)を優先
     : path.startsWith("days/")
       ? [["main", `docs/data/${path}`], ["live", path]]  // 過去の日は結果付きの main を優先
+      : path.startsWith("replies/")
+        ? [["live", path]]                                // 返信先の候補(直前予想のループが15分おきに置く)
       : path.startsWith("cards/") || path.startsWith("ura/")
         ? [["cards", path]]                               // 選手カード・記事の下書き(履歴を積み上げない cards ブランチ)
         : [["main", `docs/data/${path}`]];

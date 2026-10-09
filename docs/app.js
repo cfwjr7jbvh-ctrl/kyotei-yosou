@@ -390,6 +390,8 @@ document.addEventListener("click", (e) => {
   if (b) { e.preventDefault(); openCard(b); }
   const x = e.target.closest && e.target.closest("[data-xq]");
   if (x) { e.preventDefault(); openXSearch(x.dataset.xq, x.href); }
+  const xs = e.target.closest && e.target.closest("[data-xs]");
+  if (xs) { e.preventDefault(); openXApp(`twitter://status?id=${xs.dataset.xs}`, xs.href); }
   const g = e.target.closest && e.target.closest("[data-rc]");
   if (g) { e.preventDefault(); makeReplyCard(g); }
 });
@@ -411,12 +413,13 @@ async function makeReplyCard(btn) {
 // 「Xで探す」は X のアプリで開く(2026-10-08 ユーザー「Xで探すをアプリに飛ぶようにして」)。
 // ホーム画面に置いたアプリやアプリ内ブラウザからだと x.com のリンクがブラウザで開いてしまうので、先に X アプリの URL を開き、
 // アプリが開かなかったとき(画面が切り替わらなかったとき)だけ、ブラウザの x.com に切り替える
-function openXSearch(q, web) {
+function openXSearch(q, web) { openXApp(`twitter://search?query=${encodeURIComponent(q)}`, web); }
+function openXApp(app, web) {
   let left = false;
   const gone = () => { left = true; };
   document.addEventListener("visibilitychange", gone, { once: true });
   window.addEventListener("pagehide", gone, { once: true });
-  window.location.href = `twitter://search?query=${encodeURIComponent(q)}`;
+  window.location.href = app;
   setTimeout(() => { if (!left && !document.hidden) window.location.href = web; }, 1500);
 }
 
@@ -1258,6 +1261,15 @@ async function replyIdeasHTML() {
     .sort((a, b) => (replyRank(b) - replyRank(a)) || (left(a) - left(b))).slice(0, 8)
     .sort((a, b) => left(a) - left(b));
   if (!races.length) return "";
+  // 返信先の候補(live ブランチ、15分おき。2026-10-09 ユーザー「貼り付け先の候補まで出してもらえると助かる」)
+  let targets = {};
+  try { targets = (await getJSON(`api/data/replies/${t.date}.json`)) || {}; } catch (e) { /* まだ無い */ }
+  const tgHTML = (q) => {
+    const c = ((targets.races || {})[q] || []).slice(0, 3);
+    if (!c.length) return "";
+    return `<div class="rp-tg"><b>返信先の候補</b><small>${esc(targets.asof || "")}時点・反応の多い順</small>` + c.map((x) =>
+      `<a class="rp-c" href="${esc(x.url)}" data-xs="${esc(x.id)}" target="_blank" rel="noopener"><span>@${esc(x.user)} ・ ${esc(x.at)}${x.likes ? ` ・ ♥${x.likes}` : ""}${x.reposts ? ` ・ RP${x.reposts}` : ""}</span><q>${esc(x.text)}</q></a>`).join("") + `</div>`;
+  };
   const posts = races.map((r) => {
     const ns = (r.theories || []).filter((n) => n.kind !== "occult").sort((a, b) => Math.abs(b.dir || 0) - Math.abs(a.dir || 0)).slice(0, 2);
     const q = `${r.venue}${r.rno}R`;
@@ -1268,11 +1280,11 @@ async function replyIdeasHTML() {
       const rc = n.num && n.num.a != null && typeof replyCardGIF === "function"
         ? esc(JSON.stringify({ race: q, deadline: r.deadline || "", title: n.title, lanes: n.lanes || [], num: n.num, myomi: raceMyomi(r) })) : "";
       return `<div class="ura-post"><div class="n"><span>${i ? "もう1つ: " : head}${i ? esc(n.title) : (n.title === r.race_type ? "" : " ・ " + esc(n.title))}</span>
-        <span class="acts">${i ? "" : `<a class="btn-link" href="https://x.com/search?q=${encodeURIComponent(q)}&f=live" data-xq="${esc(q)}" target="_blank" rel="noopener">Xで探す</a> `}${rc ? `<button data-rc="${rc}">画像</button> ` : ""}<button data-copy="${esc(body)}">コピー</button></span></div>${esc(body)}</div>`;
+        <span class="acts">${i ? "" : `<a class="btn-link" href="https://x.com/search?q=${encodeURIComponent(q)}&f=live" data-xq="${esc(q)}" target="_blank" rel="noopener">Xで探す</a> `}${rc ? `<button data-rc="${rc}">画像</button> ` : ""}<button data-copy="${esc(body)}">コピー</button></span></div>${esc(body)}${i ? "" : tgHTML(q)}</div>`;
     }).join("");
   }).join("");
   return `<div class="ura-sec"><h3>ひと言リプの下書き<small> 今日これからの${races.length}レース</small></h3>
-    <p class="ura-note">「画像」で動く画像を作れます(長押しで保存して、返信に添付)。「Xで探す」でそのレースの投稿を開き、合うものに返信で貼る。1日5件まで。リンク・ハッシュタグ・宣伝は入れない。同じ文を何回も貼らない。買い目・的中・回収率は書かない。</p>${posts}</div>`;
+    <p class="ura-note">「画像」で動く画像を作れます(長押しで保存して、返信に添付)。「返信先の候補」を押すと X のアプリでその投稿が開きます(無ければ「Xで探す」)。合うものに返信で貼る。1日5件まで。リンク・ハッシュタグ・宣伝は入れない。同じ文を何回も貼らない。買い目・的中・回収率は書かない。</p>${posts}</div>`;
 }
 
 async function renderUra() {
