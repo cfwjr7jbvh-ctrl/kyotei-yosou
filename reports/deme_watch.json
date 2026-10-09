@@ -9,7 +9,7 @@
    "roi_disc": 1.0037,
    "roi_conf": 1.3022,
    "fwd": {
-    "races": 48,
+    "races": 60,
     "hits": 0,
     "ret": 0.0,
     "roi": 0.0
@@ -22,7 +22,7 @@
    "roi_disc": 1.0033,
    "roi_conf": 1.2213,
    "fwd": {
-    "races": 48,
+    "races": 60,
     "hits": 0,
     "ret": 0.0,
     "roi": 0.0
@@ -35,10 +35,10 @@
    "roi_disc": 1.0128,
    "roi_conf": 1.5373,
    "fwd": {
-    "races": 48,
+    "races": 60,
     "hits": 2,
     "ret": 11920.0,
-    "roi": 2.4833333333333334
+    "roi": 1.9866666666666666
    }
   },
   {
@@ -48,10 +48,10 @@
    "roi_disc": 1.0094,
    "roi_conf": 1.1548,
    "fwd": {
-    "races": 48,
+    "races": 60,
     "hits": 2,
     "ret": 2840.0,
-    "roi": 0.5916666666666667
+    "roi": 0.47333333333333333
    }
   },
   {
@@ -87,7 +87,7 @@
    "roi_disc": 1.0285,
    "roi_conf": 1.3552,
    "fwd": {
-    "races": 12,
+    "races": 24,
     "hits": 0,
     "ret": 0.0,
     "roi": 0.0
@@ -100,10 +100,10 @@
    "roi_disc": 1.0323,
    "roi_conf": 1.3738,
    "fwd": {
-    "races": 12,
-    "hits": 0,
-    "ret": 0.0,
-    "roi": 0.0
+    "races": 24,
+    "hits": 1,
+    "ret": 24750.0,
+    "roi": 5.15625
    }
   },
   {
@@ -126,7 +126,7 @@
    "roi_disc": 1.127,
    "roi_conf": 1.1717,
    "fwd": {
-    "races": 24,
+    "races": 35,
     "hits": 0,
     "ret": 0.0,
     "roi": 0.0
@@ -139,7 +139,7 @@
    "roi_disc": 1.0514,
    "roi_conf": 1.0977,
    "fwd": {
-    "races": 24,
+    "races": 35,
     "hits": 0,
     "ret": 0.0,
     "roi": 0.0
@@ -152,10 +152,10 @@
    "roi_disc": 1.0367,
    "roi_conf": 1.1205,
    "fwd": {
-    "races": 50,
+    "races": 62,
     "hits": 2,
     "ret": 5170.0,
-    "roi": 1.034
+    "roi": 0.8338709677419355
    }
   },
   {
@@ -165,7 +165,7 @@
    "roi_disc": 1.0465,
    "roi_conf": 1.1691,
    "fwd": {
-    "races": 50,
+    "races": 62,
     "hits": 0,
     "ret": 0.0,
     "roi": 0.0
@@ -178,10 +178,10 @@
    "roi_disc": 1.0711,
    "roi_conf": 1.0482,
    "fwd": {
-    "races": 16,
-    "hits": 0,
-    "ret": 0.0,
-    "roi": 0.0
+    "races": 27,
+    "hits": 1,
+    "ret": 9580.0,
+    "roi": 1.7740740740740741
    }
   },
   {
@@ -191,7 +191,7 @@
    "roi_disc": 1.0353,
    "roi_conf": 1.3661,
    "fwd": {
-    "races": 5,
+    "races": 7,
     "hits": 0,
     "ret": 0.0,
     "roi": 0.0
