@@ -401,5 +401,42 @@
   },
   "nikkan_icons": [],
   "nikkan_added": 0
+ },
+ {
+  "at": "2026-10-09T10:25+09:00",
+  "comment_21": 0,
+  "comment_23": 44,
+  "comment_24": 44,
+  "comment_added": 44,
+  "zenken_1": 0,
+  "zenken_5": 0,
+  "zenken_8": 45,
+  "zenken_10": 0,
+  "zenken_14": 0,
+  "zenken_20": 47,
+  "zenken_23": 44,
+  "zenken_added": 136,
+  "nikkan_todo": 2,
+  "nikkan_pages": 24,
+  "nikkan_rows": 144,
+  "nikkan_fields": {
+   "k_iki": 144,
+   "k_mawari": 144,
+   "k_pit": 144,
+   "k_motor": 144,
+   "compi": 144,
+   "o_ex": 144,
+   "o_lap": 138,
+   "o_mawari": 138,
+   "o_straight": 66,
+   "c_prev": 72,
+   "c_other": 0
+  },
+  "nikkan_icons": [
+   "icon_circle",
+   "icon_circle2",
+   "icon_triangle"
+  ],
+  "nikkan_added": 144
  }
 ]
