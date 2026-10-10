@@ -383,6 +383,70 @@
      "odds_n": 0
     }
    }
+  },
+  {
+   "date": "2026-10-10",
+   "races": 156,
+   "top1_hit": 15,
+   "bets": 21,
+   "bet_hits": 0,
+   "invest": 2100,
+   "return": 0,
+   "nerai_races": 0,
+   "nerai_bets": 0,
+   "nerai_hits": 0,
+   "nerai_return": 0,
+   "pick_races": 156,
+   "pick_bets": 465,
+   "pick_hits": 17,
+   "pick_return": 67440,
+   "cat": {
+    "top": {
+     "races": 156,
+     "bets": 156,
+     "hits": 15,
+     "ret": 10780,
+     "prob_sum": 16.4984,
+     "ev_sum": 133.8799,
+     "odds_n": 156
+    },
+    "pick": {
+     "races": 156,
+     "bets": 465,
+     "hits": 17,
+     "ret": 67440,
+     "prob_sum": 14.081,
+     "ev_sum": 741.6658,
+     "odds_n": 465
+    },
+    "ev": {
+     "races": 15,
+     "bets": 21,
+     "hits": 0,
+     "ret": 0,
+     "prob_sum": 0.7682,
+     "ev_sum": 21.4471,
+     "odds_n": 21
+    },
+    "ev13": {
+     "races": 0,
+     "bets": 0,
+     "hits": 0,
+     "ret": 0,
+     "prob_sum": 0.0,
+     "ev_sum": 0.0,
+     "odds_n": 0
+    },
+    "ev15": {
+     "races": 0,
+     "bets": 0,
+     "hits": 0,
+     "ret": 0,
+     "prob_sum": 0.0,
+     "ev_sum": 0.0,
+     "odds_n": 0
+    }
+   }
   }
  ]
 }
