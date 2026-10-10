@@ -167,6 +167,7 @@ biwako/2026-10-04
 biwako/2026-10-05
 biwako/2026-10-06
 biwako/2026-10-07
+biwako/2026-10-08
 fukuoka/2026-07-01
 fukuoka/2026-07-02
 fukuoka/2026-07-03
