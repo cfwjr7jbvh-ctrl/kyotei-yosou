@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-10-11T02:38+09:00",
+ "generated_at": "2026-10-11T04:15+09:00",
  "synthetic": false,
  "period": {
   "train": [
@@ -146,8 +146,8 @@
     "2nd_race_cond": 0.374,
     "3rd_race_cond": 0.411
    },
-   "lam2": 0.63201079350686,
-   "lam3": 0.42323889234888834,
+   "lam2": 0.6320107874174641,
+   "lam3": 0.423238925916062,
    "top_features": {
     "vl_win": 857,
     "rating_diff": 585,
