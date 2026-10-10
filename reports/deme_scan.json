@@ -2,15 +2,15 @@
  "split": "2025-10-01",
  "period": [
   "2023-10-01",
-  "2026-10-08"
+  "2026-10-09"
  ],
- "races": 167050,
+ "races": 167194,
  "n_conditions": 74,
  "n_strategies": 336,
  "n_tests": 19934,
  "n_over100_disc": 166,
  "n_over100_both": 15,
- "corr_disc_conf": 0.44721177305957516,
+ "corr_disc_conf": 0.44809762542984205,
  "bands": [
   {
    "disc": [
@@ -18,8 +18,8 @@
     0.6
    ],
    "n": 5833,
-   "conf_mean": 0.559118341962113,
-   "conf_over100": 0.005143151037202126
+   "conf_mean": 0.5590270587765332,
+   "conf_over100": 0.005314589405108864
   },
   {
    "disc": [
@@ -27,8 +27,8 @@
     0.7
    ],
    "n": 5691,
-   "conf_mean": 0.6322127719903124,
-   "conf_over100": 0.006150061500615006
+   "conf_mean": 0.6321649008163635,
+   "conf_over100": 0.005974345457740292
   },
   {
    "disc": [
@@ -36,7 +36,7 @@
     0.8
    ],
    "n": 3846,
-   "conf_mean": 0.6997371080894103,
+   "conf_mean": 0.6999218177750967,
    "conf_over100": 0.005720228809152366
   },
   {
@@ -45,8 +45,8 @@
     0.9
    ],
    "n": 715,
-   "conf_mean": 0.7113496466247615,
-   "conf_over100": 0.016783216783216783
+   "conf_mean": 0.7114045003541919,
+   "conf_over100": 0.015384615384615385
   },
   {
    "disc": [
@@ -54,7 +54,7 @@
     1.0
    ],
    "n": 101,
-   "conf_mean": 0.7344169411626502,
+   "conf_mean": 0.7350104833977036,
    "conf_over100": 0.0891089108910891
   },
   {
@@ -63,7 +63,7 @@
     1.2
    ],
    "n": 43,
-   "conf_mean": 0.6208882180819381,
+   "conf_mean": 0.6208463929782734,
    "conf_over100": 0.06976744186046512
   },
   {
@@ -72,7 +72,7 @@
     99
    ],
    "n": 1,
-   "conf_mean": 0.6811475409836065,
+   "conf_mean": 0.6774456521739131,
    "conf_over100": 0.0
   }
  ],
@@ -88,8 +88,8 @@
    "roi_disc": 1.5861,
    "roi_conf": 0.7409,
    "conf_ci90": [
-    0.1095080283002881,
-    1.601321208785484
+    0.0978358791110185,
+    1.6461023325248851
    ]
   },
   {
@@ -97,14 +97,14 @@
    "strat": "2-5-3",
    "points": 1,
    "races_disc": 4339,
-   "races_conf": 2196,
+   "races_conf": 2208,
    "hits_disc": 30,
    "hits_conf": 10,
    "roi_disc": 1.5752,
-   "roi_conf": 0.776,
+   "roi_conf": 0.7717,
    "conf_ci90": [
-    0.2536002364564597,
-    1.4362872832041322
+    0.23356070502399753,
+    1.4399104630551882
    ]
   },
   {
@@ -118,8 +118,8 @@
    "roi_disc": 1.4586,
    "roi_conf": 0.4878,
    "conf_ci90": [
-    0.1829086793463526,
-    0.928292093381349
+    0.18080080345954297,
+    0.8963748624880823
    ]
   },
   {
@@ -127,14 +127,14 @@
    "strat": "6-1-2",
    "points": 1,
    "races_disc": 4644,
-   "races_conf": 2230,
+   "races_conf": 2242,
    "hits_disc": 27,
    "hits_conf": 2,
    "roi_disc": 1.4266,
-   "roi_conf": 0.3749,
+   "roi_conf": 0.3729,
    "conf_ci90": [
     0.0,
-    1.0148375443690156
+    1.0260938087164546
    ]
   },
   {
@@ -142,14 +142,14 @@
    "strat": "2-6-1",
    "points": 1,
    "races_disc": 4547,
-   "races_conf": 2281,
+   "races_conf": 2293,
    "hits_disc": 24,
    "hits_conf": 8,
    "roi_disc": 1.3961,
-   "roi_conf": 0.5453,
+   "roi_conf": 0.5425,
    "conf_ci90": [
-    0.2004184608733247,
-    0.9962303611379293
+    0.1855890406337245,
+    0.952263705276747
    ]
   },
   {
@@ -157,14 +157,14 @@
    "strat": "1-346-346",
    "points": 6,
    "races_disc": 287,
-   "races_conf": 145,
+   "races_conf": 146,
    "hits_disc": 35,
    "hits_conf": 27,
    "roi_disc": 1.3855,
-   "roi_conf": 0.7256,
+   "roi_conf": 0.7207,
    "conf_ci90": [
-    0.4412456655480984,
-    1.0408777449075703
+    0.43220480137629025,
+    1.064678391053391
    ]
   },
   {
@@ -178,8 +178,8 @@
    "roi_disc": 1.3662,
    "roi_conf": 0.6269,
    "conf_ci90": [
-    0.24873756740944242,
-    1.0852335385596197
+    0.25861278855088765,
+    1.1127984556562613
    ]
   },
   {
@@ -187,14 +187,14 @@
    "strat": "5-4-1",
    "points": 1,
    "races_disc": 4826,
-   "races_conf": 2586,
+   "races_conf": 2598,
    "hits_disc": 21,
    "hits_conf": 9,
    "roi_disc": 1.3582,
-   "roi_conf": 0.734,
+   "roi_conf": 0.7306,
    "conf_ci90": [
-    0.14033107431985073,
-    1.5585129860169218
+    0.16676600040266656,
+    1.5352282805115367
    ]
   },
   {
@@ -202,14 +202,14 @@
    "strat": "6-1-2",
    "points": 1,
    "races_disc": 4658,
-   "races_conf": 2314,
+   "races_conf": 2326,
    "hits_disc": 22,
    "hits_conf": 6,
    "roi_disc": 1.3499,
-   "roi_conf": 0.8225,
+   "roi_conf": 0.8183,
    "conf_ci90": [
-    0.22459136716852843,
-    1.6182570384355097
+    0.23350405363464025,
+    1.5875984863626067
    ]
   },
   {
@@ -223,8 +223,8 @@
    "roi_disc": 1.3271,
    "roi_conf": 0.7734,
    "conf_ci90": [
-    0.16097501393694974,
-    1.6733514537204859
+    0.15734143161211883,
+    1.592836412135978
    ]
   },
   {
@@ -232,14 +232,14 @@
    "strat": "4-6-2",
    "points": 1,
    "races_disc": 4538,
-   "races_conf": 2397,
+   "races_conf": 2409,
    "hits_disc": 24,
    "hits_conf": 14,
    "roi_disc": 1.323,
-   "roi_conf": 0.9534,
+   "roi_conf": 0.9487,
    "conf_ci90": [
-    0.30463788500811245,
-    1.7553414698909435
+    0.3232742915246944,
+    1.7907164002713518
    ]
   },
   {
@@ -253,8 +253,8 @@
    "roi_disc": 1.3121,
    "roi_conf": 0.5006,
    "conf_ci90": [
-    0.3062952506258794,
-    0.7254188744506225
+    0.3019092088758164,
+    0.7207124425111879
    ]
   },
   {
@@ -262,14 +262,14 @@
    "strat": "1-246-246",
    "points": 6,
    "races_disc": 287,
-   "races_conf": 145,
+   "races_conf": 146,
    "hits_disc": 43,
    "hits_conf": 17,
    "roi_disc": 1.2995,
-   "roi_conf": 0.506,
+   "roi_conf": 0.5025,
    "conf_ci90": [
-    0.3000836949488029,
-    0.7689113655640373
+    0.27897250530785567,
+    0.7641748499727222
    ]
   },
   {
@@ -277,14 +277,14 @@
    "strat": "5-4-1",
    "points": 1,
    "races_disc": 4547,
-   "races_conf": 2281,
+   "races_conf": 2293,
    "hits_disc": 21,
    "hits_conf": 9,
    "roi_disc": 1.2983,
-   "roi_conf": 0.6073,
+   "roi_conf": 0.6041,
    "conf_ci90": [
-    0.16752810521771147,
-    1.2034330291219826
+    0.15280186869983511,
+    1.2318388181078879
    ]
   },
   {
@@ -292,14 +292,14 @@
    "strat": "3-6-2",
    "points": 1,
    "races_disc": 4547,
-   "races_conf": 2281,
+   "races_conf": 2293,
    "hits_disc": 21,
    "hits_conf": 5,
    "roi_disc": 1.286,
-   "roi_conf": 0.1323,
+   "roi_conf": 0.1316,
    "conf_ci90": [
-    0.029657533973935404,
-    0.26050223312602405
+    0.03225666041275797,
+    0.25955948293066483
    ]
   },
   {
@@ -307,14 +307,14 @@
    "strat": "6-1-4",
    "points": 1,
    "races_disc": 4826,
-   "races_conf": 2586,
+   "races_conf": 2598,
    "hits_disc": 26,
    "hits_conf": 7,
    "roi_disc": 1.2674,
-   "roi_conf": 0.235,
+   "roi_conf": 0.2339,
    "conf_ci90": [
-    0.05738469251336898,
-    0.45411118745128287
+    0.05649762550881954,
+    0.4734542237242742
    ]
   },
   {
@@ -328,8 +328,8 @@
    "roi_disc": 1.2601,
    "roi_conf": 0.397,
    "conf_ci90": [
-    0.1105911534621868,
-    0.7262044595253379
+    0.11586407798673065,
+    0.7330918837292772
    ]
   },
   {
@@ -337,14 +337,14 @@
    "strat": "3-2-6",
    "points": 1,
    "races_disc": 4658,
-   "races_conf": 2314,
+   "races_conf": 2326,
    "hits_disc": 34,
    "hits_conf": 8,
    "roi_disc": 1.2597,
-   "roi_conf": 0.2829,
+   "roi_conf": 0.2815,
    "conf_ci90": [
-    0.10507151208561652,
-    0.5174542201302469
+    0.10714518165950832,
+    0.5199366800019136
    ]
   },
   {
@@ -352,14 +352,14 @@
    "strat": "2-35-35",
    "points": 2,
    "races_disc": 4339,
-   "races_conf": 2196,
+   "races_conf": 2208,
    "hits_disc": 64,
    "hits_conf": 30,
    "roi_disc": 1.252,
-   "roi_conf": 0.6811,
+   "roi_conf": 0.6774,
    "conf_ci90": [
-    0.368146054453161,
-    1.0736483467593128
+    0.35351317609751776,
+    1.0493750367769386
    ]
   },
   {
@@ -367,14 +367,14 @@
    "strat": "4-2-3",
    "points": 1,
    "races_disc": 4953,
-   "races_conf": 2458,
+   "races_conf": 2470,
    "hits_disc": 25,
    "hits_conf": 7,
    "roi_disc": 1.2515,
-   "roi_conf": 0.3127,
+   "roi_conf": 0.3111,
    "conf_ci90": [
-    0.10067484403279627,
-    0.5620058877010593
+    0.10230285154581474,
+    0.5748982467046465
    ]
   },
   {
@@ -388,8 +388,8 @@
    "roi_disc": 1.2505,
    "roi_conf": 0.3053,
    "conf_ci90": [
-    0.11730003508440624,
-    0.5127616934431996
+    0.12216665112585415,
+    0.5139554738620171
    ]
   },
   {
@@ -397,14 +397,14 @@
    "strat": "4-2-3",
    "points": 1,
    "races_disc": 4339,
-   "races_conf": 2196,
+   "races_conf": 2208,
    "hits_disc": 26,
    "hits_conf": 13,
    "roi_disc": 1.2437,
-   "roi_conf": 0.7386,
+   "roi_conf": 0.7346,
    "conf_ci90": [
-    0.2983865096929207,
-    1.2267112566607459
+    0.2983847589337557,
+    1.2241907606487732
    ]
   },
   {
@@ -412,14 +412,14 @@
    "strat": "1-456-456",
    "points": 6,
    "races_disc": 287,
-   "races_conf": 145,
+   "races_conf": 146,
    "hits_disc": 23,
    "hits_conf": 10,
    "roi_disc": 1.2389,
-   "roi_conf": 0.752,
+   "roi_conf": 0.7468,
    "conf_ci90": [
-    0.2725762790084388,
-    1.3136180415009189
+    0.26692833301845204,
+    1.2789456469456466
    ]
   },
   {
@@ -427,14 +427,14 @@
    "strat": "6-1-2",
    "points": 1,
    "races_disc": 9187,
-   "races_conf": 4667,
+   "races_conf": 4679,
    "hits_disc": 29,
    "hits_conf": 11,
    "roi_disc": 1.2256,
-   "roi_conf": 0.8571,
+   "roi_conf": 0.8549,
    "conf_ci90": [
-    0.36931002602704655,
-    1.4681891755184617
+    0.3078357038731076,
+    1.463308519988635
    ]
   },
   {
@@ -442,14 +442,14 @@
    "strat": "3-2-5",
    "points": 1,
    "races_disc": 4339,
-   "races_conf": 2196,
+   "races_conf": 2208,
    "hits_disc": 44,
    "hits_conf": 19,
    "roi_disc": 1.2074,
-   "roi_conf": 0.7313,
+   "roi_conf": 0.7273,
    "conf_ci90": [
-    0.35801630003069435,
-    1.1376709549190476
+    0.3809238347819099,
+    1.1182793280437853
    ]
   },
   {
@@ -463,8 +463,8 @@
    "roi_disc": 1.2064,
    "roi_conf": 0.6111,
    "conf_ci90": [
-    0.1567296237484997,
-    1.0988622886277768
+    0.16735097261907414,
+    1.111089365359287
    ]
   },
   {
@@ -472,14 +472,14 @@
    "strat": "6-1-5",
    "points": 1,
    "races_disc": 9255,
-   "races_conf": 4701,
+   "races_conf": 4713,
    "hits_disc": 24,
    "hits_conf": 13,
    "roi_disc": 1.2058,
-   "roi_conf": 0.3923,
+   "roi_conf": 0.3913,
    "conf_ci90": [
-    0.18925817363785816,
-    0.6237675976554984
+    0.18591679310511341,
+    0.6306273674450749
    ]
   },
   {
@@ -493,8 +493,8 @@
    "roi_disc": 1.2015,
    "roi_conf": 0.4578,
    "conf_ci90": [
-    0.22617504589191956,
-    0.74301932481745
+    0.209656704881228,
+    0.7403090866490585
    ]
   },
   {
@@ -502,14 +502,14 @@
    "strat": "2-4-3",
    "points": 1,
    "races_disc": 9197,
-   "races_conf": 4667,
+   "races_conf": 4679,
    "hits_disc": 52,
    "hits_conf": 22,
    "roi_disc": 1.1921,
-   "roi_conf": 0.5273,
+   "roi_conf": 0.526,
    "conf_ci90": [
-    0.27394019553179627,
-    0.7844736319319494
+    0.2993607345383802,
+    0.799359425656857
    ]
   },
   {
@@ -517,14 +517,14 @@
    "strat": "3-1-4",
    "points": 1,
    "races_disc": 4644,
-   "races_conf": 2230,
+   "races_conf": 2242,
    "hits_disc": 89,
    "hits_conf": 36,
    "roi_disc": 1.1838,
-   "roi_conf": 0.6207,
+   "roi_conf": 0.6174,
    "conf_ci90": [
-    0.4271740412979351,
-    0.8206397679329207
+    0.42973632987138044,
+    0.8204299003875205
    ]
   },
   {
@@ -532,14 +532,14 @@
    "strat": "4-2-5",
    "points": 1,
    "races_disc": 4658,
-   "races_conf": 2314,
+   "races_conf": 2326,
    "hits_disc": 38,
    "hits_conf": 15,
    "roi_disc": 1.175,
-   "roi_conf": 0.8517,
+   "roi_conf": 0.8473,
    "conf_ci90": [
-    0.40568703944516693,
-    1.336950845982915
+    0.4372818695342623,
+    1.3224981837265173
    ]
   },
   {
@@ -547,14 +547,14 @@
    "strat": "2-146-146",
    "points": 6,
    "races_disc": 287,
-   "races_conf": 145,
+   "races_conf": 146,
    "hits_disc": 22,
    "hits_conf": 10,
    "roi_disc": 1.1717,
-   "roi_conf": 0.6061,
+   "roi_conf": 0.6019,
    "conf_ci90": [
-    0.22881738582632577,
-    1.0564258658008658
+    0.19498142404858823,
+    1.0597606788710905
    ]
   },
   {
@@ -568,8 +568,8 @@
    "roi_disc": 1.1711,
    "roi_conf": 0.8333,
    "conf_ci90": [
-    0.4700068482617071,
-    1.247776469370275
+    0.480168785333164,
+    1.2313624969124195
    ]
   },
   {
@@ -577,14 +577,14 @@
    "strat": "4-1-6",
    "points": 1,
    "races_disc": 4538,
-   "races_conf": 2397,
+   "races_conf": 2409,
    "hits_disc": 50,
-   "hits_conf": 16,
+   "hits_conf": 17,
    "roi_disc": 1.1703,
-   "roi_conf": 0.7103,
+   "roi_conf": 0.7328,
    "conf_ci90": [
-    0.29874458315474606,
-    1.1463065903567229
+    0.32746009589516917,
+    1.1960898189805913
    ]
   },
   {
@@ -592,14 +592,14 @@
    "strat": "2-6-1",
    "points": 1,
    "races_disc": 4529,
-   "races_conf": 2431,
+   "races_conf": 2443,
    "hits_disc": 20,
    "hits_conf": 7,
    "roi_disc": 1.1671,
-   "roi_conf": 0.5277,
+   "roi_conf": 0.5251,
    "conf_ci90": [
-    0.08045067912383584,
-    1.3122507825009277
+    0.05095952323573122,
+    1.2377762755420325
    ]
   },
   {
@@ -607,14 +607,14 @@
    "strat": "4-3-5",
    "points": 1,
    "races_disc": 4339,
-   "races_conf": 2196,
+   "races_conf": 2208,
    "hits_disc": 29,
    "hits_conf": 4,
    "roi_disc": 1.1667,
-   "roi_conf": 0.3122,
+   "roi_conf": 0.3105,
    "conf_ci90": [
-    0.05224867736566914,
-    0.6685761846646993
+    0.024112598940296336,
+    0.63801693507429
    ]
   },
   {
@@ -628,8 +628,8 @@
    "roi_disc": 1.1652,
    "roi_conf": 0.7735,
    "conf_ci90": [
-    0.2665326193523789,
-    1.4287965033705006
+    0.27505187959495075,
+    1.4573036602241949
    ]
   },
   {
@@ -637,14 +637,14 @@
    "strat": "6-1-2",
    "points": 1,
    "races_disc": 9253,
-   "races_conf": 4697,
+   "races_conf": 4709,
    "hits_disc": 60,
    "hits_conf": 26,
    "roi_disc": 1.1637,
-   "roi_conf": 0.4134,
+   "roi_conf": 0.4123,
    "conf_ci90": [
-    0.2257840335082349,
-    0.6305909417550442
+    0.2299699040952627,
+    0.619260091154431
    ]
   },
   {
@@ -652,14 +652,14 @@
    "strat": "6-1-2",
    "points": 1,
    "races_disc": 9197,
-   "races_conf": 4667,
+   "races_conf": 4679,
    "hits_disc": 39,
    "hits_conf": 8,
    "roi_disc": 1.1566,
-   "roi_conf": 0.6388,
+   "roi_conf": 0.6372,
    "conf_ci90": [
-    0.15121100759082198,
-    1.1970986759578481
+    0.17471166879818267,
+    1.2556916329802632
    ]
   },
   {
@@ -673,8 +673,8 @@
    "roi_disc": 1.1527,
    "roi_conf": 0.5411,
    "conf_ci90": [
-    0.2692490617180984,
-    0.8512691506117673
+    0.2776387994370498,
+    0.870411350956231
    ]
   }
  ],
@@ -690,8 +690,8 @@
    "roi_disc": 1.0037,
    "roi_conf": 1.268,
    "conf_ci90": [
-    0.6462187604641485,
-    1.9574018297803681
+    0.6616682767718128,
+    1.9698964369241312
    ]
   },
   {
@@ -705,8 +705,8 @@
    "roi_disc": 1.0033,
    "roi_conf": 1.1893,
    "conf_ci90": [
-    0.6629209875095577,
-    1.8522445271319823
+    0.6618719301682481,
+    1.8249009447928721
    ]
   },
   {
@@ -714,14 +714,14 @@
    "strat": "2-3-4",
    "points": 1,
    "races_disc": 4658,
-   "races_conf": 2314,
+   "races_conf": 2326,
    "hits_disc": 59,
    "hits_conf": 29,
    "roi_disc": 1.0128,
-   "roi_conf": 1.5489,
+   "roi_conf": 1.5409,
    "conf_ci90": [
-    0.8633982844197501,
-    2.3158678835697146
+    0.8606419572786594,
+    2.3470630123204805
    ]
   },
   {
@@ -729,14 +729,14 @@
    "strat": "3-4-2",
    "points": 1,
    "races_disc": 4529,
-   "races_conf": 2431,
+   "races_conf": 2443,
    "hits_disc": 30,
    "hits_conf": 21,
    "roi_disc": 1.0094,
-   "roi_conf": 1.138,
+   "roi_conf": 1.1324,
    "conf_ci90": [
-    0.49105888130219655,
-    1.9786386397426075
+    0.48255085750775406,
+    1.9041467730682011
    ]
   },
   {
@@ -750,8 +750,8 @@
    "roi_disc": 1.0837,
    "roi_conf": 1.2258,
    "conf_ci90": [
-    0.34220877837116154,
-    2.248721000887138
+    0.35679180021367524,
+    2.3351501421464107
    ]
   },
   {
@@ -759,14 +759,14 @@
    "strat": "2-5-4",
    "points": 1,
    "races_disc": 4800,
-   "races_conf": 2277,
+   "races_conf": 2289,
    "hits_disc": 28,
    "hits_conf": 17,
    "roi_disc": 1.0235,
-   "roi_conf": 1.3296,
+   "roi_conf": 1.3226,
    "conf_ci90": [
-    0.5393015897618547,
-    2.177403778058663
+    0.5601189942994445,
+    2.2008239761147532
    ]
   },
   {
@@ -774,14 +774,14 @@
    "strat": "4-6-5",
    "points": 1,
    "races_disc": 4538,
-   "races_conf": 2397,
+   "races_conf": 2409,
    "hits_disc": 26,
    "hits_conf": 10,
    "roi_disc": 1.0285,
-   "roi_conf": 1.3416,
+   "roi_conf": 1.3349,
    "conf_ci90": [
-    0.32235750373515765,
-    2.5549998694814815
+    0.34913848700613387,
+    2.5688618550591644
    ]
   },
   {
@@ -789,14 +789,14 @@
    "strat": "6-12-12",
    "points": 2,
    "races_disc": 4538,
-   "races_conf": 2397,
+   "races_conf": 2409,
    "hits_disc": 33,
    "hits_conf": 16,
    "roi_disc": 1.0323,
-   "roi_conf": 1.4117,
+   "roi_conf": 1.4046,
    "conf_ci90": [
-    0.4720683149878241,
-    2.569282891814623
+    0.3984660641502747,
+    2.5250097864823613
    ]
   },
   {
@@ -810,8 +810,8 @@
    "roi_disc": 1.0289,
    "roi_conf": 1.0855,
    "conf_ci90": [
-    0.19759854241876573,
-    2.2607019954317247
+    0.2046139269319467,
+    2.2505565748922503
    ]
   },
   {
@@ -819,14 +819,14 @@
    "strat": "2-3-6",
    "points": 1,
    "races_disc": 4339,
-   "races_conf": 2196,
+   "races_conf": 2208,
    "hits_disc": 25,
    "hits_conf": 13,
    "roi_disc": 1.127,
-   "roi_conf": 1.153,
+   "roi_conf": 1.1467,
    "conf_ci90": [
-    0.3466307783441169,
-    2.3069293114093634
+    0.2958915524693632,
+    2.346771411447518
    ]
   },
   {
@@ -834,14 +834,14 @@
    "strat": "4-3-6",
    "points": 1,
    "races_disc": 4339,
-   "races_conf": 2196,
+   "races_conf": 2208,
    "hits_disc": 24,
    "hits_conf": 11,
    "roi_disc": 1.0514,
-   "roi_conf": 1.0802,
+   "roi_conf": 1.0743,
    "conf_ci90": [
-    0.3680587965627419,
-    1.9073714866686786
+    0.33488718518735194,
+    1.9307386892107357
    ]
   },
   {
@@ -849,14 +849,14 @@
    "strat": "3-2-4",
    "points": 1,
    "races_disc": 9266,
-   "races_conf": 4705,
+   "races_conf": 4717,
    "hits_disc": 90,
    "hits_conf": 59,
    "roi_disc": 1.0367,
-   "roi_conf": 1.1167,
+   "roi_conf": 1.1139,
    "conf_ci90": [
-    0.7452698456362348,
-    1.5621340126360082
+    0.7429066125717322,
+    1.5631077313600419
    ]
   },
   {
@@ -864,14 +864,14 @@
    "strat": "5-2-1",
    "points": 1,
    "races_disc": 9211,
-   "races_conf": 4669,
+   "races_conf": 4681,
    "hits_disc": 38,
    "hits_conf": 23,
    "roi_disc": 1.0465,
-   "roi_conf": 1.1536,
+   "roi_conf": 1.1506,
    "conf_ci90": [
-    0.5979385496339764,
-    1.8500215119824825
+    0.5703775410506186,
+    1.8701393898162646
    ]
   },
   {
@@ -879,14 +879,14 @@
    "strat": "3-16-16",
    "points": 2,
    "races_disc": 3622,
-   "races_conf": 1767,
+   "races_conf": 1769,
    "hits_disc": 22,
    "hits_conf": 15,
    "roi_disc": 1.0711,
-   "roi_conf": 1.0593,
+   "roi_conf": 1.0581,
    "conf_ci90": [
-    0.5546484089850457,
-    1.6819620886186237
+    0.5463945456920349,
+    1.654336207237269
    ]
   },
   {
@@ -900,8 +900,8 @@
    "roi_disc": 1.0353,
    "roi_conf": 1.3461,
    "conf_ci90": [
-    0.4366692479291731,
-    2.5664932049142433
+    0.45369630740336847,
+    2.592578749752829
    ]
   }
  ],
@@ -912,680 +912,680 @@
    "strat": "1-2-3",
    "points": 1,
    "races_disc": 110812,
-   "races_conf": 56238,
+   "races_conf": 56382,
    "hits_disc": 7681,
-   "hits_conf": 4037,
+   "hits_conf": 4044,
    "roi_disc": 0.7923,
-   "roi_conf": 0.7941
+   "roi_conf": 0.7936
   },
   {
    "cond": "種別:一般",
    "strat": "1-2-3",
    "points": 1,
    "races_disc": 24732,
-   "races_conf": 12224,
+   "races_conf": 12274,
    "hits_disc": 1553,
-   "hits_conf": 823,
+   "hits_conf": 826,
    "roi_disc": 0.785,
-   "roi_conf": 0.8446
+   "roi_conf": 0.8453
   },
   {
    "cond": "種別:予選",
    "strat": "1-2-3",
    "points": 1,
    "races_disc": 52810,
-   "races_conf": 27144,
+   "races_conf": 27189,
    "hits_disc": 3149,
    "hits_conf": 1607,
    "roi_disc": 0.7966,
-   "roi_conf": 0.7532
+   "roi_conf": 0.752
   },
   {
    "cond": "種別:優勝戦",
    "strat": "1-2-3",
    "points": 1,
    "races_disc": 1687,
-   "races_conf": 847,
+   "races_conf": 852,
    "hits_disc": 174,
    "hits_conf": 78,
    "roi_disc": 0.8159,
-   "roi_conf": 0.6756
+   "roi_conf": 0.6716
   },
   {
    "cond": "種別:準優勝戦",
    "strat": "1-2-3",
    "points": 1,
    "races_disc": 4964,
-   "races_conf": 2411,
+   "races_conf": 2414,
    "hits_disc": 675,
    "hits_conf": 340,
    "roi_disc": 0.8293,
-   "roi_conf": 0.8198
+   "roi_conf": 0.8188
   },
   {
    "cond": "種別:選抜・特選",
    "strat": "1-2-3",
    "points": 1,
    "races_disc": 10654,
-   "races_conf": 5362,
+   "races_conf": 5381,
    "hits_disc": 873,
-   "hits_conf": 473,
+   "hits_conf": 476,
    "roi_disc": 0.7797,
-   "roi_conf": 0.8011
+   "roi_conf": 0.8035
   },
   {
    "cond": "全レース",
    "strat": "1-23-23",
    "points": 2,
    "races_disc": 110812,
-   "races_conf": 56238,
+   "races_conf": 56382,
    "hits_disc": 13628,
-   "hits_conf": 7103,
+   "hits_conf": 7121,
    "roi_disc": 0.7978,
-   "roi_conf": 0.7778
+   "roi_conf": 0.7776
   },
   {
    "cond": "種別:一般",
    "strat": "1-23-23",
    "points": 2,
    "races_disc": 24732,
-   "races_conf": 12224,
+   "races_conf": 12274,
    "hits_disc": 2779,
-   "hits_conf": 1463,
+   "hits_conf": 1468,
    "roi_disc": 0.788,
-   "roi_conf": 0.8207
+   "roi_conf": 0.8201
   },
   {
    "cond": "種別:予選",
    "strat": "1-23-23",
    "points": 2,
    "races_disc": 52810,
-   "races_conf": 27144,
+   "races_conf": 27189,
    "hits_disc": 5645,
-   "hits_conf": 2936,
+   "hits_conf": 2937,
    "roi_disc": 0.8063,
-   "roi_conf": 0.7682
+   "roi_conf": 0.7671
   },
   {
    "cond": "種別:優勝戦",
    "strat": "1-23-23",
    "points": 2,
    "races_disc": 1687,
-   "races_conf": 847,
+   "races_conf": 852,
    "hits_disc": 280,
    "hits_conf": 144,
    "roi_disc": 0.7846,
-   "roi_conf": 0.7809
+   "roi_conf": 0.7763
   },
   {
    "cond": "種別:準優勝戦",
    "strat": "1-23-23",
    "points": 2,
    "races_disc": 4964,
-   "races_conf": 2411,
+   "races_conf": 2414,
    "hits_disc": 1094,
-   "hits_conf": 542,
+   "hits_conf": 543,
    "roi_disc": 0.797,
-   "roi_conf": 0.7603
+   "roi_conf": 0.761
   },
   {
    "cond": "種別:選抜・特選",
    "strat": "1-23-23",
    "points": 2,
    "races_disc": 10654,
-   "races_conf": 5362,
+   "races_conf": 5381,
    "hits_disc": 1512,
-   "hits_conf": 804,
+   "hits_conf": 810,
    "roi_disc": 0.7663,
-   "roi_conf": 0.7658
+   "roi_conf": 0.769
   },
   {
    "cond": "全レース",
    "strat": "1-234-234",
    "points": 6,
    "races_disc": 110812,
-   "races_conf": 56238,
+   "races_conf": 56382,
    "hits_disc": 31463,
-   "hits_conf": 16006,
+   "hits_conf": 16041,
    "roi_disc": 0.7507,
-   "roi_conf": 0.7236
+   "roi_conf": 0.723
   },
   {
    "cond": "種別:一般",
    "strat": "1-234-234",
    "points": 6,
    "races_disc": 24732,
-   "races_conf": 12224,
+   "races_conf": 12274,
    "hits_disc": 6675,
-   "hits_conf": 3374,
+   "hits_conf": 3389,
    "roi_disc": 0.7662,
-   "roi_conf": 0.7588
+   "roi_conf": 0.7583
   },
   {
    "cond": "種別:予選",
    "strat": "1-234-234",
    "points": 6,
    "races_disc": 52810,
-   "races_conf": 27144,
+   "races_conf": 27189,
    "hits_disc": 12853,
-   "hits_conf": 6514,
+   "hits_conf": 6517,
    "roi_disc": 0.7524,
-   "roi_conf": 0.7045
+   "roi_conf": 0.7035
   },
   {
    "cond": "種別:優勝戦",
    "strat": "1-234-234",
    "points": 6,
    "races_disc": 1687,
-   "races_conf": 847,
+   "races_conf": 852,
    "hits_disc": 669,
-   "hits_conf": 321,
+   "hits_conf": 323,
    "roi_disc": 0.7883,
-   "roi_conf": 0.7285
+   "roi_conf": 0.7283
   },
   {
    "cond": "種別:準優勝戦",
    "strat": "1-234-234",
    "points": 6,
    "races_disc": 4964,
-   "races_conf": 2411,
+   "races_conf": 2414,
    "hits_disc": 2209,
-   "hits_conf": 1094,
+   "hits_conf": 1095,
    "roi_disc": 0.7668,
-   "roi_conf": 0.7494
+   "roi_conf": 0.749
   },
   {
    "cond": "種別:選抜・特選",
    "strat": "1-234-234",
    "points": 6,
    "races_disc": 10654,
-   "races_conf": 5362,
+   "races_conf": 5381,
    "hits_disc": 3555,
-   "hits_conf": 1887,
+   "hits_conf": 1894,
    "roi_disc": 0.7387,
-   "roi_conf": 0.7601
+   "roi_conf": 0.7596
   },
   {
    "cond": "全レース",
    "strat": "1-全-全",
    "points": 20,
    "races_disc": 110812,
-   "races_conf": 56238,
+   "races_conf": 56382,
    "hits_disc": 60258,
-   "hits_conf": 30947,
+   "hits_conf": 31029,
    "roi_disc": 0.7061,
-   "roi_conf": 0.7011
+   "roi_conf": 0.7013
   },
   {
    "cond": "種別:一般",
    "strat": "1-全-全",
    "points": 20,
    "races_disc": 24732,
-   "races_conf": 12224,
+   "races_conf": 12274,
    "hits_disc": 13420,
-   "hits_conf": 6899,
+   "hits_conf": 6928,
    "roi_disc": 0.7177,
-   "roi_conf": 0.7097
+   "roi_conf": 0.7091
   },
   {
    "cond": "種別:予選",
    "strat": "1-全-全",
    "points": 20,
    "races_disc": 52810,
-   "races_conf": 27144,
+   "races_conf": 27189,
    "hits_disc": 25339,
-   "hits_conf": 13070,
+   "hits_conf": 13090,
    "roi_disc": 0.693,
-   "roi_conf": 0.6939
+   "roi_conf": 0.6944
   },
   {
    "cond": "種別:優勝戦",
    "strat": "1-全-全",
    "points": 20,
    "races_disc": 1687,
-   "races_conf": 847,
+   "races_conf": 852,
    "hits_disc": 1166,
-   "hits_conf": 576,
+   "hits_conf": 581,
    "roi_disc": 0.7655,
-   "roi_conf": 0.74
+   "roi_conf": 0.7401
   },
   {
    "cond": "種別:準優勝戦",
    "strat": "1-全-全",
    "points": 20,
    "races_disc": 4964,
-   "races_conf": 2411,
+   "races_conf": 2414,
    "hits_disc": 3576,
-   "hits_conf": 1767,
+   "hits_conf": 1770,
    "roi_disc": 0.7461,
-   "roi_conf": 0.7011
+   "roi_conf": 0.7015
   },
   {
    "cond": "種別:選抜・特選",
    "strat": "1-全-全",
    "points": 20,
    "races_disc": 10654,
-   "races_conf": 5362,
+   "races_conf": 5381,
    "hits_disc": 6574,
-   "hits_conf": 3406,
+   "hits_conf": 3416,
    "roi_disc": 0.7205,
-   "roi_conf": 0.7181
+   "roi_conf": 0.7179
   },
   {
    "cond": "全レース",
    "strat": "2-全-全",
    "points": 20,
    "races_disc": 110812,
-   "races_conf": 56238,
+   "races_conf": 56382,
    "hits_disc": 15473,
-   "hits_conf": 7611,
+   "hits_conf": 7637,
    "roi_disc": 0.6135,
-   "roi_conf": 0.5932
+   "roi_conf": 0.5941
   },
   {
    "cond": "種別:一般",
    "strat": "2-全-全",
    "points": 20,
    "races_disc": 24732,
-   "races_conf": 12224,
+   "races_conf": 12274,
    "hits_disc": 3215,
-   "hits_conf": 1495,
+   "hits_conf": 1504,
    "roi_disc": 0.6073,
-   "roi_conf": 0.6124
+   "roi_conf": 0.6147
   },
   {
    "cond": "種別:予選",
    "strat": "2-全-全",
    "points": 20,
    "races_disc": 52810,
-   "races_conf": 27144,
+   "races_conf": 27189,
    "hits_disc": 8838,
-   "hits_conf": 4430,
+   "hits_conf": 4438,
    "roi_disc": 0.6182,
-   "roi_conf": 0.5705
+   "roi_conf": 0.5714
   },
   {
    "cond": "種別:優勝戦",
    "strat": "2-全-全",
    "points": 20,
    "races_disc": 1687,
-   "races_conf": 847,
+   "races_conf": 852,
    "hits_disc": 186,
    "hits_conf": 74,
    "roi_disc": 0.6256,
-   "roi_conf": 0.473
+   "roi_conf": 0.4703
   },
   {
    "cond": "種別:準優勝戦",
    "strat": "2-全-全",
    "points": 20,
    "races_disc": 4964,
-   "races_conf": 2411,
+   "races_conf": 2414,
    "hits_disc": 515,
    "hits_conf": 248,
    "roi_disc": 0.5432,
-   "roi_conf": 0.6627
+   "roi_conf": 0.6619
   },
   {
    "cond": "種別:選抜・特選",
    "strat": "2-全-全",
    "points": 20,
    "races_disc": 10654,
-   "races_conf": 5362,
+   "races_conf": 5381,
    "hits_disc": 1265,
-   "hits_conf": 582,
+   "hits_conf": 589,
    "roi_disc": 0.6387,
-   "roi_conf": 0.5892
+   "roi_conf": 0.5906
   },
   {
    "cond": "全レース",
    "strat": "3-256-256",
    "points": 6,
    "races_disc": 110812,
-   "races_conf": 56238,
+   "races_conf": 56382,
    "hits_disc": 2595,
-   "hits_conf": 1300,
+   "hits_conf": 1301,
    "roi_disc": 0.6058,
-   "roi_conf": 0.5466
+   "roi_conf": 0.5456
   },
   {
    "cond": "種別:一般",
    "strat": "3-256-256",
    "points": 6,
    "races_disc": 24732,
-   "races_conf": 12224,
+   "races_conf": 12274,
    "hits_disc": 541,
    "hits_conf": 255,
    "roi_disc": 0.567,
-   "roi_conf": 0.5597
+   "roi_conf": 0.5575
   },
   {
    "cond": "種別:予選",
    "strat": "3-256-256",
    "points": 6,
    "races_disc": 52810,
-   "races_conf": 27144,
+   "races_conf": 27189,
    "hits_disc": 1571,
-   "hits_conf": 786,
+   "hits_conf": 787,
    "roi_disc": 0.6201,
-   "roi_conf": 0.5957
+   "roi_conf": 0.5956
   },
   {
    "cond": "種別:準優勝戦",
    "strat": "3-256-256",
    "points": 6,
    "races_disc": 4964,
-   "races_conf": 2411,
+   "races_conf": 2414,
    "hits_disc": 58,
    "hits_conf": 11,
    "roi_disc": 0.741,
-   "roi_conf": 0.1367
+   "roi_conf": 0.1365
   },
   {
    "cond": "種別:選抜・特選",
    "strat": "3-256-256",
    "points": 6,
    "races_disc": 10654,
-   "races_conf": 5362,
+   "races_conf": 5381,
    "hits_disc": 178,
    "hits_conf": 119,
    "roi_disc": 0.6552,
-   "roi_conf": 0.7431
+   "roi_conf": 0.7404
   },
   {
    "cond": "全レース",
    "strat": "3-全-全",
    "points": 20,
    "races_disc": 110812,
-   "races_conf": 56238,
+   "races_conf": 56382,
    "hits_disc": 13938,
-   "hits_conf": 7148,
+   "hits_conf": 7161,
    "roi_disc": 0.6236,
-   "roi_conf": 0.6156
+   "roi_conf": 0.6149
   },
   {
    "cond": "種別:一般",
    "strat": "3-全-全",
    "points": 20,
    "races_disc": 24732,
-   "races_conf": 12224,
+   "races_conf": 12274,
    "hits_disc": 2995,
-   "hits_conf": 1446,
+   "hits_conf": 1453,
    "roi_disc": 0.6004,
-   "roi_conf": 0.6565
+   "roi_conf": 0.6559
   },
   {
    "cond": "種別:予選",
    "strat": "3-全-全",
    "points": 20,
    "races_disc": 52810,
-   "races_conf": 27144,
+   "races_conf": 27189,
    "hits_disc": 7528,
-   "hits_conf": 3957,
+   "hits_conf": 3960,
    "roi_disc": 0.631,
-   "roi_conf": 0.625
+   "roi_conf": 0.6244
   },
   {
    "cond": "種別:優勝戦",
    "strat": "3-全-全",
    "points": 20,
    "races_disc": 1687,
-   "races_conf": 847,
+   "races_conf": 852,
    "hits_disc": 117,
    "hits_conf": 94,
    "roi_disc": 0.5022,
-   "roi_conf": 0.7011
+   "roi_conf": 0.6969
   },
   {
    "cond": "種別:準優勝戦",
    "strat": "3-全-全",
    "points": 20,
    "races_disc": 4964,
-   "races_conf": 2411,
+   "races_conf": 2414,
    "hits_disc": 397,
    "hits_conf": 161,
    "roi_disc": 0.6688,
-   "roi_conf": 0.4711
+   "roi_conf": 0.4706
   },
   {
    "cond": "種別:選抜・特選",
    "strat": "3-全-全",
    "points": 20,
    "races_disc": 10654,
-   "races_conf": 5362,
+   "races_conf": 5381,
    "hits_disc": 1195,
-   "hits_conf": 574,
+   "hits_conf": 576,
    "roi_disc": 0.7127,
-   "roi_conf": 0.6505
+   "roi_conf": 0.6501
   },
   {
    "cond": "全レース",
    "strat": "4-全-全",
    "points": 20,
    "races_disc": 110812,
-   "races_conf": 56238,
+   "races_conf": 56382,
    "hits_disc": 11310,
-   "hits_conf": 5550,
+   "hits_conf": 5564,
    "roi_disc": 0.6183,
-   "roi_conf": 0.6059
+   "roi_conf": 0.6053
   },
   {
    "cond": "種別:一般",
    "strat": "4-全-全",
    "points": 20,
    "races_disc": 24732,
-   "races_conf": 12224,
+   "races_conf": 12274,
    "hits_disc": 2641,
-   "hits_conf": 1202,
+   "hits_conf": 1206,
    "roi_disc": 0.6097,
-   "roi_conf": 0.6052
+   "roi_conf": 0.6042
   },
   {
    "cond": "種別:予選",
    "strat": "4-全-全",
    "points": 20,
    "races_disc": 52810,
-   "races_conf": 27144,
+   "races_conf": 27189,
    "hits_disc": 5823,
-   "hits_conf": 2968,
+   "hits_conf": 2975,
    "roi_disc": 0.6284,
-   "roi_conf": 0.5988
+   "roi_conf": 0.5987
   },
   {
    "cond": "種別:優勝戦",
    "strat": "4-全-全",
    "points": 20,
    "races_disc": 1687,
-   "races_conf": 847,
+   "races_conf": 852,
    "hits_disc": 128,
    "hits_conf": 56,
    "roi_disc": 0.5865,
-   "roi_conf": 0.5394
+   "roi_conf": 0.5362
   },
   {
    "cond": "種別:準優勝戦",
    "strat": "4-全-全",
    "points": 20,
    "races_disc": 4964,
-   "races_conf": 2411,
+   "races_conf": 2414,
    "hits_disc": 274,
    "hits_conf": 137,
    "roi_disc": 0.5706,
-   "roi_conf": 0.7325
+   "roi_conf": 0.7316
   },
   {
    "cond": "種別:選抜・特選",
    "strat": "4-全-全",
    "points": 20,
    "races_disc": 10654,
-   "races_conf": 5362,
+   "races_conf": 5381,
    "hits_disc": 911,
    "hits_conf": 455,
    "roi_disc": 0.5956,
-   "roi_conf": 0.6652
+   "roi_conf": 0.6628
   },
   {
    "cond": "全レース",
    "strat": "人気1",
    "points": 1,
    "races_disc": 110812,
-   "races_conf": 56238,
+   "races_conf": 56382,
    "hits_disc": 11566,
-   "hits_conf": 6118,
+   "hits_conf": 6135,
    "roi_disc": 0.7694,
-   "roi_conf": 0.7661
+   "roi_conf": 0.7666
   },
   {
    "cond": "種別:一般",
    "strat": "人気1",
    "points": 1,
    "races_disc": 24732,
-   "races_conf": 12224,
+   "races_conf": 12274,
    "hits_disc": 2444,
-   "hits_conf": 1268,
+   "hits_conf": 1274,
    "roi_disc": 0.7637,
-   "roi_conf": 0.7558
+   "roi_conf": 0.7561
   },
   {
    "cond": "種別:予選",
    "strat": "人気1",
    "points": 1,
    "races_disc": 52810,
-   "races_conf": 27144,
+   "races_conf": 27189,
    "hits_disc": 5073,
-   "hits_conf": 2730,
+   "hits_conf": 2736,
    "roi_disc": 0.7758,
-   "roi_conf": 0.7679
+   "roi_conf": 0.7687
   },
   {
    "cond": "種別:優勝戦",
    "strat": "人気1",
    "points": 1,
    "races_disc": 1687,
-   "races_conf": 847,
+   "races_conf": 852,
    "hits_disc": 203,
    "hits_conf": 94,
    "roi_disc": 0.8205,
-   "roi_conf": 0.7058
+   "roi_conf": 0.7016
   },
   {
    "cond": "種別:準優勝戦",
    "strat": "人気1",
    "points": 1,
    "races_disc": 4964,
-   "races_conf": 2411,
+   "races_conf": 2414,
    "hits_disc": 688,
    "hits_conf": 361,
    "roi_disc": 0.7558,
-   "roi_conf": 0.8158
+   "roi_conf": 0.8148
   },
   {
    "cond": "種別:選抜・特選",
    "strat": "人気1",
    "points": 1,
    "races_disc": 10654,
-   "races_conf": 5362,
+   "races_conf": 5381,
    "hits_disc": 1176,
-   "hits_conf": 621,
+   "hits_conf": 623,
    "roi_disc": 0.7874,
-   "roi_conf": 0.8021
+   "roi_conf": 0.8023
   },
   {
    "cond": "全レース",
    "strat": "人気1〜10",
    "points": 10,
    "races_disc": 110812,
-   "races_conf": 56238,
+   "races_conf": 56382,
    "hits_disc": 59503,
-   "hits_conf": 30880,
+   "hits_conf": 30961,
    "roi_disc": 0.7723,
-   "roi_conf": 0.7752
+   "roi_conf": 0.7753
   },
   {
    "cond": "種別:一般",
    "strat": "人気1〜10",
    "points": 10,
    "races_disc": 24732,
-   "races_conf": 12224,
+   "races_conf": 12274,
    "hits_disc": 12907,
-   "hits_conf": 6580,
+   "hits_conf": 6609,
    "roi_disc": 0.7735,
-   "roi_conf": 0.7808
+   "roi_conf": 0.7811
   },
   {
    "cond": "種別:予選",
    "strat": "人気1〜10",
    "points": 10,
    "races_disc": 52810,
-   "races_conf": 27144,
+   "races_conf": 27189,
    "hits_disc": 26823,
-   "hits_conf": 14131,
+   "hits_conf": 14150,
    "roi_disc": 0.7732,
-   "roi_conf": 0.7755
+   "roi_conf": 0.7753
   },
   {
    "cond": "種別:優勝戦",
    "strat": "人気1〜10",
    "points": 10,
    "races_disc": 1687,
-   "races_conf": 847,
+   "races_conf": 852,
    "hits_disc": 978,
-   "hits_conf": 474,
+   "hits_conf": 478,
    "roi_disc": 0.7836,
-   "roi_conf": 0.748
+   "roi_conf": 0.7485
   },
   {
    "cond": "種別:準優勝戦",
    "strat": "人気1〜10",
    "points": 10,
    "races_disc": 4964,
-   "races_conf": 2411,
+   "races_conf": 2414,
    "hits_disc": 3158,
-   "hits_conf": 1573,
+   "hits_conf": 1575,
    "roi_disc": 0.7722,
-   "roi_conf": 0.7773
+   "roi_conf": 0.777
   },
   {
    "cond": "種別:選抜・特選",
    "strat": "人気1〜10",
    "points": 10,
    "races_disc": 10654,
-   "races_conf": 5362,
+   "races_conf": 5381,
    "hits_disc": 5903,
-   "hits_conf": 3080,
+   "hits_conf": 3092,
    "roi_disc": 0.7649,
-   "roi_conf": 0.7921
+   "roi_conf": 0.7929
   },
   {
    "cond": "全レース",
    "strat": "人気1〜3",
    "points": 3,
    "races_disc": 110812,
-   "races_conf": 56238,
+   "races_conf": 56382,
    "hits_disc": 28288,
-   "hits_conf": 14833,
+   "hits_conf": 14870,
    "roi_disc": 0.7684,
-   "roi_conf": 0.7661
+   "roi_conf": 0.766
   },
   {
    "cond": "種別:一般",
    "strat": "人気1〜3",
    "points": 3,
    "races_disc": 24732,
-   "races_conf": 12224,
+   "races_conf": 12274,
    "hits_disc": 6126,
-   "hits_conf": 3093,
+   "hits_conf": 3103,
    "roi_disc": 0.7803,
-   "roi_conf": 0.7556
+   "roi_conf": 0.7546
   },
   {
    "cond": "種別:予選",
    "strat": "人気1〜3",
    "points": 3,
    "races_disc": 52810,
-   "races_conf": 27144,
+   "races_conf": 27189,
    "hits_disc": 12524,
-   "hits_conf": 6671,
+   "hits_conf": 6681,
    "roi_disc": 0.7734,
    "roi_conf": 0.7735
   },
@@ -1594,33 +1594,33 @@
    "strat": "人気1〜3",
    "points": 3,
    "races_disc": 1687,
-   "races_conf": 847,
+   "races_conf": 852,
    "hits_disc": 467,
-   "hits_conf": 221,
+   "hits_conf": 223,
    "roi_disc": 0.7841,
-   "roi_conf": 0.6987
+   "roi_conf": 0.6983
   },
   {
    "cond": "種別:準優勝戦",
    "strat": "人気1〜3",
    "points": 3,
    "races_disc": 4964,
-   "races_conf": 2411,
+   "races_conf": 2414,
    "hits_disc": 1583,
-   "hits_conf": 829,
+   "hits_conf": 830,
    "roi_disc": 0.7337,
-   "roi_conf": 0.7727
+   "roi_conf": 0.7728
   },
   {
    "cond": "種別:選抜・特選",
    "strat": "人気1〜3",
    "points": 3,
    "races_disc": 10654,
-   "races_conf": 5362,
+   "races_conf": 5381,
    "hits_disc": 2788,
-   "hits_conf": 1486,
+   "hits_conf": 1491,
    "roi_disc": 0.7536,
-   "roi_conf": 0.7755
+   "roi_conf": 0.7752
   }
  ]
 }
